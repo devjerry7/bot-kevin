@@ -19,6 +19,91 @@ const HEADER_IMAGE =
   "https://cdn.discordapp.com/attachments/885926443220107315/1446478914468974742/ticket-banner.png?ex=693421f7&is=6932d077&hm=cf586cf1ba2ae3770bcc3d436cbbf044df522986ead23ff6cbff17e876d07570&";
 const COLOR_NEUTRAL = 0x2f3136;
 
+// --- FUNÇÃO GERADORA DE HTML (NOVO SISTEMA) ---
+const generateHtmlTranscript = (messages, channelName) => {
+  // Ordena mensagens da mais antiga para a mais nova
+  const sortedMessages = Array.from(messages.values()).reverse();
+
+  const rows = sortedMessages
+    .map((m) => {
+      const date = new Date(m.createdTimestamp).toLocaleString("pt-BR");
+      const avatarUrl = m.author.displayAvatarURL({
+        extension: "png",
+        size: 64,
+      });
+
+      // Tenta pegar conteúdo ou marcar se for embed/vazio
+      const content =
+        m.content ||
+        (m.embeds.length > 0
+          ? "<i>[Mensagem contendo Embed]</i>"
+          : "<i>[Sem conteúdo de texto]</i>");
+
+      // Lida com anexos (Imagens/Arquivos)
+      let attachmentHtml = "";
+      if (m.attachments.size > 0) {
+        attachmentHtml = m.attachments
+          .map(
+            (att) =>
+              `<br><a href="${att.url}" target="_blank" style="color: #00b0f4; font-size: 0.9em;">📎 [Anexo: ${att.name}]</a>`
+          )
+          .join("");
+      }
+
+      return `
+        <div class="message">
+            <img src="${avatarUrl}" class="avatar" alt="${m.author.username}">
+            <div class="content">
+                <div>
+                    <span class="username">${m.author.username}</span>
+                    <span class="timestamp">${date}</span>
+                </div>
+                <div class="text">
+                    ${content.replace(/\n/g, "<br>")}
+                    ${attachmentHtml}
+                </div>
+            </div>
+        </div>`;
+    })
+    .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Transcript - ${channelName}</title>
+        <style>
+            body { background-color: #36393f; color: #dcddde; font-family: "Whitney", "Helvetica Neue", Helvetica, Arial, sans-serif; padding: 20px; }
+            .header { border-bottom: 1px solid #4f545c; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { color: #fff; margin: 0; font-size: 1.5rem; }
+            .header p { color: #b9bbbe; margin-top: 5px; font-size: 0.9rem; }
+            .message { display: flex; margin-bottom: 20px; }
+            .avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; cursor: pointer; }
+            .content { display: flex; flex-direction: column; }
+            .username { color: #fff; font-weight: 500; margin-right: 5px; }
+            .timestamp { color: #72767d; font-size: 0.75rem; }
+            .text { color: #dcddde; font-size: 0.9375rem; line-height: 1.375rem; margin-top: 5px; white-space: pre-wrap; }
+            a { color: #00b0f4; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+            /* Scrollbar bonita */
+            ::-webkit-scrollbar { width: 8px; }
+            ::-webkit-scrollbar-track { background: #2f3136; }
+            ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>📄 Histórico do Ticket: ${channelName}</h1>
+            <p>Gerado automaticamente em: ${new Date().toLocaleString(
+              "pt-BR"
+            )}</p>
+        </div>
+        ${rows}
+    </body>
+    </html>`;
+};
+
 module.exports = async (interaction) => {
   if (!interaction.isButton()) return false;
   if (
@@ -33,19 +118,13 @@ module.exports = async (interaction) => {
 
   // --- 1. ABRIR TICKET ---
   if (customId === BTN_OPEN) {
-    // Debug Log
     console.log(`[TICKET] Tentativa de abrir por ${user.tag}`);
-    console.log(
-      `[TICKET] ID Pai Configurado: ${config.TICKET_PARENT_CHANNEL_ID}`
-    );
-
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const parentChannelId = config.TICKET_PARENT_CHANNEL_ID;
     const parentChannel = guild.channels.cache.get(parentChannelId);
 
     if (!parentChannel) {
-      console.error("[TICKET ERROR] Canal pai não encontrado no cache.");
       return interaction.editReply(
         "⚠️ Erro de Configuração: Canal de Suporte não encontrado (ID inválido no .env?)."
       );
@@ -88,7 +167,7 @@ module.exports = async (interaction) => {
           .setEmoji("<:cadeado:1443642375833518194>"),
         new ButtonBuilder()
           .setCustomId(BTN_TRANSCRIPT)
-          .setLabel("Log")
+          .setLabel("Log (HTML)")
           .setStyle(ButtonStyle.Secondary)
           .setEmoji("<:b_anotacTKF:1446495699985240215>")
       );
@@ -108,7 +187,7 @@ module.exports = async (interaction) => {
     } catch (e) {
       console.error("[TICKET ERROR]", e);
       return interaction.editReply(
-        "<:Nao:1443642030637977743> Erro ao criar Tópico. Verifique permissões do bot."
+        "<:Nao:1443642030637977743> Erro ao criar Tópico. Verifique permissões."
       );
     }
   }
@@ -128,51 +207,47 @@ module.exports = async (interaction) => {
     });
   }
 
-  // --- 3. LOG (Manual) ---
+  // --- 3. LOG MANUAL (HTML) ---
   if (customId === BTN_TRANSCRIPT) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const channel = interaction.channel;
 
     try {
       const messages = await channel.messages.fetch({ limit: 100 });
-      const logContent = messages
-        .reverse()
-        .map(
-          (m) =>
-            `[${new Date(m.createdTimestamp).toLocaleString()}] ${
-              m.author.tag
-            }: ${m.content}`
-        )
-        .join("\n");
+
+      // Gera HTML em vez de TXT
+      const htmlContent = generateHtmlTranscript(messages, channel.name);
+
       const attachment = new AttachmentBuilder(
-        Buffer.from(logContent, "utf-8"),
-        { name: `log-${channel.name}.txt` }
+        Buffer.from(htmlContent, "utf-8"),
+        { name: `transcript-${channel.name}.html` }
       );
 
       const logChannel = guild.channels.cache.get(config.TICKET_LOG_ID);
       if (logChannel) {
         await logChannel.send({
-          content: `<:b_anotacTKF:1446495699985240215> Log de Ticket (Manual): \`${channel.name}\``,
+          content: `<:b_anotacTKF:1446495699985240215> Log (HTML) salvo: \`${channel.name}\``,
           files: [attachment],
         });
         return interaction.editReply(
-          "<:certo_froid:1443643346722754692> Log salvo."
+          "<:certo_froid:1443643346722754692> Log HTML salvo no canal de logs."
         );
       }
 
       await interaction.user.send({
-        content: "Log do ticket:",
+        content: "Seu transcript HTML:",
         files: [attachment],
       });
       return interaction.editReply(
         "<:certo_froid:1443643346722754692> Log enviado na DM."
       );
     } catch (e) {
+      console.error(e);
       return interaction.editReply("Erro ao gerar log.");
     }
   }
 
-  // --- 4. DELETAR (Automático com Log) ---
+  // --- 4. DELETAR (Automático com Log HTML) ---
   if (customId === BTN_DELETE) {
     const thread = interaction.channel;
     if (!thread.isThread())
@@ -182,44 +257,32 @@ module.exports = async (interaction) => {
       });
 
     await interaction.reply(
-      "<:vmc_lixeiraK:1443653159779041362> Gerando log e encerrando..."
+      "<:vmc_lixeiraK:1443653159779041362> Gerando Transcript HTML e encerrando..."
     );
 
-    // Tenta gerar e enviar o log antes de deletar
     try {
       const messages = await thread.messages.fetch({ limit: 100 });
-      const logContent = messages
-        .reverse()
-        .map(
-          (m) =>
-            `[${new Date(m.createdTimestamp).toLocaleString()}] ${
-              m.author.tag
-            }: ${m.content}`
-        )
-        .join("\n");
+
+      // GERA HTML
+      const htmlContent = generateHtmlTranscript(messages, thread.name);
 
       const attachment = new AttachmentBuilder(
-        Buffer.from(logContent, "utf-8"),
-        { name: `log-${thread.name}.txt` }
+        Buffer.from(htmlContent, "utf-8"),
+        { name: `transcript-${thread.name}.html` }
       );
 
       const logChannel = guild.channels.cache.get(config.TICKET_LOG_ID);
 
       if (logChannel) {
         await logChannel.send({
-          content: `<:b_anotacTKF:1446495699985240215> **Ticket Encerrado:** \`${thread.name}\`\n👤 Fechado por: ${user}`,
+          content: `<:b_anotacTKF:1446495699985240215> **Ticket Encerrado:** \`${thread.name}\`\n👤 Fechado por: ${user}\n📂 *Baixe o arquivo e abra no navegador para ver o chat completo.*`,
           files: [attachment],
         });
-      } else {
-        console.warn(
-          "[TICKET] Canal de Log não encontrado para salvar o transcript."
-        );
       }
     } catch (error) {
       console.error("[TICKET ERROR] Falha ao gerar log no delete:", error);
     }
 
-    // Aguarda um pouco e deleta
     setTimeout(() => {
       thread.delete().catch(() => {});
     }, 3000);
