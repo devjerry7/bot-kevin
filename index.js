@@ -101,6 +101,11 @@ client.on("messageCreate", handleMessageCreate);
 const handleInteractionCreate = require("./events/interactionCreate");
 client.on("interactionCreate", handleInteractionCreate);
 
+const tempVoiceHandler = require("./handlers/tempVoiceHandler");
+client.on("voiceStateUpdate", (oldState, newState) => {
+  tempVoiceHandler(oldState, newState);
+});
+
 // --- CARREGAMENTO DE LOGGERS ---
 const loggersPath = path.join(__dirname, "events", "loggers");
 if (fs.existsSync(loggersPath)) {
