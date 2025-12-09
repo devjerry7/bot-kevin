@@ -1,6 +1,9 @@
 // events/messageCreate.js
 const { EmbedBuilder } = require("discord.js");
 
+// --- IMPORTAÇÃO DO GERENCIADOR DE CONFIG (SAAS) ---
+const { getGuildConfig } = require("../utils/guildConfigManager");
+
 // --- IMPORTAÇÕES DOS SISTEMAS DE JOGO E ESTADO ---
 const { getGameState } = require("../game/gameState");
 const { calculateScores, postReviewEmbed } = require("../game/scoreSystem");
@@ -34,20 +37,18 @@ const {
 } = require("../commands/lockdown");
 const { handleBotInfo } = require("../commands/botinfo");
 const { handleListMembers } = require("../commands/listMembers");
-const { handleVoice } = require("../commands/voice"); // <--- ADICIONADO
+const { handleVoice } = require("../commands/voice");
 
 // --- NOVOS PAINÉIS VISUAIS ---
-const { sendRolePanel } = require("../commands/rolePanel"); // k!cargo (Admin)
+const { sendRolePanel } = require("../commands/rolePanel"); // k!cargo
 const { handleChannelPanel } = require("../commands/channelPanel"); // k!canal
 const { handleModPanel } = require("../commands/modPanel"); // k!mod
-const { sendGameRolesPanel } = require("../commands/gameRoles"); // k!roles (Jogos) <--- ADICIONADO
-const { handleBoosterPanel } = require("../commands/booster"); // k!booster <--- ADICIONADO
+const { sendGameRolesPanel } = require("../commands/gameRoles"); // k!roles
+const { handleBoosterPanel } = require("../commands/booster"); // k!booster
 const { handleEconomy } = require("../commands/economy");
 const { handleGambling } = require("../commands/gambling");
 const { handleCrime } = require("../commands/crime");
 const { handleTicketPanel } = require("../commands/ticketPanel");
-
-const PREFIX = "k!";
 
 // Helper Visual
 const createFeedbackEmbed = (title, description, color = 0xff0000) => {
@@ -60,10 +61,20 @@ const createFeedbackEmbed = (title, description, color = 0xff0000) => {
 
 // --- INÍCIO DO MÓDULO ---
 module.exports = async (message) => {
-  if (message.author.bot) return;
+  // Ignora bots e DMs
+  if (message.author.bot || !message.guild) return;
 
   // ====================================================
-  // 1. CAMADA DE SEGURANÇA (Prioridade Máxima)
+  // 1. CARREGAR CONFIGURAÇÃO (SAAS)
+  // ====================================================
+  // Busca as configs do servidor no Banco de Dados (com cache)
+  const config = await getGuildConfig(message.guild.id);
+
+  // Define o prefixo: Se tiver no banco usa ele, senão usa 'k!'
+  const PREFIX = config.prefix || "k!";
+
+  // ====================================================
+  // 2. CAMADA DE SEGURANÇA (Prioridade Máxima)
   // ====================================================
 
   // A. Proteção de Chat (Anti-Everyone, Anti-Link)
@@ -73,22 +84,24 @@ module.exports = async (message) => {
   if (await handleAntiSpam(message)) return;
 
   // ====================================================
-  // 2. LÓGICA DE JOGO E MENÇÃO
+  // 3. LÓGICA DE JOGO E MENÇÃO
   // ====================================================
 
-  // Obtém o estado do jogo
   const state = getGameState(message.guild.id);
-  const userId = message.author.id; // A. Resposta a Menção
+  const userId = message.author.id;
 
+  // A. Resposta a Menção (Bot foi marcado?)
   if (await handleMention(message)) return;
 
-  // B. Resposta Rápida (STOP GAME)
+  // B. Resposta Rápida do Jogo (Sem Prefixo)
+  // Se a mensagem NÃO começa com o prefixo, verificamos se é resposta do jogo Stop
   if (!message.content.startsWith(PREFIX)) {
     if (state.isActive) {
       const currentLetter = state.currentLetter;
       if (state.players[userId] && state.players[userId].isStopped) return;
 
       const content = message.content.trim().toUpperCase();
+      // Verifica se começa com a letra e tem vírgula (padrão do jogo)
       if (content.startsWith(currentLetter) && content.includes(",")) {
         const rawAnswers = content.split(",");
         const cleanedAnswers = rawAnswers
@@ -127,10 +140,15 @@ module.exports = async (message) => {
         }
       }
     }
+    // Se não for comando e não for jogo, para por aqui
     return;
   }
 
-  // 3. EXCLUSÃO CENTRALIZADA DE COMANDOS
+  // ====================================================
+  // 4. PROCESSAMENTO DE COMANDOS
+  // ====================================================
+
+  // Auto-Delete do comando (Limpeza do Chat)
   if (message.deletable) {
     try {
       await message.delete();
@@ -139,15 +157,13 @@ module.exports = async (message) => {
     }
   }
 
+  // Separa comando e argumentos usando o prefixo dinâmico
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
-  // ====================================================
-  // 3. ROTEAMENTO DE COMANDOS
-  // ====================================================
 
   // --- INFO & AJUDA ---
   if (["help", "ajuda", "comandos"].includes(command))
-    return handleHelp(message);
+    return handleHelp(message); // Nota: handleHelp deve ser atualizado para ler o prefixo também
   if (["sistemas", "botinfo"].includes(command)) return handleBotInfo(message);
 
   // --- SISTEMA VIP ---
@@ -164,7 +180,7 @@ module.exports = async (message) => {
   )
     return handleVipCommands(message, command, args);
   if (["booster", "boost"].includes(command))
-    return handleBoosterPanel(message); // <--- NOVO
+    return handleBoosterPanel(message);
 
   // --- SISTEMA DE PROTEÇÃO ---
   if (["panela", "blacklist"].includes(command))
@@ -200,18 +216,20 @@ module.exports = async (message) => {
 
   // --- SISTEMA DE VOZ ---
   if (["join", "entrar", "leave", "sair"].includes(command))
-    return handleVoice(message, args, command); // <--- NOVO
+    return handleVoice(message, args, command);
 
   // --- UTIL ---
   if (command === "av") return handleAvatar(message, args);
   if (command === "repeat") return handleRepeat(message, args);
   if (["membros", "listmembers", "list"].includes(command))
-    return handleListMembers(message, args); // --- PAINEL DE JOGOS (AUTO-ROLE) ---
+    return handleListMembers(message, args);
 
+  // --- PAINEL DE JOGOS (AUTO-ROLE) ---
   if (["roles", "cargos", "jogos"].includes(command)) {
-    return sendGameRolesPanel(message); // <--- NOVO
+    return sendGameRolesPanel(message);
   }
 
+  // --- SUPORTE ---
   if (["ticket", "suporte", "atendimento"].includes(command)) {
     return handleTicketPanel(message);
   }
@@ -246,7 +264,6 @@ module.exports = async (message) => {
   }
 
   // --- JOGO STOP ---
-
   if (command === "stop") {
     if (state.isActive)
       return message.channel.send({
@@ -273,7 +290,7 @@ module.exports = async (message) => {
       ],
     });
     await postReviewEmbed(state, message.channel);
-  } // --- RESPOSTA STOP OBSOLETA ---
+  }
 
   if (command === "resposta" || command === "respostas") {
     return message.channel

@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,34 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- TABELA VIP ---
 model Vip {
-  userId          String   @id @unique // ID do Discord
-  tier            String   @default("default")
-  since           DateTime @default(now())
+  userId          String      @id @unique
+  tier            String      @default("default")
+  since           DateTime    @default(now())
   expiresAt       DateTime?
-  customRoleId    String?  // ID da Tag criada
-  customChannelId String?  // ID do Canal criado
-  
-  friends         VipFriend[] // Relação com amigos
+  customRoleId    String?
+  customChannelId String?
+  friends         VipFriend[]
 }
 
-// Tabela para os amigos convidados pelos VIPs
 model VipFriend {
-  friendId String @id @unique // ID do amigo
-  ownerId  String // ID do dono do VIP que convidou
-  
+  friendId String @id @unique
+  ownerId  String
   owner    Vip    @relation(fields: [ownerId], references: [userId], onDelete: Cascade)
 }
 
-// --- TABELA PRIMEIRA DAMA (PD) ---
 model Pd {
   memberId String   @id @unique
-  staffId  String   // Quem indicou
+  staffId  String
   since    DateTime @default(now())
 }
 
-// --- TABELAS DE PROTEÇÃO ---
 model Panela {
   userId String @id @unique
 }
@@ -45,43 +37,118 @@ model Blacklist {
   userId String @id @unique
 }
 
-// --- TABELA BOOSTER (NOVO) ---
 model Booster {
-  userId          String   @id @unique
-  since           DateTime @default(now())
-  customRoleId    String?  // ID da Tag do Booster
-  customChannelId String?  // ID do Canal do Booster
-  
+  userId          String          @id @unique
+  since           DateTime        @default(now())
+  customRoleId    String?
+  customChannelId String?
   friends         BoosterFriend[]
 }
 
 model BoosterFriend {
-  friendId String @id @unique
+  friendId String  @id @unique
   ownerId  String
-  
   owner    Booster @relation(fields: [ownerId], references: [userId], onDelete: Cascade)
 }
 
-// --- SISTEMA DE ECONOMIA ---
 model Economy {
   id        Int       @id @default(autoincrement())
   userId    String
-  guildId   String    // Economia separada por servidor (boa prática)
+  guildId   String
   wallet    Int       @default(0)
   bank      Int       @default(0)
-  lastDaily DateTime? // Data do último daily
-  lastWork  DateTime? // Data do último trabalho
+  lastDaily DateTime?
+  lastWork  DateTime?
 
   @@unique([userId, guildId])
 }
 
-// --- SISTEMA DE ITENS ---
 model Inventory {
-  id        Int     @id @default(autoincrement())
-  userId    String
-  guildId   String
-  itemId    String  // Ex: "gun", "shield", "lock"
-  quantity  Int     @default(1)
+  id       Int    @id @default(autoincrement())
+  userId   String
+  guildId  String
+  itemId   String
+  quantity Int    @default(1)
 
   @@unique([userId, guildId, itemId])
+}
+
+// ==========================================
+// 🏢 CONFIGURAÇÃO DO SERVIDOR (SAAS)
+// ==========================================
+model GuildConfiguration {
+  id        String   @id @default(uuid())
+  guildId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- 🎨 IDENTIDADE & APARÊNCIA ---
+  prefix         String  @default("k!")      // Prefixo (ex: k!, ., !)
+  embedColor     String  @default("#2f3136") // Cor dos Embeds
+  bannerImage    String?                     // Link Imagem Grande (Bottom)
+  thumbnailImage String?                     // Link Imagem Pequena (Top Right)
+  
+  // --- 💰 ECONOMIA ---
+  currencyName   String  @default("Coins")   // Nome da moeda
+  currencyEmoji  String  @default("💵")      // Emoji da moeda
+
+  // --- 👋 BOAS-VINDAS & SAÍDA ---
+  welcomeChannelId String?
+  welcomeMessage   String? // Texto: "Olá {user}, bem-vindo!"
+  welcomeImage     String? // Link da imagem
+  leaveChannelId   String?
+
+  // --- 🛡️ PERMISSÕES & STAFF ---
+  staffTrustedRoles String? // Lista de IDs (separados por vírgula)
+  roleManagerIds    String? 
+  roleAssignerIds   String?
+
+  // --- ✅ SISTEMA DE VERIFICAÇÃO ---
+  verificationChannelId    String?
+  approvalChannelId        String?
+  approvedLogChannelId     String?
+  verifiedRoleId           String?
+  approverRoleId           String?
+  secondaryApproverRoleId  String?
+
+  // --- 💎 SISTEMA VIP ---
+  vipRoleId       String?
+  vipCategoryId   String?
+  vipAnchorRoleId String?
+
+  // --- 👮 MODERAÇÃO & PROTEÇÃO ---
+  jailRoleId     String?
+  pdLogChannelId String?
+  panelaLogId    String?
+  blacklistLogId String?
+
+  // --- 📝 LOGS DE AUDITORIA ---
+  logChannelId          String? // Log Geral
+  voiceLogId            String?
+  messageDeleteLogId    String?
+  messageEditLogId      String?
+  modBanLogId           String?
+  modMuteLogId          String?
+  memberJoinLeaveLogId  String?
+  channelUpdateLogId    String?
+  
+  // --- 🎫 TICKETS ---
+  ticketLogId           String?
+  ticketParentChannelId String?
+
+  // --- 🎮 JOGOS & BOOSTERS ---
+  freefireRoleId   String?
+  valorantRoleId   String?
+  csRoleId         String?
+  robloxRoleId     String?
+  gtaRoleId        String?
+  minecraftRoleId  String?
+  boosterCategoryId    String?
+  boosterAnchorRoleId  String?
+
+  // --- 🎭 REACTION ROLES (LEGADO) ---
+  roleReactionChannelId String?
+  roleReactionMessageId String?
+
+  @@map("guild_configurations")
 }
