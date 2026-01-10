@@ -21,14 +21,14 @@ module.exports = async (message) => {
 
   // --- 2. ANTI-EVERYONE / HERE (Para todos, inclusive Admins) ---
   // Verifica a menção real ou o texto escrito na raça
-  if (
-    message.mentions.everyone ||
-    contentLower.includes("@everyone") ||
-    contentLower.includes("@here")
-  ) {
-    violationType = "MASS_MENTION";
-    warningMessage = `🐂 **${message.author}, não marca seu boi!** Menções globais foram restritas pelos bigode do serv`;
-  }
+  // if (
+  // message.mentions.everyone ||
+  // contentLower.includes("@everyone") ||
+  //contentLower.includes("@here")
+  // ) {
+  // violationType = "MASS_MENTION";
+  // warningMessage = `🐂 **${message.author}, não marca seu boi!** Menções globais foram restritas pelos bigode do serv`;
+  // }
 
   // --- 3. ANTI-INVITE ---
   const inviteRegex = /(discord\.(gg|io|me|li)|discord(app)?\.com\/invite)/i;
