@@ -91,7 +91,12 @@ module.exports = async (message) => {
   const userId = message.author.id;
 
   // A. Resposta a Menção (Bot foi marcado?)
-  if (await handleMention(message)) return;
+  if (
+    message.mentions.has(message.client.user.id) &&
+    !message.mentions.everyone
+  ) {
+    if (await handleMention(message)) return;
+  }
 
   // B. Resposta Rápida do Jogo (Sem Prefixo)
   // Se a mensagem NÃO começa com o prefixo, verificamos se é resposta do jogo Stop
