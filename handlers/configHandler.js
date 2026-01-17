@@ -1,132 +1,248 @@
-// handlers/configHandler.js
+// src/handlers/configHandler.js
 const {
   EmbedBuilder,
   ActionRowBuilder,
   ChannelSelectMenuBuilder,
   RoleSelectMenuBuilder,
   ChannelType,
-  StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require("discord.js");
-const { guildConfig } = require("../services/guildConfig"); // Certifique-se que o caminho está certo
+const { guildConfig } = require("../services/guildConfig");
 
 module.exports = async (interaction) => {
-  const { customId, values, guild } = interaction;
+  const { customId, values, guild, fields } = interaction;
 
-  // Se a interação foi apenas selecionar uma categoria no Menu Principal (/config)
-  if (customId === "config_main_menu") {
-    const selected = values[0];
-
-    if (selected === "cat_verify") {
-      await showVerificationPanel(interaction);
-    }
-    // Se tivéssemos outras categorias, o else if viria aqui
+  // 1. Abertura do Painel via Menu Principal (/config)
+  if (customId === "config_main_menu" && values[0] === "cat_verify") {
+    await showVerificationPanel(interaction);
     return;
   }
 
-  // --- LÓGICA DE SALVAMENTO (SAVE) ---
-  // Aqui processamos quando o usuário escolhe um canal/cargo nos menus abaixo
+  // 2. Botão "Personalizar Aparência" (Modal)
+  if (customId === "btn_verify_customize") {
+    const modal = new ModalBuilder()
+      .setCustomId("modal_verify_save")
+      .setTitle("🎨 Personalizar Painel");
 
-  // 1. Canal de Entrada (Onde tem o botão verificar)
+    const titleInput = new TextInputBuilder()
+      .setCustomId("input_verify_title")
+      .setLabel("Título do Embed")
+      .setPlaceholder("Ex: Verificação Obrigatória")
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false);
+
+    const descInput = new TextInputBuilder()
+      .setCustomId("input_verify_desc")
+      .setLabel("Descrição")
+      .setPlaceholder("Ex: Clique para liberar acesso...")
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(false);
+
+    const imageInput = new TextInputBuilder()
+      .setCustomId("input_verify_image")
+      .setLabel("URL do Banner (Imgur/Gif)")
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false);
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(titleInput),
+      new ActionRowBuilder().addComponents(descInput),
+      new ActionRowBuilder().addComponents(imageInput)
+    );
+
+    await interaction.showModal(modal);
+    return;
+  }
+
+  // 3. Salvando Aparência (Modal Submit)
+  if (customId === "modal_verify_save") {
+    const title = fields.getTextInputValue("input_verify_title");
+    const description = fields.getTextInputValue("input_verify_desc");
+    const image = fields.getTextInputValue("input_verify_image");
+
+    const updateData = {};
+    if (title) updateData.verificationTitle = title;
+    if (description) updateData.verificationDescription = description;
+    if (image) updateData.verificationImage = image;
+
+    if (Object.keys(updateData).length > 0) {
+      await guildConfig.update(guild.id, updateData);
+      return interaction.reply({
+        content: "✅ Aparência salva! Use 'Enviar Painel' para ver.",
+        ephemeral: true,
+      });
+    }
+    return interaction.reply({ content: "⚠️ Nada alterado.", ephemeral: true });
+  }
+
+  // 4. Botão "Enviar Painel"
+  if (customId === "btn_verify_send") {
+    await sendVerificationPanelToChannel(interaction);
+    return;
+  }
+
+  // --- SALVAMENTO DAS CONFIGURAÇÕES (Menus) ---
+
+  // Canal de Entrada
   if (customId === "save_verify_channel") {
-    await guildConfig.update(guild.id, "verificationChannelId", values[0]);
+    await guildConfig.update(guild.id, { verificationChannelId: values[0] });
     return interaction.reply({
-      content: `✅ **Canal de Verificação** definido para: <#${values[0]}>`,
+      content: `✅ **Canal de Entrada** definido para: <#${values[0]}>`,
       ephemeral: true,
     });
   }
 
-  // 2. Canal de Aprovação (Onde caem as fichas para staff)
+  // Canal de Aprovação
   if (customId === "save_approval_channel") {
-    await guildConfig.update(guild.id, "approvalChannelId", values[0]);
+    await guildConfig.update(guild.id, { approvalChannelId: values[0] });
     return interaction.reply({
       content: `✅ **Canal de Aprovação** definido para: <#${values[0]}>`,
       ephemeral: true,
     });
   }
 
-  // 3. Canal de Logs (Aprovados/Reprovados)
-  if (customId === "save_log_channel") {
-    await guildConfig.update(guild.id, "approvedLogChannelId", values[0]);
+  // Cargo que o usuário ganha (Membro)
+  if (customId === "save_verified_role") {
+    await guildConfig.update(guild.id, { verifiedRoleId: values[0] });
     return interaction.reply({
-      content: `✅ **Canal de Logs** definido para: <#${values[0]}>`,
+      content: `✅ **Cargo de Membro** definido para: <@&${values[0]}>`,
       ephemeral: true,
     });
   }
 
-  // 4. Cargo de Verificado (Quem passou)
-  if (customId === "save_verified_role") {
-    await guildConfig.update(guild.id, "verifiedRoleId", values[0]);
+  // Cargo que pode aprovar (Staff) - NOVO!
+  if (customId === "save_approver_role") {
+    await guildConfig.update(guild.id, { approverRoleId: values[0] });
     return interaction.reply({
-      content: `✅ **Cargo de Verificado** definido para: <@&${values[0]}>`,
+      content: `✅ **Cargo de Staff/Aprovador** definido para: <@&${values[0]}>`,
       ephemeral: true,
     });
   }
 };
 
 /**
- * Função auxiliar que desenha o Painel de Verificação
+ * Monta o Painel de Configuração (Respeitando o limite de 5 linhas do Discord)
  */
 async function showVerificationPanel(interaction) {
-  // Busca configs atuais para mostrar o estado atual (opcional, mas profissional)
-  // const currentConfig = await guildConfig.get(interaction.guild.id);
-
   const embed = new EmbedBuilder()
     .setTitle("✅ Configuração: Sistema de Verificação")
-    .setDescription(
-      "Configure abaixo os canais e cargos automáticos do sistema de entrada."
-    )
+    .setDescription("Configure quem entra, quem aprova e onde tudo acontece.")
     .setColor("#00FF00")
     .addFields(
       {
-        name: "1️⃣ Canal de Entrada",
-        value: "Onde fica o botão para iniciar verificação.",
+        name: "1️⃣ Onde acontece?",
+        value: "Defina o Canal de Entrada e o Canal da Staff.",
       },
       {
-        name: "2️⃣ Canal de Aprovação",
-        value: "Canal privado onde a Staff recebe as fichas.",
+        name: "2️⃣ Quem é quem?",
+        value: "Defina o Cargo que o membro ganha e o Cargo que aprova.",
       },
       {
-        name: "3️⃣ Canal de Logs",
-        value: "Onde avisa quem foi aprovado/reprovado.",
-      },
-      { name: "4️⃣ Cargo Verificado", value: "Cargo entregue após aprovação." }
+        name: "3️⃣ Finalizar",
+        value: "Personalize o visual e envie a mensagem.",
+      }
     );
 
-  // Menu 1: Selecionar Canal de Entrada
+  // Linha 1: Canal de Entrada (Onde o membro clica)
   const row1 = new ActionRowBuilder().addComponents(
     new ChannelSelectMenuBuilder()
       .setCustomId("save_verify_channel")
-      .setPlaceholder("1️⃣ Selecione o Canal de Entrada")
+      .setPlaceholder("1️⃣ Canal PÚBLICO (Entrada)")
       .setChannelTypes(ChannelType.GuildText)
   );
 
-  // Menu 2: Selecionar Canal de Aprovação
+  // Linha 2: Canal de Aprovação (Onde a staff recebe)
   const row2 = new ActionRowBuilder().addComponents(
     new ChannelSelectMenuBuilder()
       .setCustomId("save_approval_channel")
-      .setPlaceholder("2️⃣ Selecione o Canal de Aprovação (Staff)")
+      .setPlaceholder("2️⃣ Canal PRIVADO (Staff)")
       .setChannelTypes(ChannelType.GuildText)
   );
 
-  // Menu 3: Selecionar Canal de Logs
+  // Linha 3: Cargo de Verificado (Prêmio)
   const row3 = new ActionRowBuilder().addComponents(
-    new ChannelSelectMenuBuilder()
-      .setCustomId("save_log_channel")
-      .setPlaceholder("3️⃣ Selecione o Canal de Logs")
-      .setChannelTypes(ChannelType.GuildText)
-  );
-
-  // Menu 4: Selecionar Cargo Verificado
-  const row4 = new ActionRowBuilder().addComponents(
     new RoleSelectMenuBuilder()
       .setCustomId("save_verified_role")
-      .setPlaceholder("4️⃣ Selecione o Cargo de Verificado")
+      .setPlaceholder("3️⃣ Cargo Entregue (Membro)")
+  );
+
+  // Linha 4: Cargo de Aprovador (Quem tem poder) - ADICIONADO
+  const row4 = new ActionRowBuilder().addComponents(
+    new RoleSelectMenuBuilder()
+      .setCustomId("save_approver_role")
+      .setPlaceholder("4️⃣ Cargo que Aprova (Staff)")
+  );
+
+  // Linha 5: Botões de Ação
+  const row5 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("btn_verify_customize")
+      .setLabel("🎨 Aparência")
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder()
+      .setCustomId("btn_verify_send")
+      .setLabel("Enviar Painel")
+      .setStyle(ButtonStyle.Success)
+      .setEmoji("🚀")
   );
 
   await interaction.update({
     embeds: [embed],
-    components: [row1, row2, row3, row4],
+    components: [row1, row2, row3, row4, row5], // Usamos exatamente 5 linhas
+  });
+}
+
+/**
+ * Envia a mensagem final para o canal
+ */
+async function sendVerificationPanelToChannel(interaction) {
+  const config = await guildConfig.get(interaction.guild.id);
+
+  if (!config.verificationChannelId) {
+    return interaction.reply({
+      content: "❌ Configure o **Canal de Entrada** primeiro!",
+      ephemeral: true,
+    });
+  }
+
+  const channel = interaction.guild.channels.cache.get(
+    config.verificationChannelId
+  );
+  if (!channel) {
+    return interaction.reply({
+      content: "❌ Canal não encontrado.",
+      ephemeral: true,
+    });
+  }
+
+  const verifyEmbed = new EmbedBuilder()
+    .setTitle(config.verificationTitle || "🔐 Verificação")
+    .setDescription(
+      config.verificationDescription || "Clique no botão abaixo para iniciar."
+    )
+    .setColor(config.embedColor || "#2f3136")
+    .setImage(config.verificationImage || null)
+    .setFooter({
+      text: interaction.guild.name,
+      iconURL: interaction.guild.iconURL(),
+    });
+
+  const verifyButton = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("start_verification")
+      .setLabel("Iniciar Verificação")
+      .setStyle(ButtonStyle.Success)
+      .setEmoji("✅")
+  );
+
+  await channel.send({ embeds: [verifyEmbed], components: [verifyButton] });
+  return interaction.reply({
+    content: `✅ Enviado para ${channel}!`,
+    ephemeral: true,
   });
 }
