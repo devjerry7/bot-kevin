@@ -1,18 +1,15 @@
 // src/services/guildConfig.js
 const { PrismaClient } = require("@prisma/client");
 
-// Instancia o cliente do banco
 const prisma = new PrismaClient();
 
 const guildConfig = {
-  // Busca a configuração. Se não existir, cria uma nova.
+  // Busca a config. Se não existir, cria uma nova padrão.
   async get(guildId) {
-    // Tenta achar no banco
     let config = await prisma.guildConfiguration.findUnique({
       where: { guildId },
     });
 
-    // Se não existir, cria o registro inicial
     if (!config) {
       config = await prisma.guildConfiguration.create({
         data: { guildId },
@@ -22,15 +19,23 @@ const guildConfig = {
     return config;
   },
 
-  // Atualiza qualquer campo da tabela
-  async update(guildId, data) {
+  // --- A MÁGICA ESTÁ AQUI ---
+  // Agora aceita tanto: update(id, { canal: 123 }) QUANTO update(id, "canal", "123")
+  async update(guildId, keyOrData, value = null) {
+    let dataToUpdate = keyOrData;
+
+    // Se o segundo argumento for uma string (ex: "verificationChannelId")
+    // Nós transformamos ele num objeto automaticamente
+    if (typeof keyOrData === "string") {
+      dataToUpdate = { [keyOrData]: value };
+    }
+
     return await prisma.guildConfiguration.update({
       where: { guildId },
-      data: data,
+      data: dataToUpdate,
     });
   },
 
-  // Ajuda a ler listas (caso precisemos no futuro)
   async getList(guildId, key) {
     const config = await this.get(guildId);
     const value = config[key];
