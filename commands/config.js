@@ -10,9 +10,10 @@ const {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("config")
-    .setDescription("⚙️ Painel de Configuração Geral (SaaS)."),
+    .setDescription("⚙️ Painel de Configuração - Verificação."),
 
   async execute(interaction) {
+    // 1. Verificação de Segurança (Apenas Admin)
     if (
       !interaction.member.permissions.has(
         PermissionsBitField.Flags.Administrator
@@ -24,81 +25,27 @@ module.exports = {
       });
     }
 
-    // Defer para evitar erro 10062
+    // 2. Defer (Evita o erro "A interação falhou" se demorar)
     await interaction.deferReply({ ephemeral: true });
 
+    // 3. O Embed Principal
     const embed = new EmbedBuilder()
-      .setTitle("⚙️ Painel de Controle - Bot Kevin")
-      .setDescription("Configure cada aspecto do bot neste servidor.")
+      .setTitle("⚙️ Configuração do Sistema")
+      .setDescription("Selecione abaixo o módulo que deseja configurar.")
       .setColor("#2f3136")
       .setThumbnail(interaction.client.user.displayAvatarURL())
-      .setFooter({ text: "Sistema SaaS Profissional v2.0" });
+      .setFooter({ text: "Painel de Controle v2.0" });
 
+    // 4. O Menu (Limpo, apenas com Verificação)
     const selectMenu = new StringSelectMenuBuilder()
-      .setCustomId("config_main_menu")
-      .setPlaceholder("📂 Selecione uma categoria...")
-      .addOptions(
-        {
-          label: "Aparência & Identidade",
-          description: "Prefixo, Cores, Banners.",
-          value: "cat_appearance",
-          emoji: "🎨",
-        },
-        {
-          label: "Economia",
-          description: "Nome da moeda, Emoji.",
-          value: "cat_economy",
-          emoji: "💰",
-        },
-        {
-          label: "Boas-Vindas",
-          description: "Canais, Mensagens e Imagens.",
-          value: "cat_welcome",
-          emoji: "👋",
-        },
-        {
-          label: "Logs de Auditoria",
-          description: "Canais de log geral.",
-          value: "cat_logs",
-          emoji: "📝",
-        },
-        {
-          label: "Sistema VIP",
-          description: "Cargos e Categorias VIP.",
-          value: "cat_vip",
-          emoji: "💎",
-        },
-        {
-          label: "Staff & Permissões",
-          description: "Hierarquia de Staff.",
-          value: "cat_staff",
-          emoji: "🛡️",
-        },
-        {
-          label: "Verificação",
-          description: "Fluxo de entrada.",
-          value: "cat_verify",
-          emoji: "✅",
-        },
-        {
-          label: "Proteção",
-          description: "Logs de segurança.",
-          value: "cat_protection",
-          emoji: "👮",
-        },
-        {
-          label: "Tickets",
-          description: "Logs HTML e Categorias.",
-          value: "cat_ticket",
-          emoji: "🎫",
-        },
-        {
-          label: "Jogos & Boosters",
-          description: "Auto-Roles de Jogos.",
-          value: "cat_games",
-          emoji: "🎮",
-        }
-      );
+      .setCustomId("config_main_menu") // Importante: Vamos procurar esse ID no interactionCreate
+      .setPlaceholder("📂 Selecione uma opção...")
+      .addOptions({
+        label: "Sistema de Verificação",
+        description: "Canais de entrada, aprovação, logs e cargos.",
+        value: "cat_verify", // Esse é o valor que o backend vai receber
+        emoji: "✅",
+      });
 
     const row = new ActionRowBuilder().addComponents(selectMenu);
 
