@@ -83,23 +83,23 @@ model GuildConfiguration {
   updatedAt DateTime @updatedAt
 
   // --- 🎨 IDENTIDADE & APARÊNCIA ---
-  prefix         String  @default("k!")      // Prefixo (ex: k!, ., !)
-  embedColor     String  @default("#2f3136") // Cor dos Embeds
-  bannerImage    String?                     // Link Imagem Grande (Bottom)
-  thumbnailImage String?                     // Link Imagem Pequena (Top Right)
+  prefix         String  @default("k!")
+  embedColor     String  @default("#2f3136")
+  bannerImage    String?
+  thumbnailImage String?
   
   // --- 💰 ECONOMIA ---
-  currencyName   String  @default("Coins")   // Nome da moeda
-  currencyEmoji  String  @default("💵")      // Emoji da moeda
+  currencyName  String  @default("Coins")
+  currencyEmoji String  @default("💵")
 
   // --- 👋 BOAS-VINDAS & SAÍDA ---
   welcomeChannelId String?
-  welcomeMessage   String? // Texto: "Olá {user}, bem-vindo!"
-  welcomeImage     String? // Link da imagem
+  welcomeMessage   String?
+  welcomeImage     String?
   leaveChannelId   String?
 
   // --- 🛡️ PERMISSÕES & STAFF ---
-  staffTrustedRoles String? // Lista de IDs (separados por vírgula)
+  staffTrustedRoles String?
   roleManagerIds    String? 
   roleAssignerIds   String?
 
@@ -110,6 +110,11 @@ model GuildConfiguration {
   verifiedRoleId           String?
   approverRoleId           String?
   secondaryApproverRoleId  String?
+
+  // 👇 --- ADICIONE ESTAS 3 LINHAS AQUI --- 👇
+  verificationTitle        String?  @default("🔐 Verificação Necessária")
+  verificationDescription  String?  @default("Clique no botão abaixo para iniciar seu processo de verificação.")
+  verificationImage        String?
 
   // --- 💎 SISTEMA VIP ---
   vipRoleId       String?
@@ -123,26 +128,26 @@ model GuildConfiguration {
   blacklistLogId String?
 
   // --- 📝 LOGS DE AUDITORIA ---
-  logChannelId          String? // Log Geral
-  voiceLogId            String?
-  messageDeleteLogId    String?
-  messageEditLogId      String?
-  modBanLogId           String?
-  modMuteLogId          String?
-  memberJoinLeaveLogId  String?
-  channelUpdateLogId    String?
+  logChannelId         String?
+  voiceLogId           String?
+  messageDeleteLogId   String?
+  messageEditLogId     String?
+  modBanLogId          String?
+  modMuteLogId         String?
+  memberJoinLeaveLogId String?
+  channelUpdateLogId   String?
   
   // --- 🎫 TICKETS ---
   ticketLogId           String?
   ticketParentChannelId String?
 
   // --- 🎮 JOGOS & BOOSTERS ---
-  freefireRoleId   String?
-  valorantRoleId   String?
-  csRoleId         String?
-  robloxRoleId     String?
-  gtaRoleId        String?
-  minecraftRoleId  String?
+  freefireRoleId    String?
+  valorantRoleId    String?
+  csRoleId          String?
+  robloxRoleId      String?
+  gtaRoleId         String?
+  minecraftRoleId   String?
   boosterCategoryId    String?
   boosterAnchorRoleId  String?
 
