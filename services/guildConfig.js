@@ -19,20 +19,27 @@ const guildConfig = {
     return config;
   },
 
-  // --- A MÁGICA ESTÁ AQUI ---
-  // Agora aceita tanto: update(id, { canal: 123 }) QUANTO update(id, "canal", "123")
+  // --- CORREÇÃO AQUI ---
+  // Usamos UPSERT para garantir que salva mesmo se for a primeira vez
   async update(guildId, keyOrData, value = null) {
     let dataToUpdate = keyOrData;
 
-    // Se o segundo argumento for uma string (ex: "verificationChannelId")
-    // Nós transformamos ele num objeto automaticamente
+    // Transforma (chave, valor) em objeto { chave: valor }
     if (typeof keyOrData === "string") {
       dataToUpdate = { [keyOrData]: value };
     }
 
-    return await prisma.guildConfiguration.update({
+    console.log(`[DEBUG] Salvando Config na Guilda ${guildId}:`, dataToUpdate);
+
+    return await prisma.guildConfiguration.upsert({
       where: { guildId },
-      data: dataToUpdate,
+      // Se já existe, atualiza isso:
+      update: dataToUpdate,
+      // Se NÃO existe, cria com o ID + os dados novos:
+      create: {
+        guildId,
+        ...dataToUpdate,
+      },
     });
   },
 
