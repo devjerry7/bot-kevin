@@ -88,7 +88,7 @@ module.exports = async (interaction) => {
   // --- SALVAMENTO DAS CONFIGURAÇÕES (Menus) ---
 
   // Canal de Entrada
-  if (customId === "save_verify_channel") {
+  if (customId === "save_verify_chnnel") {
     await guildConfig.update(guild.id, { verificationChannelId: values[0] });
     return interaction.reply({
       content: `✅ **Canal de Entrada** definido para: <#${values[0]}>`,
@@ -118,7 +118,7 @@ module.exports = async (interaction) => {
   if (customId === "save_approver_role") {
     await guildConfig.update(guild.id, { approverRoleId: values[0] });
     return interaction.reply({
-      content: `✅ **Cargo de Staff/Aprovador** definido para: <@&${values[0]}>`,
+      content: `✅ **Cargo de Dono/Aprovador** definido para: <@&${values[0]}>`,
       ephemeral: true,
     });
   }
@@ -135,7 +135,7 @@ async function showVerificationPanel(interaction) {
     .addFields(
       {
         name: "1️⃣ Onde acontece?",
-        value: "Defina o Canal de Entrada e o Canal da Staff.",
+        value: "Defina o Canal de Entrada e o Canal dos donos.",
       },
       {
         name: "2️⃣ Quem é quem?",
@@ -159,7 +159,7 @@ async function showVerificationPanel(interaction) {
   const row2 = new ActionRowBuilder().addComponents(
     new ChannelSelectMenuBuilder()
       .setCustomId("save_approval_channel")
-      .setPlaceholder("2️⃣ Canal PRIVADO (Staff)")
+      .setPlaceholder("2️⃣ Canal PRIVADO (donos)")
       .setChannelTypes(ChannelType.GuildText)
   );
 
@@ -174,7 +174,7 @@ async function showVerificationPanel(interaction) {
   const row4 = new ActionRowBuilder().addComponents(
     new RoleSelectMenuBuilder()
       .setCustomId("save_approver_role")
-      .setPlaceholder("4️⃣ Cargo que Aprova (Staff)")
+      .setPlaceholder("4️⃣ Cargo que Aprova (donoSSSSSSS)")
   );
 
   // Linha 5: Botões de Ação
