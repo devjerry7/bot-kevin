@@ -71,7 +71,7 @@ if (fs.existsSync(commandsPath)) {
       if ("data" in command && "execute" in command) {
         client.commands.set(command.data.name, command);
         console.log(
-          `[CMD] Comando /${command.data.name} carregado com sucesso.`
+          `[CMD] Comando /${command.data.name} carregado com sucesso.`,
         );
       }
     } catch (error) {
@@ -140,8 +140,8 @@ async function postVerificationPanel(client) {
       (m) =>
         m.author.id === client.user.id &&
         m.components.some((row) =>
-          row.components.some((btn) => btn.customId === VERIFY_BUTTON_ID)
-        )
+          row.components.some((btn) => btn.customId === VERIFY_BUTTON_ID),
+        ),
     );
 
     if (panelExists) {
@@ -152,7 +152,7 @@ async function postVerificationPanel(client) {
     const embed = new EmbedBuilder()
       .setTitle("<:certo_froid:1443643346722754692> KEVIN - VERIFICAÇÃO")
       .setDescription(
-        "SÓ MLK BOM, OS MENO MAIS QUENTE!!\n **FORA PANELEIROS**\n\nClique no botão abaixo para iniciar seu processo de acesso."
+        "**inf**\n **Gostaria de entrar e tomar uma xicara de chá?**\n\nClique no botão abaixo para iniciar seu processo de acesso.",
       )
       .setColor(0x007fff)
       .setThumbnail(THUMBNAIL_URL)
@@ -163,7 +163,7 @@ async function postVerificationPanel(client) {
         .setCustomId(VERIFY_BUTTON_ID)
         .setLabel("Verificar")
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:mov_ok:1439456247794634845>")
+        .setEmoji("<:mov_ok:1439456247794634845>"),
     );
 
     await channel.send({ embeds: [embed], components: [row] });
@@ -175,10 +175,10 @@ async function postVerificationPanel(client) {
 
 // Tratamento de Erros Críticos
 process.on("uncaughtException", (err) =>
-  console.error(`[CRÍTICO] Uncaught Exception:`, err)
+  console.error(`[CRÍTICO] Uncaught Exception:`, err),
 );
 process.on("unhandledRejection", (reason) =>
-  console.error(`[CRÍTICO] Unhandled Rejection:`, reason)
+  console.error(`[CRÍTICO] Unhandled Rejection:`, reason),
 );
 
 // --- 8. EVENTO READY (Inicialização) ---

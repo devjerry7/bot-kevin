@@ -49,6 +49,7 @@ const { handleEconomy } = require("../commands/economy");
 const { handleGambling } = require("../commands/gambling");
 const { handleCrime } = require("../commands/crime");
 const { handleTicketPanel } = require("../commands/ticketPanel");
+const { handleMassRemove } = require("../commands/massRemove");
 
 // Helper Visual
 const createFeedbackEmbed = (title, description, color = 0xff0000) => {
@@ -116,7 +117,7 @@ module.exports = async (message) => {
 
         if (cleanedAnswers.length === categoriesCount) {
           const hasInvalidLetter = cleanedAnswers.some(
-            (ans) => !ans.startsWith(currentLetter)
+            (ans) => !ans.startsWith(currentLetter),
           );
           if (hasInvalidLetter) {
             return message.channel
@@ -125,7 +126,7 @@ module.exports = async (message) => {
                   createFeedbackEmbed(
                     "❌ Resposta Inválida",
                     `Todas as respostas devem começar com a letra **${currentLetter}**!`,
-                    0x00bfff
+                    0x00bfff,
                   ),
                 ],
               })
@@ -228,6 +229,9 @@ module.exports = async (message) => {
   if (command === "repeat") return handleRepeat(message, args);
   if (["membros", "listmembers", "list"].includes(command))
     return handleListMembers(message, args);
+  if (["limparcargo", "tirarcargo", "massremove"].includes(command)) {
+    return handleMassRemove(message, args);
+  }
 
   // --- PAINEL DE JOGOS (AUTO-ROLE) ---
   if (["roles", "cargos", "jogos"].includes(command)) {
@@ -275,7 +279,7 @@ module.exports = async (message) => {
         embeds: [
           createFeedbackEmbed(
             "🛑 Jogo Ativo",
-            `Já existe um jogo ativo (Letra **${state.currentLetter}**).`
+            `Já existe um jogo ativo (Letra **${state.currentLetter}**).`,
           ),
         ],
       });
@@ -303,7 +307,7 @@ module.exports = async (message) => {
         embeds: [
           createFeedbackEmbed(
             "Obsoleto",
-            `Envie suas respostas direto no chat.`
+            `Envie suas respostas direto no chat.`,
           ),
         ],
       })

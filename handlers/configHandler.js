@@ -236,7 +236,7 @@ async function sendVerificationPanelToChannel(interaction) {
     new ButtonBuilder()
       .setCustomId("start_verification")
       .setLabel("Iniciar Verificação")
-      .setStyle(ButtonStyle.Success)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji("✅")
   );
 
