@@ -9,7 +9,7 @@ const {
   EmbedBuilder,
 } = require("discord.js");
 
-// Importa gerenciador de dados e IDs dos botões
+// Importa gerenciador de dados e IDs dos botões (O manager será refatorado para JSON depois)
 const {
   getBoosterData,
   updateBoosterData,
@@ -22,7 +22,7 @@ const MDL_TAG = "boost_mdl_tag";
 const MDL_CHANNEL = "boost_mdl_ch";
 const MDL_ADD = "boost_mdl_add";
 
-// CONFIG VISUAL (Nitro Pink para diferenciar, mas mantendo o estilo dark)
+// CONFIG VISUAL
 const HEADER_IMAGE =
   "https://cdn.discordapp.com/attachments/885926443220107315/1443770029354127451/banner-vip-booster.png?ex=692a471e&is=6928f59e&hm=2dc7967ad2cde87a2a4bc015e97d7abbc75362ab40f798fb7949c6d32fdf7dda";
 const COLOR_NITRO = 0xf47fff;
@@ -56,15 +56,15 @@ module.exports = async (interaction) => {
             .setCustomId("t_name")
             .setLabel("Nome")
             .setStyle(TextInputStyle.Short)
-            .setRequired(true)
+            .setRequired(true),
         ),
         new ActionRowBuilder().addComponents(
           new TextInputBuilder()
             .setCustomId("t_color")
             .setLabel("Cor Hex")
             .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-        )
+            .setRequired(false),
+        ),
       );
       await interaction.showModal(modal);
     } else if (interaction.customId === BTN_CHANNEL) {
@@ -77,8 +77,8 @@ module.exports = async (interaction) => {
             .setCustomId("c_name")
             .setLabel("Nome (digite 'deletar' p/ apagar)")
             .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-        )
+            .setRequired(true),
+        ),
       );
       await interaction.showModal(modal);
     } else if (interaction.customId === BTN_ADD) {
@@ -91,8 +91,8 @@ module.exports = async (interaction) => {
             .setCustomId("f_id")
             .setLabel("ID do Amigo")
             .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-        )
+            .setRequired(true),
+        ),
       );
       await interaction.showModal(modal);
     }
@@ -110,7 +110,7 @@ module.exports = async (interaction) => {
     if (!interaction.member.premiumSince)
       return reply(
         interaction,
-        "<:Nao:1443642030637977743> Você precisa estar impulsionando o servidor."
+        "<:nao:1527696601869713469> Você precisa estar impulsionando o servidor.",
       );
 
     const data = await getBoosterData(interaction.user.id);
@@ -134,10 +134,10 @@ module.exports = async (interaction) => {
           await role.edit({ name, color });
           reply(
             interaction,
-            `<:certo_froid:1443643346722754692> Tag editada para **${name}**!`
+            `<:certo:1527697543981695176> Tag editada para **${name}**!`,
           );
         } else {
-          // Pega a âncora de Boosters do .env
+          // Pega a âncora de Boosters do .env com segurança
           const anchorId = process.env.BOOSTER_ANCHOR_ROLE_ID;
           const anchorRole = anchorId
             ? interaction.guild.roles.cache.get(anchorId)
@@ -169,13 +169,13 @@ module.exports = async (interaction) => {
           }
           reply(
             interaction,
-            `<:certo_froid:1443643346722754692> Tag Booster **${name}** criada!`
+            `<:certo:1527697543981695176> Tag Booster **${name}** criada!`,
           );
         }
       } catch (e) {
         reply(
           interaction,
-          "<:Nao:1443642030637977743> Erro ao configurar tag. Verifique a hierarquia."
+          "<:nao:1527696601869713469> Erro ao configurar tag. Verifique a hierarquia dos meus cargos.",
         );
       }
     }
@@ -183,7 +183,7 @@ module.exports = async (interaction) => {
     // B. CANAL
     else if (interaction.customId === MDL_CHANNEL) {
       const name = interaction.fields.getTextInputValue("c_name");
-      const catId = process.env.BOOSTER_CATEGORY_ID; // Categoria específica dos Boosters
+      const catId = process.env.BOOSTER_CATEGORY_ID; // Lendo do .env
 
       if (name.toLowerCase() === "deletar") {
         if (data.customChannelId) {
@@ -196,7 +196,7 @@ module.exports = async (interaction) => {
           });
           return reply(
             interaction,
-            "<:vmc_lixeiraK:1443653159779041362> Canal deletado."
+            "<:vmc_lixeiraK:1443653159779041362> Canal deletado.",
           );
         }
         return reply(interaction, "Você não tem canal.");
@@ -211,15 +211,12 @@ module.exports = async (interaction) => {
 
         if (channel) {
           await channel.setName(name);
-          reply(
-            interaction,
-            `<:certo_froid:1443643346722754692> Canal renomeado.`
-          );
+          reply(interaction, `<:certo:1527697543981695176> Canal renomeado.`);
         } else {
           if (!catId)
             return reply(
               interaction,
-              "<:am_avisoK:1443645307358544124> Categoria Booster não configurada no .env."
+              "<:am_avisoK:1443645307358544124> Categoria Booster não configurada no `.env` (BOOSTER_CATEGORY_ID).",
             );
 
           const overwrites = [
@@ -256,11 +253,14 @@ module.exports = async (interaction) => {
           });
           reply(
             interaction,
-            `<:certo_froid:1443643346722754692> Canal Booster criado!`
+            `<:certo:1527697543981695176> Canal Booster criado!`,
           );
         }
       } catch (e) {
-        reply(interaction, "<:Nao:1443642030637977743> Erro ao criar canal.");
+        reply(
+          interaction,
+          "<:nao:1527696601869713469> Erro ao criar canal. Verifique minhas permissões.",
+        );
       }
     }
 
@@ -270,12 +270,12 @@ module.exports = async (interaction) => {
       if (!data.customRoleId)
         return reply(
           interaction,
-          "<:Nao:1443642030637977743> Crie sua tag primeiro."
+          "<:nao:1527696601869713469> Crie sua tag primeiro.",
         );
 
       const res = await addBoosterFriend(interaction.user.id, friendId);
       if (!res.success)
-        return reply(interaction, `<:Nao:1443642030637977743> ${res.msg}`);
+        return reply(interaction, `<:nao:1527696601869713469> ${res.msg}`);
 
       const friend = await interaction.guild.members
         .fetch(friendId)
@@ -287,12 +287,12 @@ module.exports = async (interaction) => {
         if (role) await friend.roles.add(role);
         reply(
           interaction,
-          `<:certo_froid:1443643346722754692> **${friend.user.tag}** adicionado à sua Tag Booster!`
+          `<:certo:1527697543981695176> **${friend.user.tag}** adicionado à sua Tag Booster!`,
         );
       } else {
         reply(
           interaction,
-          "<:Nao:1443642030637977743> Usuário não encontrado."
+          "<:nao:1527696601869713469> Usuário não encontrado no servidor.",
         );
       }
     }
