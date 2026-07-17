@@ -1,10 +1,8 @@
 // handlers/antiSpamHandler.js
 const { PermissionsBitField } = require("discord.js");
 
-// Configuração
+// Configuração em memória
 const spamMap = new Map();
-const SPAM_LIMIT = 5; // Max mensagens
-const SPAM_TIME = 5000; // Em 5 segundos (5000ms)
 
 /**
  * Verifica se a mensagem é spam.
@@ -18,6 +16,11 @@ module.exports = async (message) => {
   ) {
     return false;
   }
+
+  // 2. Puxa as configurações do .env ou usa valores padrão
+  const SPAM_LIMIT = parseInt(process.env.ANTI_SPAM_LIMIT) || 5; // Max mensagens
+  const SPAM_TIME = parseInt(process.env.ANTI_SPAM_TIME_MS) || 5000; // Em milissegundos
+  const TIMEOUT_MINUTES = parseInt(process.env.ANTI_SPAM_TIMEOUT_MIN) || 10; // Tempo do castigo
 
   const userId = message.author.id;
 
@@ -41,24 +44,22 @@ module.exports = async (message) => {
       const member = message.member;
       if (member && member.moderatable) {
         try {
-          // Timeout de 10 minutos
+          // Aplica o timeout configurado
           await member.timeout(
-            10 * 60 * 1000,
-            "Anti-Spam: Enviou muitas mensagens rápido demais."
+            TIMEOUT_MINUTES * 60 * 1000,
+            "Anti-Spam: Enviou muitas mensagens rápido demais.",
           );
 
           await message.channel.send(
-            `🤐 **${message.author.tag}** entrou em timeout por SPAM.`
+            `🤐 **${message.author.tag}** entrou em timeout de ${TIMEOUT_MINUTES} minutos por SPAM.`,
           );
-
-          // Opcional: Limpar as mensagens de spam
-          // await message.channel.bulkDelete(SPAM_LIMIT).catch(() => {});
         } catch (e) {
           console.error("Erro ao aplicar timeout de spam:", e);
         }
       }
 
-      spamMap.delete(userId); // Reseta o usuário para não tentar punir novamente no próximo ms
+      // Reseta o usuário para não tentar punir novamente no próximo ms
+      spamMap.delete(userId);
       return true; // É spam, pare o processamento!
     }
   } else {
