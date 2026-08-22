@@ -1,174 +1,216 @@
-// commands/gambling.js
+// commands/economy.js
+const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 const {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} = require("discord.js");
-const { getAccount, removeMoney, addMoney } = require("../economyManager");
+  getAccount,
+  addMoney,
+  removeMoney,
+  pay,
+  claimDaily,
+  work,
+  getLeaderboard,
+} = require("../services/economyManager");
 
-const HEADER_IMAGE =
-  "https://cdn.discordapp.com/attachments/885926443220107315/1443687792637907075/Gemini_Generated_Image_ppy99dppy99dppy9.png?ex=6929fa88&is=6928a908&hm=70e19897c6ea43c36f11265164a26ce5b70e4cb2699b82c26863edfb791a577d&";
-const COLOR_CASINO = 0xf1c40f; // Dourado
+const HEADER_IMAGE = "LINK_DO_SEU_BANNER_NOVO_AQUI";
+const COLOR_DIAMOND = 0x00e5ff;
 const CURRENCY = "Kevins";
 
-// Cache para o jogo Mines (Armazena o estado do jogo)
-const minesCache = new Map();
+const formatTime = (ms) => {
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  return `${hours}h ${minutes}m`;
+};
+
+const createEcoEmbed = (title, desc, color = COLOR_DIAMOND) => {
+  return new EmbedBuilder()
+    .setTitle(title)
+    .setDescription(desc)
+    .setColor(color)
+    .setImage(HEADER_IMAGE)
+    .setTimestamp();
+};
 
 module.exports = {
-  minesCache,
-
-  handleGambling: async (message, command, args) => {
+  handleEconomy: async (message, command, args) => {
     const userId = message.author.id;
-    const guildId = message.guild.id;
 
-    // --- 🎰 SLOTS (Caça-Níquel) ---
-    if (command === "slot" || command === "slots") {
-      const bet = parseInt(args[0]);
-      if (!bet || bet <= 0)
-        return message.channel.send(
-          `<:Nao:1443642030637977743> Uso: \`k!slot <valor>\``
-        );
+    // --- k!atm / k!saldo ---
+    if (["atm", "saldo", "carteira"].includes(command)) {
+      const target = message.mentions.users.first() || message.author;
+      const acc = await getAccount(target.id);
 
-      const acc = await getAccount(userId, guildId);
-      if (acc.wallet < bet)
-        return message.channel.send(
-          "<:notasemoji:1446229027416309841> Você não tem dinheiro suficiente na carteira."
-        );
-
-      // Deduz a aposta
-      await removeMoney(userId, guildId, bet);
-
-      // Lógica do Slot
-      const fruits = [
-        "<:emojiacerola:1446235024490889317>",
-        "<:emojimangaba:1446235482131271913>",
-        "<:uvaemoji:1446236337350115440>",
-        "<:arogh_white_glock:1439459921484714004>",
-        "<:vd_diamanteK:1443648289068285972>",
-        "<:white_setecr:1446236775663014086>",
-      ];
-      const reel1 = fruits[Math.floor(Math.random() * fruits.length)];
-      const reel2 = fruits[Math.floor(Math.random() * fruits.length)];
-      const reel3 = fruits[Math.floor(Math.random() * fruits.length)];
-
-      let multiplier = 0;
-      let resultText = "Você perdeu!";
-      let color = 0xff0000;
-
-      // Regras de Vitória
-      if (reel1 === reel2 && reel2 === reel3) {
-        multiplier = 5; // Jackpot (3 iguais)
-        resultText = "JACKPOT! (5x)";
-        color = 0x00ff00;
-        if (reel1 === "<:vd_diamanteK:1443648289068285972>") multiplier = 10; // Super Jackpot
-        if (reel1 === "<:white_setecr:1446236775663014086>") multiplier = 20; // Mega Jackpot
-      } else if (reel1 === reel2 || reel2 === reel3 || reel1 === reel3) {
-        multiplier = 1.5; // 2 iguais
-        resultText = "Belo par! (1.5x)";
-        color = 0xf1c40f;
-      }
-
-      const prize = Math.floor(bet * multiplier);
-      if (prize > 0) await addMoney(userId, guildId, prize);
-
-      const embed = new EmbedBuilder()
-        .setTitle("<:emoji777:1446238437869879319> Cassino do Kevin")
-        .setDescription(
-          `**Aposta:** ${bet} ${CURRENCY}\n\n> | ${reel1} | ${reel2} | ${reel3} |\n\n**${resultText}**\nGanho: **${prize}** ${CURRENCY}`
+      const embed = createEcoEmbed("💳 Conta Bancária", `Titular: ${target}`)
+        .addFields(
+          {
+            name: "💵 Carteira",
+            value: `**${acc.wallet}** ${CURRENCY}`,
+            inline: true,
+          },
+          {
+            name: "🏦 Banco",
+            value: `**${acc.bank || 0}** ${CURRENCY}`,
+            inline: true,
+          },
+          {
+            name: "💰 Patrimônio Total",
+            value: `**${acc.wallet + (acc.bank || 0)}** ${CURRENCY}`,
+            inline: false,
+          },
         )
-        .setColor(color)
-        .setImage(HEADER_IMAGE)
-        .setFooter({ text: `Saldo atual: ${acc.wallet - bet + prize}` });
+        .setThumbnail(target.displayAvatarURL());
 
       return message.channel.send({ embeds: [embed] });
     }
 
-    // --- 💣 MINES (Campo Minado 4x4) ---
-    if (command === "mines") {
-      const bet = parseInt(args[0]);
-      const bombs = parseInt(args[1]) || 3; // Padrão 3 bombas
+    // --- k!daily ---
+    if (command === "daily") {
+      const res = await claimDaily(userId);
+      if (res.success) {
+        return message.channel.send({
+          embeds: [
+            createEcoEmbed(
+              "📅 Recompensa Diária",
+              `Você recebeu **${res.amount} ${CURRENCY}**! Volte amanhã para resgatar mais.`,
+              0x00ff00,
+            ),
+          ],
+        });
+      } else {
+        return message.channel.send({
+          embeds: [
+            createEcoEmbed(
+              "⏳ Calma lá!",
+              `Você já resgatou sua recompensa diária. Volte em **${formatTime(res.remaining)}**.`,
+              0xe74c3c,
+            ),
+          ],
+        });
+      }
+    }
 
-      if (!bet || bet <= 0)
-        return message.channel.send(
-          `<:Nao:1443642030637977743> Uso: \`k!mines <valor> [bombas 1-15]\``
+    // --- k!work ---
+    if (["work", "trabalhar"].includes(command)) {
+      const res = await work(userId);
+      if (res.success) {
+        const jobs = [
+          "Desenvolvedor",
+          "Designer Gráfico",
+          "Moderador do Discord",
+          "Streamer",
+          "Criador de Conteúdo",
+          "Investidor",
+        ];
+        const job = jobs[Math.floor(Math.random() * jobs.length)];
+        return message.channel.send({
+          embeds: [
+            createEcoEmbed(
+              "💼 Expediente Concluído",
+              `Você trabalhou como **${job}** e faturou **${res.amount} ${CURRENCY}**!`,
+              0x00ff00,
+            ),
+          ],
+        });
+      } else {
+        return message.channel.send({
+          embeds: [
+            createEcoEmbed(
+              "⏳ Descanso Necessário",
+              `Você está cansado. Volte ao trabalho em **${formatTime(res.remaining)}**.`,
+              0xe74c3c,
+            ),
+          ],
+        });
+      }
+    }
+
+    // --- k!pay @user <valor> ---
+    if (["pay", "pagar"].includes(command)) {
+      const target = message.mentions.users.first();
+      const amount = parseInt(args[1], 10);
+
+      if (!target || isNaN(amount) || amount <= 0) {
+        return message.reply("Uso correto: `k!pay @usuario <valor>`");
+      }
+      if (target.id === userId) {
+        return message.reply(
+          "Você não pode transferir dinheiro para si mesmo.",
         );
-
-      // Limite ajustado para 15 (4x4 = 16, precisa de pelo menos 1 livre)
-      if (bombs < 1 || bombs > 15)
-        return message.channel.send(
-          "<:Nao:1443642030637977743> O número de bombas deve ser entre 1 e 15."
-        );
-
-      if (minesCache.has(userId))
-        return message.channel.send(
-          "<:Nao:1443642030637977743> Você já tem um jogo em andamento! Termine ele antes."
-        );
-
-      const acc = await getAccount(userId, guildId);
-      if (acc.wallet < bet)
-        return message.channel.send(
-          "<:notasemoji:1446229027416309841> Sem saldo."
-        );
-
-      // Deduz a aposta
-      await removeMoney(userId, guildId, bet);
-
-      // Cria o tabuleiro (0 = diamante, 1 = bomba)
-      // Grid 4x4 = 16 posições
-      let board = Array(16).fill(0);
-      let bombsPlaced = 0;
-      while (bombsPlaced < bombs) {
-        const pos = Math.floor(Math.random() * 16);
-        if (board[pos] === 0) {
-          board[pos] = 1;
-          bombsPlaced++;
-        }
       }
 
-      // Salva estado
-      minesCache.set(userId, {
-        bet,
-        bombsCount: bombs,
-        board,
-        revealed: [],
-        multiplier: 1.0,
-        active: true,
+      const res = await pay(userId, target.id, amount);
+      if (res.success) {
+        return message.channel.send({
+          embeds: [
+            createEcoEmbed(
+              "💸 Transferência Realizada",
+              `Você transferiu **${amount} ${CURRENCY}** com sucesso para ${target}.`,
+              0x00ff00,
+            ),
+          ],
+        });
+      } else {
+        return message.channel.send({
+          embeds: [
+            createEcoEmbed(
+              "❌ Falha na Transferência",
+              res.msg || "Erro ao processar o pagamento.",
+              0xe74c3c,
+            ),
+          ],
+        });
+      }
+    }
+
+    // --- k!rank / k!leaderboard ---
+    if (["rank", "leaderboard", "top"].includes(command)) {
+      const list = await getLeaderboard();
+      const topString =
+        list
+          .map(
+            (acc, i) =>
+              `**${i + 1}.** <@${acc.userId}> — **${acc.wallet}** ${CURRENCY}`,
+          )
+          .join("\n") || "Nenhum membro registrado no ranking ainda.";
+
+      return message.channel.send({
+        embeds: [
+          createEcoEmbed("🏆 Ranking dos Mais Ricos", topString, COLOR_DIAMOND),
+        ],
       });
+    }
 
-      // Gera botões (4 linhas de 4 botões)
-      const rows = [];
-      for (let i = 0; i < 4; i++) {
-        const row = new ActionRowBuilder();
-        for (let j = 0; j < 4; j++) {
-          const index = i * 4 + j;
-          row.addComponents(
-            new ButtonBuilder()
-              .setCustomId(`mines_${index}`)
-              .setLabel("❓")
-              .setStyle(ButtonStyle.Secondary)
-          );
-        }
-        rows.push(row);
+    // --- ADMIN: k!eco add/rem @user <valor> ---
+    if (command === "eco") {
+      if (
+        !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
+      ) {
+        return;
       }
-      // Botão de Cashout (5ª Linha)
-      const cashoutRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("mines_cashout")
-          .setLabel("💰 SAIR E PEGAR O DINHEIRO")
-          .setStyle(ButtonStyle.Success)
-      );
-      rows.push(cashoutRow);
 
-      const embed = new EmbedBuilder()
-        .setTitle("<:black_bombcr:1446238680741314643> Mines")
-        .setDescription(
-          `Aposta: **${bet}**\nBombas: **${bombs}**\nMultiplicador: **1.00x**\nLucro: **0**`
-        )
-        .setColor(COLOR_CASINO)
-        .setImage(HEADER_IMAGE);
+      const action = args[0];
+      const target = message.mentions.users.first();
+      const amount = parseInt(args[2], 10);
 
-      await message.channel.send({ embeds: [embed], components: rows });
+      if (
+        !["add", "rem"].includes(action) ||
+        !target ||
+        isNaN(amount) ||
+        amount <= 0
+      ) {
+        return message.reply("Uso correto: `k!eco add/rem @user <valor>`");
+      }
+
+      if (action === "add") {
+        await addMoney(target.id, amount);
+        return message.channel.send(
+          `✅ Foram adicionados **${amount} ${CURRENCY}** para ${target}.`,
+        );
+      }
+      if (action === "rem") {
+        await removeMoney(target.id, amount);
+        return message.channel.send(
+          `🗑️ Foram removidos **${amount} ${CURRENCY}** de ${target}.`,
+        );
+      }
     }
   },
 };
