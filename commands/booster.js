@@ -5,7 +5,9 @@ const {
   ButtonBuilder,
   ButtonStyle,
 } = require("discord.js");
-const { ensureBooster } = require("../boosterManager");
+
+// Já atualizei o caminho supondo que o boosterManager vai para a pasta services!
+const { ensureBooster } = require("../services/boosterManager");
 
 // IDs dos Botões
 const BTN_TAG = "boost_tag";
@@ -15,76 +17,100 @@ const BTN_ADD = "boost_add";
 // Config Visual
 const HEADER_IMAGE =
   "https://cdn.discordapp.com/attachments/885926443220107315/1443770029354127451/banner-vip-booster.png?ex=692a471e&is=6928f59e&hm=2dc7967ad2cde87a2a4bc015e97d7abbc75362ab40f798fb7949c6d32fdf7dda";
-const COLOR_PINK = 0xf47fff; // Rosa Nitro
+const COLOR_PINK = 0xf47fff; // Mantive o Rosa Nitro porque combina perfeitamente com os Boosters!
 
-module.exports = {
-  BTN_TAG,
-  BTN_CHANNEL,
-  BTN_ADD,
-
-  handleBoosterPanel: async (message) => {
+const handleBoosterPanel = async (message) => {
+  try {
     const member = message.member;
 
-    // Verifica se é Booster (premiumSince é a data do boost, null se não for)
+    // --- 1. Bloqueia quem não é Booster ---
     if (!member.premiumSince) {
-      return message.channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle("<:rainbownitro:1443768547347136625> Área Restrita")
-            .setDescription(
-              "Este painel é exclusivo para **Server Boosters**.\nImpulsione o servidor para desbloquear!"
-            )
-            .setColor(0x2f3136),
-        ],
-      });
+      const blockEmbed = new EmbedBuilder()
+        .setTitle("🚀 Área Restrita")
+        .setDescription(
+          "Este painel é exclusivo para **Server Boosters**.\nImpulsione o servidor para desbloquear seus benefícios!",
+        )
+        .setColor(0x2f3136);
+
+      const msg = await message.channel.send({ embeds: [blockEmbed] });
+      return setTimeout(() => msg.delete().catch(() => {}), 5000);
     }
 
-    // Garante que o booster exista no banco
+    // --- 2. Busca ou cadastra o booster no Banco de Dados ---
     const data = await ensureBooster(member.id);
 
+    if (!data) {
+      const errorMsg = await message.channel.send(
+        "❌ Erro ao buscar seus dados de Booster.",
+      );
+      return setTimeout(() => errorMsg.delete().catch(() => {}), 5000);
+    }
+
+    // --- 3. Monta a Embed ---
     const embed = new EmbedBuilder()
-      .setTitle(`<:rainbownitro:1443768547347136625> Painel Booster VIP`)
+      .setTitle(`🚀 Painel Booster VIP`)
       .setDescription(
-        `Obrigado pelo boost, **${member.user.username}**! Configure seus benefícios.`
+        `Obrigado pelo impulso, **${member.user.username}**! Configure seus benefícios exclusivos abaixo.`,
       )
       .setColor(COLOR_PINK)
       .setImage(HEADER_IMAGE)
       .addFields(
         {
-          name: "<:label:1443650019562622976> Tag",
-          value: data.customRoleId
-            ? `<@&${data.customRoleId}>`
-            : "<:Nao:1443642030637977743>",
+          name: "🏷️ Tag Personalizada",
+          value: data.customRoleId ? `<@&${data.customRoleId}>` : "Nenhuma",
           inline: true,
         },
         {
-          name: "<:voz:1443651112644378818> Canal",
+          name: "🔊 Call Exclusiva",
           value: data.customChannelId
             ? `<#${data.customChannelId}>`
-            : "<:Nao:1443642030637977743>",
+            : "Nenhuma",
           inline: true,
         },
-        { name: "👥 Convidados", value: `${data.friends.length}`, inline: true }
-      );
+        {
+          name: "👥 Convidados",
+          value: `${data.friends?.length || 0}`,
+          inline: true,
+        },
+      )
+      .setFooter({
+        text: "Benefícios Nitro Booster",
+        iconURL: message.guild.iconURL(),
+      })
+      .setTimestamp();
 
+    // --- 4. Monta os Botões ---
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(BTN_TAG)
-        .setLabel("Tag Booster")
-        .setEmoji("<:label:1443650019562622976>")
-        .setStyle(ButtonStyle.Secondary),
+        .setLabel("Criar/Editar Tag")
+        .setEmoji("🏷️")
+        .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(BTN_CHANNEL)
-        .setLabel("Canal Booster")
-        .setEmoji("<:voz:1443651112644378818>")
-        .setStyle(ButtonStyle.Secondary),
+        .setLabel("Criar Call VIP")
+        .setEmoji("🔊")
+        .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(BTN_ADD)
-        .setLabel("Add Amigo")
+        .setLabel("Add Amigo na Call")
         .setEmoji("👥")
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Secondary),
     );
 
     await message.channel.send({ embeds: [embed], components: [row] });
-  },
+  } catch (error) {
+    console.error("[BOOSTER CMD ERROR]:", error);
+    const errorMsg = await message.channel.send(
+      "❌ Ocorreu um erro interno ao abrir o painel booster.",
+    );
+    setTimeout(() => errorMsg.delete().catch(() => {}), 5000);
+  }
+};
+
+module.exports = {
+  BTN_TAG,
+  BTN_CHANNEL,
+  BTN_ADD,
+  handleBoosterPanel,
 };
