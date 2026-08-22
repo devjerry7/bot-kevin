@@ -1,5 +1,6 @@
-// economyManager.js
-const prisma = require("./database");
+// services/economyManager.js
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 // Configurações
 const DAILY_AMOUNT = 500;
@@ -10,38 +11,38 @@ const COOLDOWN_WORK = 1 * 60 * 60 * 1000;
 
 module.exports = {
   // --- CONTA & SALDO ---
-  getAccount: async (userId, guildId) => {
+  getAccount: async (userId) => {
     let account = await prisma.economy.findUnique({
-      where: { userId_guildId: { userId, guildId } },
+      where: { userId: userId },
     });
     if (!account) {
-      account = await prisma.economy.create({ data: { userId, guildId } });
+      account = await prisma.economy.create({ data: { userId } });
     }
     return account;
   },
 
-  addMoney: async (userId, guildId, amount) => {
-    const acc = await module.exports.getAccount(userId, guildId);
+  addMoney: async (userId, amount) => {
+    const acc = await module.exports.getAccount(userId);
     await prisma.economy.update({
-      where: { id: acc.id },
+      where: { userId: acc.userId },
       data: { wallet: acc.wallet + amount },
     });
     return acc.wallet + amount;
   },
 
-  removeMoney: async (userId, guildId, amount) => {
-    const acc = await module.exports.getAccount(userId, guildId);
+  removeMoney: async (userId, amount) => {
+    const acc = await module.exports.getAccount(userId);
     const newBalance = Math.max(0, acc.wallet - amount);
     await prisma.economy.update({
-      where: { id: acc.id },
+      where: { userId: acc.userId },
       data: { wallet: newBalance },
     });
     return newBalance;
   },
 
-  pay: async (senderId, receiverId, guildId, amount) => {
-    const sender = await module.exports.getAccount(senderId, guildId);
-    const receiver = await module.exports.getAccount(receiverId, guildId);
+  pay: async (senderId, receiverId, amount) => {
+    const sender = await module.exports.getAccount(senderId);
+    const receiver = await module.exports.getAccount(receiverId);
 
     if (sender.wallet < amount)
       return { success: false, msg: "Saldo insuficiente." };
@@ -49,11 +50,11 @@ module.exports = {
 
     await prisma.$transaction([
       prisma.economy.update({
-        where: { id: sender.id },
+        where: { userId: sender.userId },
         data: { wallet: sender.wallet - amount },
       }),
       prisma.economy.update({
-        where: { id: receiver.id },
+        where: { userId: receiver.userId },
         data: { wallet: receiver.wallet + amount },
       }),
     ]);
@@ -62,8 +63,8 @@ module.exports = {
   },
 
   // --- ECONOMIA BÁSICA ---
-  claimDaily: async (userId, guildId) => {
-    const acc = await module.exports.getAccount(userId, guildId);
+  claimDaily: async (userId) => {
+    const acc = await module.exports.getAccount(userId);
     const now = Date.now();
     const last = acc.lastDaily ? acc.lastDaily.getTime() : 0;
 
@@ -73,15 +74,15 @@ module.exports = {
     }
 
     await prisma.economy.update({
-      where: { id: acc.id },
+      where: { userId: acc.userId },
       data: { wallet: acc.wallet + DAILY_AMOUNT, lastDaily: new Date() },
     });
 
     return { success: true, amount: DAILY_AMOUNT };
   },
 
-  work: async (userId, guildId) => {
-    const acc = await module.exports.getAccount(userId, guildId);
+  work: async (userId) => {
+    const acc = await module.exports.getAccount(userId);
     const now = Date.now();
     const last = acc.lastWork ? acc.lastWork.getTime() : 0;
 
@@ -94,26 +95,24 @@ module.exports = {
       Math.floor(Math.random() * (WORK_MAX - WORK_MIN + 1)) + WORK_MIN;
 
     await prisma.economy.update({
-      where: { id: acc.id },
+      where: { userId: acc.userId },
       data: { wallet: acc.wallet + earnings, lastWork: new Date() },
     });
 
     return { success: true, amount: earnings };
   },
 
-  getLeaderboard: async (guildId) => {
+  // Busca os top 10 do servidor inteiro (já que é single-server)
+  getLeaderboard: async () => {
     return await prisma.economy.findMany({
-      where: { guildId },
       orderBy: { wallet: "desc" },
       take: 10,
     });
   },
 
-  // --- SISTEMA DE ITENS (CRIME) ---
-
-  // ESTA É A FUNÇÃO QUE ESTAVA FALTANDO OU COM ERRO
-  buyItem: async (userId, guildId, itemPrice, itemId) => {
-    const acc = await module.exports.getAccount(userId, guildId);
+  // --- SISTEMA DE ITENS E INVENTÁRIO ---
+  buyItem: async (userId, itemPrice, itemId) => {
+    const acc = await module.exports.getAccount(userId);
 
     if (acc.wallet < itemPrice)
       return { success: false, msg: "Saldo insuficiente." };
@@ -121,13 +120,13 @@ module.exports = {
     try {
       await prisma.$transaction([
         prisma.economy.update({
-          where: { id: acc.id },
+          where: { userId: acc.userId },
           data: { wallet: acc.wallet - itemPrice },
         }),
         prisma.inventory.upsert({
-          where: { userId_guildId_itemId: { userId, guildId, itemId } },
+          where: { userId_itemId: { userId, itemId } }, // Atualizado para a V2
           update: { quantity: { increment: 1 } },
-          create: { userId, guildId, itemId, quantity: 1 },
+          create: { userId, itemId, quantity: 1 },
         }),
       ]);
       return { success: true };
@@ -137,14 +136,14 @@ module.exports = {
     }
   },
 
-  hasItem: async (userId, guildId, itemId) => {
+  hasItem: async (userId, itemId) => {
     const item = await prisma.inventory.findUnique({
-      where: { userId_guildId_itemId: { userId, guildId, itemId } },
+      where: { userId_itemId: { userId, itemId } }, // Atualizado para a V2
     });
     return item && item.quantity > 0;
   },
 
-  getItems: async (userId, guildId) => {
-    return await prisma.inventory.findMany({ where: { userId, guildId } });
+  getItems: async (userId) => {
+    return await prisma.inventory.findMany({ where: { userId } });
   },
 };

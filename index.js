@@ -18,7 +18,7 @@ const {
 } = require("discord.js");
 
 // Importações dos Gerenciadores
-const { checkExpiredVips } = require("./vipManager");
+const { checkExpiredVips } = require("../services/vipManager");
 
 // Importações dos Eventos Principais
 const handleMessageCreate = require("./events/messageCreate");
@@ -163,7 +163,7 @@ async function postVerificationPanel(client) {
         .setCustomId(VERIFY_BUTTON_ID)
         .setLabel("Verificar")
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:mov_ok:1439456247794634845>"),
+        .setEmoji("<:verify:1527688037704794275>"),
     );
 
     await channel.send({ embeds: [embed], components: [row] });

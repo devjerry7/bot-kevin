@@ -25,11 +25,11 @@ module.exports = async (interaction) => {
   const isModal = interaction.isModalSubmit();
   const isSelect = interaction.isAnySelectMenu();
 
-  // Verificação de Segurança
+  // Verificação de Segurança direto do .env
   const trustedRoles = process.env.STAFF_TRUSTED_ROLES?.split(",") || [];
   const isStaff =
     interaction.member.permissions.has(
-      PermissionsBitField.Flags.Administrator
+      PermissionsBitField.Flags.Administrator,
     ) ||
     interaction.member.roles.cache.some((r) => trustedRoles.includes(r.id));
 
@@ -46,7 +46,7 @@ module.exports = async (interaction) => {
       ].includes(interaction.customId)
     ) {
       return interaction.reply({
-        content: "🔒 Acesso negado.",
+        content: "<:cadeado:1527700096324473012> Acesso negado.",
         ephemeral: true,
       });
     }
@@ -65,7 +65,7 @@ module.exports = async (interaction) => {
             .setCustomId("c_name")
             .setLabel("Nome")
             .setStyle(TextInputStyle.Short)
-            .setRequired(true)
+            .setRequired(true),
         ),
         new ActionRowBuilder().addComponents(
           new TextInputBuilder()
@@ -73,8 +73,8 @@ module.exports = async (interaction) => {
             .setLabel("Tipo")
             .setStyle(TextInputStyle.Short)
             .setPlaceholder("texto, voz ou categoria")
-            .setRequired(true)
-        )
+            .setRequired(true),
+        ),
       );
       return interaction.showModal(modal);
     }
@@ -87,7 +87,7 @@ module.exports = async (interaction) => {
         .setChannelTypes(
           ChannelType.GuildText,
           ChannelType.GuildVoice,
-          ChannelType.GuildCategory
+          ChannelType.GuildCategory,
         );
       const row = new ActionRowBuilder().addComponents(menu);
       return interaction.reply({
@@ -105,7 +105,7 @@ module.exports = async (interaction) => {
         .setChannelTypes(
           ChannelType.GuildText,
           ChannelType.GuildVoice,
-          ChannelType.GuildCategory
+          ChannelType.GuildCategory,
         );
       const row = new ActionRowBuilder().addComponents(menu);
       return interaction.reply({
@@ -165,14 +165,14 @@ module.exports = async (interaction) => {
 
       try {
         await channel.setName(newName);
-        interaction.editReply(`✅ Renomeado para **${newName}**`);
-        const logChannelId = interaction.client.config.CHANNEL_UPDATE_LOG_ID;
+        interaction.editReply(` Renomeado para **${newName}**`);
+        const logChannelId = process.env.CHANNEL_UPDATE_LOG_ID;
         await logEmbed(
           interaction.client,
           logChannelId,
           "Infra Editada",
           `**${newName}** editado por <@${interaction.user.id}>`,
-          0xf1c40f
+          0xf1c40f,
         );
       } catch (e) {
         interaction.editReply(`Erro: ${e.message}`);
@@ -241,13 +241,13 @@ module.exports = async (interaction) => {
           components: [],
         });
 
-        const logChannelId = interaction.client.config.CHANNEL_UPDATE_LOG_ID;
+        const logChannelId = process.env.CHANNEL_UPDATE_LOG_ID;
         await logEmbed(
           interaction.client,
           logChannelId,
           "Infra Criada",
           `**${ch.name}** (${preset.label}) por <@${interaction.user.id}>`,
-          0x00ff00
+          0x00ff00,
         );
       } catch (e) {
         interaction.editReply({
@@ -276,13 +276,13 @@ module.exports = async (interaction) => {
           content: `🗑️ **${name}** deletado.`,
           components: [],
         });
-        const logChannelId = interaction.client.config.CHANNEL_UPDATE_LOG_ID;
+        const logChannelId = process.env.CHANNEL_UPDATE_LOG_ID;
         await logEmbed(
           interaction.client,
           logChannelId,
           "Infra Deletada",
           `**${name}** por <@${interaction.user.id}>`,
-          0xff0000
+          0xff0000,
         );
       } catch (e) {
         interaction.editReply({
@@ -310,8 +310,8 @@ module.exports = async (interaction) => {
             .setLabel("Novo Nome")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setValue(channel.name)
-        )
+            .setValue(channel.name),
+        ),
       );
       return interaction.showModal(modal);
     }
@@ -333,8 +333,8 @@ async function askForPermissions(interaction, type, isUpdate = false) {
         data.type === ChannelType.GuildCategory
           ? "📂"
           : data.type === ChannelType.GuildVoice
-          ? "🔊"
-          : "💬",
+            ? "🔊"
+            : "💬",
     }));
 
   if (options.length === 0) {
@@ -348,7 +348,7 @@ async function askForPermissions(interaction, type, isUpdate = false) {
     new StringSelectMenuBuilder()
       .setCustomId(SEL.TYPE)
       .setPlaceholder("Selecione o Modelo de Permissão")
-      .addOptions(options)
+      .addOptions(options),
   );
 
   const content =

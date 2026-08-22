@@ -1,9 +1,8 @@
-// vipManager.js
-const prisma = require("./database");
+// services/vipManager.js
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 const DEFAULT_DAYS = 30;
-// Nota: GUILD_ID é usado apenas para buscar membros no Discord, não no Banco de Dados agora.
-const GUILD_ID = process.env.GUILD_ID;
 
 module.exports = {
   MAX_FRIENDS: 100,
@@ -13,7 +12,6 @@ module.exports = {
    */
   addVip: async (userId, days = DEFAULT_DAYS) => {
     try {
-      // Verifica se já existe (Busca apenas pelo userId, pois é bot único)
       const existing = await prisma.vip.findUnique({
         where: { userId: userId },
       });
@@ -25,7 +23,6 @@ module.exports = {
       await prisma.vip.create({
         data: {
           userId,
-          // guildId REMOVIDO pois não existe no seu schema atual
           tier: "default",
           since: now,
           expiresAt: expiresAt,
@@ -51,7 +48,7 @@ module.exports = {
       const now = new Date();
       const baseTime = vip.expiresAt > now ? vip.expiresAt : now;
       const newExpiresAt = new Date(
-        baseTime.getTime() + days * 24 * 60 * 60 * 1000
+        baseTime.getTime() + days * 24 * 60 * 60 * 1000,
       );
 
       const updated = await prisma.vip.update({
@@ -67,7 +64,7 @@ module.exports = {
   },
 
   /**
-   * Remove VIP e limpa amigos.
+   * Remove VIP e limpa amigos, cargos e canais.
    */
   removeVip: async (userId) => {
     try {
@@ -95,40 +92,47 @@ module.exports = {
   },
 
   /**
-   * Verifica expirados e limpa.
+   * Verifica VIPs expirados e limpa o servidor (Roda automaticamente no index).
    */
   checkExpiredVips: async (client) => {
     try {
       const now = new Date();
-      // AQUI ESTAVA O ERRO: Removemos o filtro 'guildId'
       const expiredVips = await prisma.vip.findMany({
-        where: {
-          expiresAt: { lt: now }, // Pega todos os vips vencidos do banco
-        },
+        where: { expiresAt: { lt: now } },
       });
 
       if (expiredVips.length === 0) return;
       console.log(
-        `[VIP SYSTEM] Encontrados ${expiredVips.length} VIPs expirados.`
+        `[VIP SYSTEM] Encontrados ${expiredVips.length} VIPs expirados. Iniciando limpeza...`,
       );
 
-      const guild = client.guilds.cache.get(GUILD_ID);
-      const vipRoleId = process.env.VIP_ROLE_ID;
+      // Como é Single-Server, pega o servidor principal
+      const guild = client.guilds.cache.first();
+      if (!guild) return;
+
+      // Busca a config central do banco para pegar o ID do Cargo VIP
+      const config = await prisma.serverConfig.findUnique({
+        where: { id: "main" },
+      });
+      const vipRoleId = config?.vipRoleId;
 
       for (const vip of expiredVips) {
         const result = await module.exports.removeVip(vip.userId);
 
-        if (result.success && guild) {
+        if (result.success) {
           const member = await guild.members
             .fetch(vip.userId)
             .catch(() => null);
-          if (member && vipRoleId)
+
+          if (member && vipRoleId) {
             await member.roles.remove(vipRoleId).catch(() => {});
+          }
 
           if (result.customRoleId) {
             const role = guild.roles.cache.get(result.customRoleId);
             if (role) await role.delete("VIP Expirado").catch(() => {});
           }
+
           if (result.customChannelId) {
             const channel = guild.channels.cache.get(result.customChannelId);
             if (channel) await channel.delete("VIP Expirado").catch(() => {});
@@ -192,12 +196,10 @@ module.exports = {
       });
 
       if (!vip) return { success: false, msg: "Você não é VIP." };
-
       if (vip.friends.some((f) => f.friendId === friendId)) {
         return { success: false, msg: "Este usuário já está na sua lista." };
       }
 
-      // Cria relação (Sem guildId)
       await prisma.vipFriend.create({
         data: {
           friendId,
@@ -216,7 +218,6 @@ module.exports = {
 
   removeFriend: async (vipId, friendId) => {
     try {
-      // Remove a relação (Sem guildId)
       const result = await prisma.vipFriend.deleteMany({
         where: {
           ownerId: vipId,

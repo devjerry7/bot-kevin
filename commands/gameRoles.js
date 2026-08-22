@@ -7,72 +7,91 @@ const {
   PermissionsBitField,
 } = require("discord.js");
 
-// CONFIG VISUAL
-const HEADER_IMAGE =
-  "https://cdn.discordapp.com/attachments/885926443220107315/1443687792637907075/Gemini_Generated_Image_ppy99dppy99dppy9.png?ex=6929fa88&is=6928a908&hm=70e19897c6ea43c36f11265164a26ce5b70e4cb2699b82c26863edfb791a577d&";
-const COLOR_NEUTRAL = 0x2f3136;
-
-module.exports = {
-  sendGameRolesPanel: async (message) => {
-    // Apenas Staff pode postar o painel para evitar spam
-    if (
-      !message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)
-    ) {
-      return message.reply(
-        "<:cadeado:1443642375833518194> Apenas Os Donos podem postar o painel de jogos."
-      );
-    }
-
-    const embed = new EmbedBuilder()
-      .setTitle("<:controle:1443678488870785044> Selecione seus Jogos")
-      .setDescription(
-        "Clique nos botões abaixo para adicionar ou remover as tags de jogo no seu perfil.\n" +
-          "\nIsso liberará canais e notificações específicas para cada game."
-      )
-      .setColor(COLOR_NEUTRAL)
-      .setImage(HEADER_IMAGE)
-      .setFooter({ text: "Sistema auto-role" });
-
-    // Linha 1: FPS / Tiro
-    const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("btn_role_ff")
-        .setLabel("Free Fire")
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:freefire:1443689056197283982>"),
-      new ButtonBuilder()
-        .setCustomId("btn_role_val")
-        .setLabel("Valorant")
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:valorant:1439457595290292344>"),
-      new ButtonBuilder()
-        .setCustomId("btn_role_cs")
-        .setLabel("CS:GO/2")
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:cs2:1443689897998422087>")
+const handleGameRolesPanel = async (message) => {
+  if (
+    !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
+  ) {
+    return message.reply(
+      "❌ Apenas administradores podem postar o painel de jogos.",
     );
+  }
 
-    // Linha 2: Outros
-    const row2 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("btn_role_gta")
-        .setLabel("GTA V")
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:fiveM:1443690654612848690>"),
-      new ButtonBuilder()
-        .setCustomId("btn_role_roblox")
-        .setLabel("Roblox")
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:roblox:1443691205929078876>"),
-      new ButtonBuilder()
-        .setCustomId("btn_role_mine")
-        .setLabel("Minecraft")
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji("<:minecraft:1443692753958600898>")
-    );
+  const COLOR_DIAMOND = 0x00e5ff;
+  const HEADER_IMAGE =
+    "https://media.discordapp.net/attachments/1539757756272091177/1540170399369662484/14_de_ago._de_2026_18_19_38.png?ex=6a88faf6&is=6a87a976&hm=9e613c70cf8982eb821bb1d6d0e9afb08f48de6a1932c2d51f7a8403effa30d8&=&format=webp&quality=lossless&width=1536&height=615";
 
-    await message.channel.send({ embeds: [embed], components: [row1, row2] });
+  const embed = new EmbedBuilder()
+    .setTitle("<:emoji_14:1540175395993690173> SELECIONE SEUS JOGOS")
+    .setDescription(
+      "Clique nos botões abaixo para adicionar ou remover as tags de jogo no seu perfil.\n\n" +
+        "Isso liberará o acesso aos canais específicos de cada game e você poderá ser notificado para jogar com a galera!",
+    )
+    .setColor(COLOR_DIAMOND)
+    .setImage(HEADER_IMAGE)
+    .setFooter({
+      text: "Sistema de Auto-Role",
+      iconURL: message.guild.iconURL(),
+    });
 
-    if (message.deletable) message.delete().catch(() => {});
-  },
+  // Linha 1: FPS / Tiro
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("btn_role_ff")
+      .setLabel("Free Fire")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:jogo_freefire:1537237851127816232>"),
+    new ButtonBuilder()
+      .setCustomId("btn_role_val")
+      .setLabel("Valorant")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:valorant:1537237880089608252>"),
+    new ButtonBuilder()
+      .setCustomId("btn_role_cs")
+      .setLabel("CS:GO/2")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:csemoji:1540150893322829904>"),
+  );
+
+  // Linha 2: Outros Jogos (Todos com emojis padrão)
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("btn_role_gta")
+      .setLabel("GTA V")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:gtaemoji:1540172171257581628>"),
+    new ButtonBuilder()
+      .setCustomId("btn_role_roblox")
+      .setLabel("Roblox")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:jogo_roblox:1537237864847249568>"), // 👈 Trocado para emoji padrão de tijolo/bloco
+    new ButtonBuilder()
+      .setCustomId("btn_role_mine")
+      .setLabel("Minecraft")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:mineicon:1540172781386342450>"),
+  );
+
+  // Linha 3: Novos Jogos Adicionados
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("btn_role_codenames")
+      .setLabel("Codenames")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:b_emoji:1537237908547965001>"),
+    new ButtonBuilder()
+      .setCustomId("btn_role_amongus")
+      .setLabel("Among Us")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("<:amongemoji:1540174838596108298>"),
+  );
+
+  // Envio com as 3 linhas
+  await message.channel.send({
+    embeds: [embed],
+    components: [row1, row2, row3],
+  });
+
+  if (message.deletable) await message.delete().catch(() => {});
 };
+
+module.exports = { handleGameRolesPanel };

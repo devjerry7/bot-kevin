@@ -39,17 +39,20 @@ const { handleBotInfo } = require("../commands/botinfo");
 const { handleListMembers } = require("../commands/listMembers");
 const { handleVoice } = require("../commands/voice");
 
-// --- NOVOS PAINÉIS VISUAIS ---
+// --- NOVOS PAINÉIS VISUAIS E EMBEDS ---
 const { sendRolePanel } = require("../commands/rolePanel"); // k!cargo
 const { handleChannelPanel } = require("../commands/channelPanel"); // k!canal
 const { handleModPanel } = require("../commands/modPanel"); // k!mod
-const { sendGameRolesPanel } = require("../commands/gameRoles"); // k!roles
+const { handleGameRolesPanel } = require("../commands/gameRoles"); // k!roles (ATUALIZADO AQUI)
 const { handleBoosterPanel } = require("../commands/booster"); // k!booster
 const { handleEconomy } = require("../commands/economy");
 const { handleGambling } = require("../commands/gambling");
 const { handleCrime } = require("../commands/crime");
 const { handleTicketPanel } = require("../commands/ticketPanel");
 const { handleMassRemove } = require("../commands/massRemove");
+
+// 👇 NOVO: Importação do comando de postar a embed VIP
+const { handlePostVip } = require("../commands/postarVip"); // Ajuste o caminho se tiver salvo com outro nome
 
 // Helper Visual
 const createFeedbackEmbed = (title, description, color = 0xff0000) => {
@@ -100,14 +103,12 @@ module.exports = async (message) => {
   }
 
   // B. Resposta Rápida do Jogo (Sem Prefixo)
-  // Se a mensagem NÃO começa com o prefixo, verificamos se é resposta do jogo Stop
   if (!message.content.startsWith(PREFIX)) {
     if (state.isActive) {
       const currentLetter = state.currentLetter;
       if (state.players[userId] && state.players[userId].isStopped) return;
 
       const content = message.content.trim().toUpperCase();
-      // Verifica se começa com a letra e tem vírgula (padrão do jogo)
       if (content.startsWith(currentLetter) && content.includes(",")) {
         const rawAnswers = content.split(",");
         const cleanedAnswers = rawAnswers
@@ -146,7 +147,6 @@ module.exports = async (message) => {
         }
       }
     }
-    // Se não for comando e não for jogo, para por aqui
     return;
   }
 
@@ -169,10 +169,12 @@ module.exports = async (message) => {
 
   // --- INFO & AJUDA ---
   if (["help", "ajuda", "comandos"].includes(command))
-    return handleHelp(message); // Nota: handleHelp deve ser atualizado para ler o prefixo também
+    return handleHelp(message);
   if (["sistemas", "botinfo"].includes(command)) return handleBotInfo(message);
 
-  // --- SISTEMA VIP ---
+  // --- SISTEMA VIP & PAINÉIS DE POSTAGEM ---
+  if (command === "postarvip") return handlePostVip(message); // 👇 Chamada do novo comando
+
   if (
     [
       "vip",
@@ -235,7 +237,7 @@ module.exports = async (message) => {
 
   // --- PAINEL DE JOGOS (AUTO-ROLE) ---
   if (["roles", "cargos", "jogos"].includes(command)) {
-    return sendGameRolesPanel(message);
+    return handleGameRolesPanel(message); // (ATUALIZADO AQUI)
   }
 
   // --- SUPORTE ---
