@@ -22,10 +22,9 @@ const SEL = {
   CAT: "sel_ch_cat",
 };
 
-// Configuração Visual
-const HEADER_IMAGE =
-  "https://cdn.discordapp.com/attachments/885926443220107315/1443687792637907075/Gemini_Generated_Image_ppy99dppy99dppy9.png?ex=6929fa88&is=6928a908&hm=70e19897c6ea43c36f11265164a26ce5b70e4cb2699b82c26863edfb791a577d&";
-const COLOR_NEUTRAL = 0x2f3136;
+// ⚠️ ATENÇÃO: COLOQUE O LINK DO SEU BANNER NOVO AQUI ⚠️
+const HEADER_IMAGE = "LINK_DO_SEU_BANNER_NOVO_AQUI";
+const COLOR_DIAMOND = 0x00e5ff;
 
 // --- MODELOS DE PERMISSÃO (PRESETS) ---
 // Exportado para ser usado pelo Handler na hora de criar
@@ -69,7 +68,7 @@ const CHANNEL_PRESETS = {
     ],
   },
   announcement: {
-    label: "<:voz:1443651112644378818> Avisos (Leitura)",
+    label: "📢 Avisos (Leitura)",
     description: "Texto: Apenas leitura.",
     type: ChannelType.GuildText,
     overwrites: (guild) => [
@@ -119,11 +118,10 @@ const CHANNEL_PRESETS = {
   },
 };
 
+// V2: Verificação de segurança direta (Apenas Admins) sem depender do .env
 function canManageChannels(member) {
-  const managers = process.env.STAFF_TRUSTED_ROLES?.split(",") || [];
   return (
     member.permissions.has(PermissionsBitField.Flags.Administrator) ||
-    member.roles.cache.some((r) => managers.includes(r.id)) ||
     member.id === member.guild.ownerId
   );
 }
@@ -135,16 +133,20 @@ module.exports = {
   CHANNEL_PRESETS,
 
   handleChannelPanel: async (message) => {
-    if (!canManageChannels(message.member))
-      return message.reply("🔒 Sem permissão.");
+    if (!canManageChannels(message.member)) {
+      const msg = await message.reply(
+        "🔒 Apenas Administradores podem postar o painel de canais.",
+      );
+      return setTimeout(() => msg.delete().catch(() => {}), 5000);
+    }
 
     const embed = new EmbedBuilder()
-      .setTitle("Infraestrutura de Canais")
+      .setTitle("🏗️ Infraestrutura de Canais")
       .setDescription(
         "Gerencie a estrutura do servidor (Categorias, Texto e Voz) utilizando modelos seguros.\n" +
-          "Você não precisa configurar permissões manualmente."
+          "Você não precisa configurar permissões manualmente, o bot faz isso por você.",
       )
-      .setColor(COLOR_NEUTRAL)
+      .setColor(COLOR_DIAMOND)
       .setImage(HEADER_IMAGE)
       .setThumbnail(message.guild.iconURL());
 
@@ -152,18 +154,18 @@ module.exports = {
       new ButtonBuilder()
         .setCustomId(BTN.CREATE)
         .setLabel("Criar")
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Success)
         .setEmoji("➕"),
       new ButtonBuilder()
         .setCustomId(BTN.EDIT)
         .setLabel("Renomear")
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Primary)
         .setEmoji("✏️"),
       new ButtonBuilder()
         .setCustomId(BTN.DELETE)
         .setLabel("Deletar")
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji("🗑️")
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji("🗑️"),
     );
 
     await message.channel.send({ embeds: [embed], components: [row] });

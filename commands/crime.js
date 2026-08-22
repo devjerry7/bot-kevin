@@ -1,53 +1,52 @@
 // commands/crime.js
 const { EmbedBuilder } = require("discord.js");
-// Importação corrigida com buyItem
+// Caminho atualizado para a pasta services V2!
 const {
   getAccount,
   addMoney,
   removeMoney,
   hasItem,
   buyItem,
-} = require("../economyManager");
+} = require("../services/economyManager");
 
-// CONFIG VISUAL
-const HEADER_IMAGE =
-  "https://cdn.discordapp.com/attachments/885926443220107315/1443687792637907075/Gemini_Generated_Image_ppy99dppy99dppy9.png?ex=6929fa88&is=6928a908&hm=70e19897c6ea43c36f11265164a26ce5b70e4cb2699b82c26863edfb791a577d&";
+// ⚠️ ATENÇÃO: COLOQUE O LINK DO SEU BANNER NOVO AQUI ⚠️
+const HEADER_IMAGE = "LINK_DO_SEU_BANNER_NOVO_AQUI";
 const COLOR_NEUTRAL = 0x2f3136;
 
 // Configuração dos Itens (Preços e IDs)
 const SHOP_ITEMS = {
   gun: {
-    name: "<:arogh_white_glock:1439459921484714004> Oitão",
+    name: "🔫 Oitão", // Emoji padrão
     price: 5000,
-    desc: "+20% chance de roubo",
+    desc: "+20% chance de sucesso",
   },
   vest: {
-    name: "<:coleteemoji:1446249525168701580> Colete",
+    name: "🦺 Colete", // Emoji padrão
     price: 5000,
-    desc: "-20% chance de ser roubado",
+    desc: "-20% chance de falhar",
   },
   lock: {
     name: "🔐 Cadeado",
     price: 2000,
-    desc: "Protege contra roubo 1 vez (quebra)",
+    desc: "Protege o saldo 1 vez (quebra)",
   },
 };
 
 // Configuração de Risco
-const JAIL_TIME_MS = 5 * 60 * 1000; // 5 Minutos de prisão se falhar
+const JAIL_TIME_MS = 5 * 60 * 1000; // 5 Minutos de timeout se falhar
 
 // Helper para Embeds Rápidos
 const createResponseEmbed = (
   title,
   description,
   color = COLOR_NEUTRAL,
-  image = null
+  image = null,
 ) => {
   const embed = new EmbedBuilder()
-    .setTitle(title)
     .setDescription(description)
     .setColor(color)
     .setTimestamp();
+  if (title) embed.setTitle(title);
   if (image) embed.setImage(image);
   return embed;
 };
@@ -57,15 +56,15 @@ module.exports = {
 
   handleCrime: async (message, command, args) => {
     const userId = message.author.id;
-    const guildId = message.guild.id;
+    // O guildId foi removido pois a V2 é single-server!
 
     // --- k!loja (Ver itens) ---
     if (command === "loja") {
       const embed = new EmbedBuilder()
-        .setTitle("<:lojaemoji:1446250117337452544> Loja do Gueto")
+        .setTitle("🛒 Loja do Gueto")
         .setDescription("Compre itens para melhorar seus corres.")
         .setColor(0x00ff00)
-        .setImage(HEADER_IMAGE); // Banner adicionado
+        .setImage(HEADER_IMAGE);
 
       for (const [id, item] of Object.entries(SHOP_ITEMS)) {
         embed.addFields({
@@ -81,7 +80,7 @@ module.exports = {
       const itemId = args[0]?.toLowerCase();
       const itemEntry = Object.entries(SHOP_ITEMS).find(
         ([key, val]) =>
-          key === itemId || val.name.toLowerCase().includes(itemId)
+          key === itemId || val.name.toLowerCase().includes(itemId),
       );
 
       if (!itemEntry) {
@@ -89,8 +88,8 @@ module.exports = {
           embeds: [
             createResponseEmbed(
               null,
-              "<:Nao:1443642030637977743> Item não encontrado. Veja a `k!loja`.",
-              0xff0000
+              "❌ Item não encontrado. Veja a loja.",
+              0xff0000,
             ),
           ],
         });
@@ -98,8 +97,8 @@ module.exports = {
 
       const [key, item] = itemEntry;
 
-      // Chama buyItem do economyManager
-      const res = await buyItem(userId, guildId, item.price, key);
+      // Chama buyItem da V2 (apenas userId)
+      const res = await buyItem(userId, item.price, key);
 
       if (res.success) {
         return message.channel.send({
@@ -107,34 +106,23 @@ module.exports = {
             createResponseEmbed(
               null,
               `✅ Você comprou **${item.name}**!`,
-              0x00ff00
+              0x00ff00,
             ),
           ],
         });
       }
       return message.channel.send({
-        embeds: [
-          createResponseEmbed(
-            null,
-            `<:Nao:1443642030637977743> ${res.msg}`,
-            0xff0000
-          ),
-        ],
+        embeds: [createResponseEmbed(null, `❌ ${res.msg}`, 0xff0000)],
       });
     }
 
-    // --- k!roubar @user (O DIFERENCIAL) ---
+    // --- k!roubar @user ---
     if (command === "roubar" || command === "rob") {
       const target = message.mentions.users.first();
 
       if (!target)
         return message.channel.send({
-          embeds: [
-            createResponseEmbed(
-              null,
-              "<:Nao:1443642030637977743> Mencione a vítima."
-            ),
-          ],
+          embeds: [createResponseEmbed(null, "❌ Mencione a vítima.")],
         });
       if (target.id === userId)
         return message.channel.send({
@@ -145,24 +133,25 @@ module.exports = {
           embeds: [createResponseEmbed(null, "Não pode roubar robôs.")],
         });
 
-      const attackerAcc = await getAccount(userId, guildId);
-      const victimAcc = await getAccount(target.id, guildId);
+      // Puxa as contas na V2 (apenas userId)
+      const attackerAcc = await getAccount(userId);
+      const victimAcc = await getAccount(target.id);
 
       if (victimAcc.wallet < 100) {
         return message.channel.send({
           embeds: [
             createResponseEmbed(
               null,
-              "<:Nao:1443642030637977743> Essa pessoa está DURA, nem vale a pena."
+              "❌ Essa pessoa está DURA, nem vale a pena.",
+              0xff0000,
             ),
           ],
         });
       }
 
-      // Verifica Inventários
-      const hasGun = await hasItem(userId, guildId, "gun");
-      const hasVest = await hasItem(target.id, guildId, "vest");
-      // const hasLock = await hasItem(target.id, guildId, "lock"); // Lógica futura
+      // Verifica Inventários na V2 (apenas userId)
+      const hasGun = await hasItem(userId, "gun");
+      const hasVest = await hasItem(target.id, "vest");
 
       // Cálculo da Chance (Base 40%)
       let chance = 40;
@@ -173,21 +162,19 @@ module.exports = {
 
       // SUCESSO
       if (roll <= chance) {
-        // Rouba entre 10% e 40% da carteira da vítima
         const percent = Math.random() * (0.4 - 0.1) + 0.1;
         const amount = Math.floor(victimAcc.wallet * percent);
 
-        await removeMoney(target.id, guildId, amount);
-        await addMoney(userId, guildId, amount);
+        // V2 (apenas userId)
+        await removeMoney(target.id, amount);
+        await addMoney(userId, amount);
 
         return message.channel.send({
           embeds: [
             new EmbedBuilder()
-              .setTitle(
-                "<:arogh_white_glock:1439459921484714004> Assalto Bem Sucedido!"
-              )
+              .setTitle("🔫 Assalto Bem Sucedido!")
               .setDescription(
-                `**${message.author.username}** enquadrou **${target.username}** e levou **${amount} Kevins**!`
+                `**${message.author.username}** enquadrou **${target.username}** e levou **${amount} Kevins**!`,
               )
               .setColor(0x00ff00)
               .setImage(HEADER_IMAGE)
@@ -196,31 +183,29 @@ module.exports = {
         });
       }
 
-      // FRACASSO (PRISÃO AUTOMÁTICA)
+      // FRACASSO (TIMEOUT AUTOMÁTICO)
       else {
-        // Aplica Timeout no Discord (A Punição Real)
         const member = message.member;
         if (member.moderatable) {
           await member.timeout(
             JAIL_TIME_MS,
-            "Preso em flagrante tentando roubar."
+            "Preso em flagrante tentando roubar.",
           );
         }
 
-        // Multa
         const fine = 500;
-        await removeMoney(userId, guildId, fine);
+        await removeMoney(userId, fine);
 
         return message.channel.send({
           embeds: [
             new EmbedBuilder()
               .setTitle("🚔 POLÍCIA CHEGOU!")
               .setDescription(
-                `**${message.author.username}** tentou roubar, falhou e foi preso!\n\n**Pena:** 5 Minutos de Timeout + Multa de ${fine} Kevins.`
+                `**${message.author.username}** tentou roubar, falhou e foi preso!\n\n**Pena:** 5 Minutos de Timeout + Multa de ${fine} Kevins.`,
               )
               .setColor(0xff0000)
               .setImage(
-                "https://i.pinimg.com/originals/ea/0c/cd/ea0ccd11f06cba1bfe842f1c47e7242d.gif"
+                "https://i.pinimg.com/originals/ea/0c/cd/ea0ccd11f06cba1bfe842f1c47e7242d.gif",
               ) // Gif de sirene
               .setFooter({ text: `Chance: ${chance}% | Dado: ${roll}` }),
           ],
