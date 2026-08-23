@@ -1,71 +1,90 @@
 // commands/listMembers.js
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 
-// Configuração Visual (Padronizada)
-const HEADER_IMAGE =
-  "https://i.pinimg.com/736x/4d/68/8e/4d688edfeedd4bec17b856d2a2ad7241.jpg";
-const NEUTRAL_COLOR = 0x2f3136;
+// ⚠️ ATENÇÃO: COLOQUE O LINK DO SEU BANNER NOVO AQUI ⚠️
+const HEADER_IMAGE = "LINK_DO_SEU_BANNER_NOVO_AQUI";
+const COLOR_DIAMOND = 0x00e5ff;
 
 module.exports = {
   handleListMembers: async (message, args) => {
-    // 1. Segurança: Apenas quem tem permissão de gerenciar cargos ou admins
-    if (
-      !message.member.permissions.has(PermissionsBitField.Flags.ManageRoles) &&
-      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-    ) {
-      return message.reply("🔒 Apenas a Staff pode listar membros de cargos.");
-    }
+    try {
+      // 1. Permissão: Administrador ou Gerenciar Cargos
+      const hasPermission =
+        message.member.permissions.has(PermissionsBitField.Flags.ManageRoles) ||
+        message.member.permissions.has(PermissionsBitField.Flags.Administrator);
 
-    // 2. Identificar o Cargo (ID ou Menção)
-    const roleIdentifier = args[0];
-    if (!roleIdentifier) {
-      return message.reply(
-        "❌ Uso correto: `k!membros @cargo` ou `k!membros <ID>`"
+      if (!hasPermission) {
+        const reply = await message.reply(
+          "🔒 Apenas a equipe com permissão pode listar membros de cargos.",
+        );
+        return setTimeout(() => reply.delete().catch(() => {}), 5000);
+      }
+
+      // 2. Identificar o Cargo (Menção ou ID)
+      const roleIdentifier = args[0];
+      if (!roleIdentifier) {
+        const reply = await message.reply(
+          "❌ Uso correto: `k!membros @cargo` ou `k!membros <ID_DO_CARGO>`",
+        );
+        return setTimeout(() => reply.delete().catch(() => {}), 5000);
+      }
+
+      const roleId = roleIdentifier.replace(/<@&(\d+)>/, "$1");
+      const role = message.guild.roles.cache.get(roleId);
+
+      if (!role) {
+        const reply = await message.reply(
+          "❌ Cargo não encontrado no servidor.",
+        );
+        return setTimeout(() => reply.delete().catch(() => {}), 5000);
+      }
+
+      await message.channel.sendTyping();
+
+      // 3. Garante que o cache de membros está atualizado
+      await message.guild.members.fetch();
+
+      const membersWithRole = role.members.map((m) => `• ${m.user.username}`);
+      const total = membersWithRole.length;
+
+      if (total === 0) {
+        return message.reply(
+          `O cargo **${role.name}** não possui nenhum membro vinculado.`,
+        );
+      }
+
+      // 4. Formatar Lista (Limite de 40 nomes por segurança de tamanho do embed)
+      const MAX_DISPLAY = 40;
+      const displayList = membersWithRole.slice(0, MAX_DISPLAY).join("\n");
+      const remaining = total - MAX_DISPLAY;
+
+      let description = `**Cargo:** ${role}\n**Total:** ${total} membro(s)\n\n${displayList}`;
+
+      if (remaining > 0) {
+        description += `\n\n...e mais **${remaining}** membro(s).`;
+      }
+
+      const embedColor =
+        role.hexColor !== "#000000" ? role.hexColor : COLOR_DIAMOND;
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📋 Lista de Membros • ${role.name}`)
+        .setDescription(description)
+        .setColor(embedColor)
+        .setImage(HEADER_IMAGE)
+        .setFooter({
+          text: `Solicitado por ${message.author.tag}`,
+          iconURL: message.author.displayAvatarURL(),
+        })
+        .setTimestamp();
+
+      await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+      console.error("[LISTMEMBERS ERROR]:", error);
+      const errorMsg = await message.channel.send(
+        "❌ Ocorreu um erro ao carregar a lista de membros.",
       );
+      setTimeout(() => errorMsg.delete().catch(() => {}), 5000);
     }
-
-    // Tenta achar o cargo
-    const roleId = roleIdentifier.replace(/<@&(\d+)>/, "$1");
-    const role = message.guild.roles.cache.get(roleId);
-
-    if (!role) {
-      return message.reply("❌ Cargo não encontrado.");
-    }
-
-    await message.channel.sendTyping();
-
-    // 3. Carregar Membros (Importante: força o fetch para garantir que a lista esteja atualizada)
-    await message.guild.members.fetch();
-
-    // Filtra membros com o cargo
-    const membersWithRole = role.members.map((m) => m.user.tag); // Pega o Discord Tag
-    const total = membersWithRole.length;
-
-    if (total === 0) {
-      return message.reply(
-        `O cargo **${role.name}** não possui nenhum membro.`
-      );
-    }
-
-    // 4. Formatar a Lista (Limita a visualização para não estourar o limite do Embed)
-    const MAX_DISPLAY = 40; // Mostra os primeiros 40 nomes
-    const displayList = membersWithRole.slice(0, MAX_DISPLAY).join("\n");
-    const remaining = total - MAX_DISPLAY;
-
-    let description = `**Cargo:** ${role}\n**Total de Membros:** ${total}\n\n${displayList}`;
-
-    if (remaining > 0) {
-      description += `\n\n...e mais **${remaining}** membros.`;
-    }
-
-    const embed = new EmbedBuilder()
-      .setTitle(`📋 Lista de Membros`)
-      .setDescription(description)
-      .setColor(role.hexColor !== "#000000" ? role.hexColor : NEUTRAL_COLOR) // Usa a cor do cargo ou a padrão
-      .setImage(HEADER_IMAGE)
-      .setFooter({ text: `Solicitado por ${message.author.tag}` })
-      .setTimestamp();
-
-    await message.channel.send({ embeds: [embed] });
   },
 };
