@@ -1,13 +1,30 @@
+// commands/massRemove.js
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 
 const handleMassRemove = async (message, args) => {
   try {
+    // --- Lendo variáveis estéticas e de configuração do .env ---
+    const PREFIX = process.env.PREFIX || "mc!";
+    const COLOR_WARNING = process.env.COLOR_WARNING
+      ? parseInt(process.env.COLOR_WARNING.replace("#", ""), 16)
+      : 0xffa500;
+    const COLOR_SUCCESS = process.env.COLOR_SUCCESS
+      ? parseInt(process.env.COLOR_SUCCESS.replace("#", ""), 16)
+      : 0x00ff00;
+
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
+    const EMOJI_WAIT = process.env.EMOJI_WAIT || "⏳";
+    const EMOJI_LOADING = process.env.EMOJI_LOADING || "🔄";
+    const EMOJI_WARNING = process.env.EMOJI_WARNING || "⚠️";
+    const EMOJI_BROOM = process.env.EMOJI_BROOM || "🧹";
+
     // 1. Verificação de Permissão (Apenas Admins)
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
     ) {
       return message.channel.send(
-        "❌ Você precisa ser Administrador para usar este comando.",
+        `${EMOJI_ERROR} Você precisa ser Administrador para usar este comando.`,
       );
     }
 
@@ -17,21 +34,21 @@ const handleMassRemove = async (message, args) => {
 
     if (!role) {
       return message.channel.send(
-        "❌ Uso correto: `k!limparcargo @cargo` ou `k!limparcargo <ID>`",
+        `${EMOJI_ERROR} Uso correto: \`${PREFIX}limparcargo @cargo\` ou \`${PREFIX}limparcargo <ID>\``,
       );
     }
 
     // 3. Verificação de Hierarquia (O bot precisa estar ACIMA do cargo)
     if (role.position >= message.guild.members.me.roles.highest.position) {
       return message.channel.send(
-        `❌ Erro de Hierarquia: O cargo **${role.name}** está acima do meu cargo mais alto.`,
+        `${EMOJI_ERROR} Erro de Hierarquia: O cargo **${role.name}** está acima do meu cargo mais alto.`,
       );
     }
 
     // 4. Início do Processo
     // Usamos channel.send para evitar o erro de "Unknown Message" se o comando foi deletado
     const statusMsg = await message.channel.send(
-      `🔄 Buscando membros com o cargo **${role.name}**... aguarde.`,
+      `${EMOJI_LOADING} Buscando membros com o cargo **${role.name}**... aguarde.`,
     );
 
     // Força o bot a buscar todos os membros do servidor (cache full)
@@ -41,17 +58,17 @@ const handleMassRemove = async (message, args) => {
 
     if (total === 0) {
       return statusMsg.edit(
-        `⚠️ Ninguém possui o cargo **${role.name}** atualmente.`,
+        `${EMOJI_WARNING} Ninguém possui o cargo **${role.name}** atualmente.`,
       );
     }
 
     // 5. Embed de Progresso
     const progressEmbed = new EmbedBuilder()
-      .setTitle(`🧹 Limpeza Iniciada: ${role.name}`)
+      .setTitle(`${EMOJI_BROOM} Limpeza Iniciada: ${role.name}`)
       .setDescription(
         `Encontrados **${total}** membros.\nRemovendo cargos um por um...`,
       )
-      .setColor("#FFA500")
+      .setColor(COLOR_WARNING)
       .setFooter({
         text: "O processo é lento para evitar bloqueios do Discord.",
       })
@@ -78,7 +95,7 @@ const handleMassRemove = async (message, args) => {
       // Atualiza o embed a cada 5 membros para dar feedback visual
       if (processed % 5 === 0 || processed === total) {
         progressEmbed.setDescription(
-          `⏳ Progresso: **${processed}/${total}** removidos.\nFalhas: **${errors}**`,
+          `${EMOJI_WAIT} Progresso: **${processed}/${total}** removidos.\nFalhas: **${errors}**`,
         );
         await statusMsg.edit({ embeds: [progressEmbed] }).catch(() => {});
       }
@@ -86,12 +103,12 @@ const handleMassRemove = async (message, args) => {
 
     // 7. Finalização
     const finalEmbed = new EmbedBuilder()
-      .setTitle(`✅ Limpeza Concluída: ${role.name}`)
+      .setTitle(`${EMOJI_SUCCESS} Limpeza Concluída: ${role.name}`)
       .addFields(
         { name: "Sucesso", value: `\`${processed}\` membros`, inline: true },
         { name: "Falhas", value: `\`${errors}\` membros`, inline: true },
       )
-      .setColor("#00FF00")
+      .setColor(COLOR_SUCCESS)
       .setTimestamp();
 
     await statusMsg.edit({ embeds: [finalEmbed] }).catch(() => {
@@ -100,8 +117,9 @@ const handleMassRemove = async (message, args) => {
     });
   } catch (error) {
     console.error("Erro crítico no massRemove:", error);
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
     message.channel.send(
-      "❌ Ocorreu um erro interno ao processar a remoção em massa.",
+      `${EMOJI_ERROR} Ocorreu um erro interno ao processar a remoção em massa.`,
     );
   }
 };

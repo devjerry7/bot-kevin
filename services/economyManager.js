@@ -2,12 +2,14 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-// Configurações
-const DAILY_AMOUNT = 500;
-const WORK_MIN = 50;
-const WORK_MAX = 200;
-const COOLDOWN_DAILY = 24 * 60 * 60 * 1000;
-const COOLDOWN_WORK = 1 * 60 * 60 * 1000;
+// --- CONFIGURAÇÕES PUXADAS DO .ENV (Com fallback de segurança) ---
+const DAILY_AMOUNT = Number(process.env.ECONOMY_DAILY_AMOUNT) || 500;
+const WORK_MIN = Number(process.env.ECONOMY_WORK_MIN) || 50;
+const WORK_MAX = Number(process.env.ECONOMY_WORK_MAX) || 200;
+
+// Cooldowns fixos (podem ir pro .env no futuro se você quiser alterar)
+const COOLDOWN_DAILY = 24 * 60 * 60 * 1000; // 24 horas
+const COOLDOWN_WORK = 1 * 60 * 60 * 1000; // 1 hora
 
 module.exports = {
   // --- CONTA & SALDO ---
@@ -102,7 +104,7 @@ module.exports = {
     return { success: true, amount: earnings };
   },
 
-  // Busca os top 10 do servidor inteiro (já que é single-server)
+  // Busca os top 10 do servidor inteiro
   getLeaderboard: async () => {
     return await prisma.economy.findMany({
       orderBy: { wallet: "desc" },
@@ -124,21 +126,21 @@ module.exports = {
           data: { wallet: acc.wallet - itemPrice },
         }),
         prisma.inventory.upsert({
-          where: { userId_itemId: { userId, itemId } }, // Atualizado para a V2
+          where: { userId_itemId: { userId, itemId } },
           update: { quantity: { increment: 1 } },
           create: { userId, itemId, quantity: 1 },
         }),
       ]);
       return { success: true };
     } catch (e) {
-      console.error(e);
+      console.error("[ECONOMY ERROR]", e);
       return { success: false, msg: "Erro no banco de dados." };
     }
   },
 
   hasItem: async (userId, itemId) => {
     const item = await prisma.inventory.findUnique({
-      where: { userId_itemId: { userId, itemId } }, // Atualizado para a V2
+      where: { userId_itemId: { userId, itemId } },
     });
     return item && item.quantity > 0;
   },

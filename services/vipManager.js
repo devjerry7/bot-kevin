@@ -110,11 +110,8 @@ module.exports = {
       const guild = client.guilds.cache.first();
       if (!guild) return;
 
-      // Busca a config central do banco para pegar o ID do Cargo VIP
-      const config = await prisma.serverConfig.findUnique({
-        where: { id: "main" },
-      });
-      const vipRoleId = config?.vipRoleId;
+      // Puxa o ID do cargo VIP direto do .env!
+      const vipRoleId = process.env.VIP_ROLE_ID;
 
       for (const vip of expiredVips) {
         const result = await module.exports.removeVip(vip.userId);

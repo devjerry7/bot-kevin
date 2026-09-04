@@ -6,6 +6,12 @@ const cooldowns = new Set();
 
 const handleAvatar = async (message, args) => {
   try {
+    // Carregando variáveis do .env (com fallback de segurança)
+    const COLOR_BASE = process.env.COLOR_BASE || "#00E5FF";
+    const EMOJI_WAIT = process.env.EMOJI_WAIT || "⏳";
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const EMOJI_DOWNLOAD = process.env.EMOJI_DOWNLOAD || "⬇️";
+
     // --- 1. Identifica o usuário alvo (Menção -> ID -> Autor) ---
     let user = message.mentions.users.first();
 
@@ -26,18 +32,17 @@ const handleAvatar = async (message, args) => {
 
     if (!isAdmin && cooldowns.has(message.author.id)) {
       const reply = await message.reply({
-        content: "⏳ Aguarde um pouco para usar este comando novamente.",
+        content: `${EMOJI_WAIT} Aguarde um pouco para usar este comando novamente.`,
       });
-      setTimeout(() => reply.delete().catch(() => {}), 3000);
-      return;
+      return setTimeout(() => reply.delete().catch(() => {}), 3000);
     }
 
     // --- 3. Definição Visual (Cor e Ícone) ---
-    // Pega a cor do cargo mais alto ou usa o Azul Diamond da V2
+    // Pega a cor do cargo mais alto ou usa a cor base do .env
     const avatarColor =
       member?.displayHexColor && member.displayHexColor !== "#000000"
         ? member.displayHexColor
-        : "#00E5FF";
+        : COLOR_BASE;
 
     const pngLink = user.displayAvatarURL({ extension: "png", size: 4096 });
     // URL principal (Retorna GIF se for animado, PNG/JPG se não for)
@@ -49,7 +54,9 @@ const handleAvatar = async (message, args) => {
         name: `Avatar de ${user.username}`,
         iconURL: displayLink,
       })
-      .setDescription(`[⬇️ Clique aqui para baixar a imagem](${pngLink})`)
+      .setDescription(
+        `[${EMOJI_DOWNLOAD} Clique aqui para baixar a imagem](${pngLink})`,
+      )
       .setImage(displayLink)
       .setColor(avatarColor)
       .setFooter({
@@ -69,8 +76,10 @@ const handleAvatar = async (message, args) => {
     return true;
   } catch (error) {
     console.error("[AVATAR ERROR] Erro ao buscar avatar:", error);
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+
     const errorMsg = await message.channel.send({
-      content: "❌ Ocorreu um erro ao tentar buscar este avatar.",
+      content: `${EMOJI_ERROR} Ocorreu um erro ao tentar buscar este avatar.`,
     });
     setTimeout(() => errorMsg.delete().catch(() => {}), 5000);
   }

@@ -1,6 +1,5 @@
 // commands/crime.js
 const { EmbedBuilder } = require("discord.js");
-// Caminho atualizado para a pasta services V2!
 const {
   getAccount,
   addMoney,
@@ -9,62 +8,74 @@ const {
   buyItem,
 } = require("../services/economyManager");
 
-// ⚠️ ATENÇÃO: COLOQUE O LINK DO SEU BANNER NOVO AQUI ⚠️
-const HEADER_IMAGE = "LINK_DO_SEU_BANNER_NOVO_AQUI";
-const COLOR_NEUTRAL = 0x2f3136;
-
-// Configuração dos Itens (Preços e IDs)
-const SHOP_ITEMS = {
-  gun: {
-    name: "🔫 Oitão", // Emoji padrão
-    price: 5000,
-    desc: "+20% chance de sucesso",
-  },
-  vest: {
-    name: "🦺 Colete", // Emoji padrão
-    price: 5000,
-    desc: "-20% chance de falhar",
-  },
-  lock: {
-    name: "🔐 Cadeado",
-    price: 2000,
-    desc: "Protege o saldo 1 vez (quebra)",
-  },
-};
-
 // Configuração de Risco
 const JAIL_TIME_MS = 5 * 60 * 1000; // 5 Minutos de timeout se falhar
 
-// Helper para Embeds Rápidos
-const createResponseEmbed = (
-  title,
-  description,
-  color = COLOR_NEUTRAL,
-  image = null,
-) => {
-  const embed = new EmbedBuilder()
-    .setDescription(description)
-    .setColor(color)
-    .setTimestamp();
-  if (title) embed.setTitle(title);
-  if (image) embed.setImage(image);
-  return embed;
-};
-
 module.exports = {
-  SHOP_ITEMS,
-
   handleCrime: async (message, command, args) => {
+    // --- Lendo variáveis estéticas do .env ---
+    const BANNER_URL = process.env.BANNER_URL;
+    const GIF_POLICE = process.env.GIF_POLICE;
+    const COLOR_BASE = process.env.COLOR_BASE
+      ? parseInt(process.env.COLOR_BASE, 16)
+      : 0x2f3136;
+    const COLOR_SUCCESS = process.env.COLOR_SUCCESS
+      ? parseInt(process.env.COLOR_SUCCESS, 16)
+      : 0x00ff00;
+    const COLOR_ERROR = process.env.COLOR_ERROR
+      ? parseInt(process.env.COLOR_ERROR, 16)
+      : 0xff0000;
+
+    const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const EMOJI_GUN = process.env.EMOJI_GUN || "🔫";
+    const EMOJI_VEST = process.env.EMOJI_VEST || "🦺";
+    const EMOJI_LOCK = process.env.EMOJI_LOCK || "🔐";
+
+    // Configuração dos Itens (Construída com os emojis do env)
+    const SHOP_ITEMS = {
+      gun: {
+        name: `${EMOJI_GUN} Oitão`,
+        price: 5000,
+        desc: "+20% chance de sucesso",
+      },
+      vest: {
+        name: `${EMOJI_VEST} Colete`,
+        price: 5000,
+        desc: "-20% chance de falhar",
+      },
+      lock: {
+        name: `${EMOJI_LOCK} Cadeado`,
+        price: 2000,
+        desc: "Protege o saldo 1 vez (quebra)",
+      },
+    };
+
+    // Helper para Embeds Rápidos
+    const createResponseEmbed = (
+      title,
+      description,
+      color = COLOR_BASE,
+      image = null,
+    ) => {
+      const embed = new EmbedBuilder()
+        .setDescription(description)
+        .setColor(color)
+        .setTimestamp();
+      if (title) embed.setTitle(title);
+      if (image) embed.setImage(image);
+      return embed;
+    };
+
     const userId = message.author.id;
-    // O guildId foi removido pois a V2 é single-server!
 
     // --- k!loja (Ver itens) ---
     if (command === "loja") {
       const embed = new EmbedBuilder()
         .setTitle("🛒 Loja do Gueto")
         .setDescription("Compre itens para melhorar seus corres.")
-        .setColor(0x00ff00)
-        .setImage(HEADER_IMAGE);
+        .setColor(COLOR_SUCCESS)
+        .setImage(BANNER_URL);
 
       for (const [id, item] of Object.entries(SHOP_ITEMS)) {
         embed.addFields({
@@ -88,16 +99,14 @@ module.exports = {
           embeds: [
             createResponseEmbed(
               null,
-              "❌ Item não encontrado. Veja a loja.",
-              0xff0000,
+              `${EMOJI_ERROR} Item não encontrado. Veja a loja.`,
+              COLOR_ERROR,
             ),
           ],
         });
       }
 
       const [key, item] = itemEntry;
-
-      // Chama buyItem da V2 (apenas userId)
       const res = await buyItem(userId, item.price, key);
 
       if (res.success) {
@@ -105,14 +114,16 @@ module.exports = {
           embeds: [
             createResponseEmbed(
               null,
-              `✅ Você comprou **${item.name}**!`,
-              0x00ff00,
+              `${EMOJI_SUCCESS} Você comprou **${item.name}**!`,
+              COLOR_SUCCESS,
             ),
           ],
         });
       }
       return message.channel.send({
-        embeds: [createResponseEmbed(null, `❌ ${res.msg}`, 0xff0000)],
+        embeds: [
+          createResponseEmbed(null, `${EMOJI_ERROR} ${res.msg}`, COLOR_ERROR),
+        ],
       });
     }
 
@@ -122,18 +133,25 @@ module.exports = {
 
       if (!target)
         return message.channel.send({
-          embeds: [createResponseEmbed(null, "❌ Mencione a vítima.")],
+          embeds: [
+            createResponseEmbed(
+              null,
+              `${EMOJI_ERROR} Mencione a vítima.`,
+              COLOR_ERROR,
+            ),
+          ],
         });
       if (target.id === userId)
         return message.channel.send({
-          embeds: [createResponseEmbed(null, "Vai se roubar?")],
+          embeds: [createResponseEmbed(null, "Vai se roubar?", COLOR_BASE)],
         });
       if (target.bot)
         return message.channel.send({
-          embeds: [createResponseEmbed(null, "Não pode roubar robôs.")],
+          embeds: [
+            createResponseEmbed(null, "Não pode roubar robôs.", COLOR_BASE),
+          ],
         });
 
-      // Puxa as contas na V2 (apenas userId)
       const attackerAcc = await getAccount(userId);
       const victimAcc = await getAccount(target.id);
 
@@ -142,14 +160,13 @@ module.exports = {
           embeds: [
             createResponseEmbed(
               null,
-              "❌ Essa pessoa está DURA, nem vale a pena.",
-              0xff0000,
+              `${EMOJI_ERROR} Essa pessoa está DURA, nem vale a pena.`,
+              COLOR_ERROR,
             ),
           ],
         });
       }
 
-      // Verifica Inventários na V2 (apenas userId)
       const hasGun = await hasItem(userId, "gun");
       const hasVest = await hasItem(target.id, "vest");
 
@@ -165,19 +182,18 @@ module.exports = {
         const percent = Math.random() * (0.4 - 0.1) + 0.1;
         const amount = Math.floor(victimAcc.wallet * percent);
 
-        // V2 (apenas userId)
         await removeMoney(target.id, amount);
         await addMoney(userId, amount);
 
         return message.channel.send({
           embeds: [
             new EmbedBuilder()
-              .setTitle("🔫 Assalto Bem Sucedido!")
+              .setTitle(`${EMOJI_GUN} Assalto Bem Sucedido!`)
               .setDescription(
                 `**${message.author.username}** enquadrou **${target.username}** e levou **${amount} Kevins**!`,
               )
-              .setColor(0x00ff00)
-              .setImage(HEADER_IMAGE)
+              .setColor(COLOR_SUCCESS)
+              .setImage(BANNER_URL)
               .setFooter({ text: `Chance: ${chance}% | Dado: ${roll}` }),
           ],
         });
@@ -203,10 +219,8 @@ module.exports = {
               .setDescription(
                 `**${message.author.username}** tentou roubar, falhou e foi preso!\n\n**Pena:** 5 Minutos de Timeout + Multa de ${fine} Kevins.`,
               )
-              .setColor(0xff0000)
-              .setImage(
-                "https://i.pinimg.com/originals/ea/0c/cd/ea0ccd11f06cba1bfe842f1c47e7242d.gif",
-              ) // Gif de sirene
+              .setColor(COLOR_ERROR)
+              .setImage(GIF_POLICE)
               .setFooter({ text: `Chance: ${chance}% | Dado: ${roll}` }),
           ],
         });

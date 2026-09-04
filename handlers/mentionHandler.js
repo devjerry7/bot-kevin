@@ -1,28 +1,40 @@
 // handlers/mentionHandler.js
 const { EmbedBuilder } = require("discord.js");
-const PREFIX = "k!";
 
 module.exports = async (message) => {
-  // Checa se a mensagem é uma menção direta ao bot
   if (!message.mentions.has(message.client.user.id)) return false;
 
-  // Lógica da Resposta (Embed de Apresentação)
+  // --- Lendo variáveis do .env ---
+  const PREFIX = process.env.PREFIX || "mc!";
+  const EMOJI_BOT = process.env.EMOJI_BOT || "🤖";
+  const DEVELOPER_ID = process.env.OWNER_1_ID || "578307859964624928";
+  const COLOR_BASE = process.env.COLOR_BASE
+    ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
+    : 0x3498db;
+  const BANNER_URL = process.env.BANNER_URL || "";
+
   const mentionEmbed = new EmbedBuilder()
-    .setTitle("<:robo1:1443677412498870434> Olá! Eu sou o MC KEVIN.")
+    .setTitle(`${EMOJI_BOT} Olá! Eu sou o MC KEVIN.`)
     .setDescription(
-      "Fui desenvolvido com o objetivo de gerenciar a **verificação de novos membros** e automatizar algumas tarefas."
+      "Estou operando com estrutura otimizada para gerenciar a segurança, moderação e os sistemas automatizados deste servidor.",
     )
     .addFields(
       {
-        name: "Criador/Desenvolvedor:",
-        value: "jerry",
+        name: "Desenvolvedor:",
+        value: `<@${DEVELOPER_ID}>`,
         inline: true,
       },
-      { name: "Prefixo de Comando:", value: `\`${PREFIX}\``, inline: true }
+      {
+        name: "Prefixo do Bot:",
+        value: `\`${PREFIX}\``,
+        inline: true,
+      },
     )
-    .setColor(0x3498db)
+    .setColor(COLOR_BASE)
     .setTimestamp();
 
+  if (BANNER_URL) mentionEmbed.setImage(BANNER_URL);
+
   await message.reply({ embeds: [mentionEmbed] });
-  return true; // Retorna true para sinalizar que a mensagem foi processada
+  return true;
 };

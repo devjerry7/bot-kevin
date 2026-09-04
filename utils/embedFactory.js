@@ -1,30 +1,29 @@
 // utils/embedFactory.js
 const { EmbedBuilder } = require("discord.js");
-const { getGuildConfig } = require("./guildConfigManager");
 
 /**
  * Cria um EmbedBuilder já configurado com as cores e imagens do servidor.
- * @param {string} guildId - ID do servidor
- * @returns {Promise<EmbedBuilder>} - O Embed pronto para uso
+ * Lê os dados diretamente do .env (Estrutura Single-Server).
+ * @returns {EmbedBuilder} - O Embed pronto para uso
  */
-async function createGuildEmbed(guildId) {
-  // 1. Busca a configuração do banco
-  const config = await getGuildConfig(guildId);
+function createGuildEmbed() {
+  // Puxa as variáveis globais do .env
+  const colorHex = process.env.COLOR_BASE || "#2f3136";
+  const color = parseInt(colorHex.replace("#", ""), 16) || 0x2f3136;
 
-  // 2. Define os padrões caso o cliente não tenha configurado
-  const color = config.embedColor || "#2f3136"; // Cinza escuro padrão
+  const bannerImage = process.env.BANNER_URL || "";
+  const thumbnailImage = process.env.THUMBNAIL_URL || ""; // Se quiser adicionar no .env depois
 
-  // 3. Cria o Embed
   const embed = new EmbedBuilder().setColor(color);
 
-  // 4. Se tiver Banner configurado (Imagem Grande embaixo), adiciona
-  if (config.bannerImage && config.bannerImage.startsWith("http")) {
-    embed.setImage(config.bannerImage);
+  // Se tiver Banner configurado (Imagem Grande embaixo), adiciona
+  if (bannerImage && bannerImage.startsWith("http")) {
+    embed.setImage(bannerImage);
   }
 
-  // 5. Se tiver Thumbnail configurada (Imagem pequena no canto), adiciona
-  if (config.thumbnailImage && config.thumbnailImage.startsWith("http")) {
-    embed.setThumbnail(config.thumbnailImage);
+  // Se tiver Thumbnail configurada (Imagem pequena no canto), adiciona
+  if (thumbnailImage && thumbnailImage.startsWith("http")) {
+    embed.setThumbnail(thumbnailImage);
   }
 
   return embed;

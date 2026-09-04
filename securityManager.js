@@ -1,28 +1,34 @@
 // securityManager.js
-const {
-  EmbedBuilder,
-  AuditLogEvent,
-  PermissionsBitField,
-} = require("discord.js");
+const { AuditLogEvent } = require("discord.js");
+const logEmbed = require("../utils/logEmbed"); // Puxando o seu gerador de logs recém-refatorado!
 
-// --- CONFIGURAÇÃO DE LIMITES (Personalize conforme a rigidez desejada) ---
+// --- CONFIGURAÇÃO DE LIMITES (Puxando do .env com fallback) ---
+const TIME_WINDOW = Number(process.env.ANTI_NUKE_TIME_MS) || 10000;
 const LIMITS = {
-  CHANNEL_DELETE: { max: 2, time: 10000 }, // Max 2 canais deletados em 10s
-  CHANNEL_CREATE: { max: 3, time: 10000 }, // Max 3 canais criados em 10s (Raid de canais)
-  ROLE_DELETE: { max: 2, time: 10000 }, // Max 2 cargos deletados em 10s
-  BAN_ADD: { max: 3, time: 10000 }, // Max 3 bans em 10s (Mass Ban)
-  KICK_MEMBER: { max: 3, time: 10000 }, // Max 3 kicks em 10s
+  CHANNEL_DELETE: {
+    max: Number(process.env.ANTI_NUKE_MAX_CHANNELS) || 2,
+    time: TIME_WINDOW,
+  },
+  CHANNEL_CREATE: {
+    max: Number(process.env.ANTI_NUKE_MAX_CHANNELS) || 3,
+    time: TIME_WINDOW,
+  },
+  ROLE_DELETE: {
+    max: Number(process.env.ANTI_NUKE_MAX_ROLES) || 2,
+    time: TIME_WINDOW,
+  },
+  BAN_ADD: {
+    max: Number(process.env.ANTI_NUKE_MAX_BANS) || 3,
+    time: TIME_WINDOW,
+  },
+  KICK_MEMBER: {
+    max: Number(process.env.ANTI_NUKE_MAX_KICKS) || 3,
+    time: TIME_WINDOW,
+  },
 };
 
 // Armazenamento temporário em memória: Map<UserID, Map<ActionType, {count, timer}>>
 const tracker = new Map();
-
-// Lista de IDs que o Anti-Nuke NUNCA vai punir (Seu ID, ID de outros bots confiáveis)
-const WHITELIST = [
-  "578307859964624928",
-  "697947696702554223",
-  // O ID do próprio bot já é ignorado automaticamente
-];
 
 /**
  * Função principal de verificação de segurança
@@ -35,17 +41,22 @@ async function checkSecurity(client, guild, actionType, auditType) {
 
     if (!entry) return;
 
-    // Verifica se o log é recente (menos de 5s) para evitar falsos positivos de logs antigos
+    // Verifica se o log é recente (menos de 5s) para evitar falsos positivos
     if (Date.now() - entry.createdTimestamp > 5000) return;
 
     const executor = entry.executor;
 
-    // 2. Ignora se for o próprio bot ou alguém da Whitelist
-    if (executor.id === client.user.id || WHITELIST.includes(executor.id))
-      return;
+    // --- 2. VERIFICAÇÃO DE WHITELIST (Lendo do .env) ---
+    const envWhitelist = process.env.WHITELIST_IDS?.split(",") || [];
 
-    // 3. Ignora o Dono do Servidor (O bot não pode puni-lo de qualquer forma)
-    if (executor.id === guild.ownerId) return;
+    if (
+      executor.id === client.user.id || // Próprio bot
+      executor.id === guild.ownerId || // Dono do Servidor (Discord bloqueia punição de qualquer jeito)
+      executor.id === process.env.OWNER_1_ID || // Você (Desenvolvedor)
+      envWhitelist.includes(executor.id) // Outros bots ou administradores de confiança
+    ) {
+      return;
+    }
 
     // 4. Inicializa o rastreador para esse usuário se não existir
     if (!tracker.has(executor.id)) tracker.set(executor.id, new Map());
@@ -78,7 +89,7 @@ async function checkSecurity(client, guild, actionType, auditType) {
 }
 
 /**
- * Punição Automática: Remove cargos e Bane
+ * Punição Automática: Remove cargos, Bane e Envia Log
  */
 async function punishNuker(guild, user, reasonType) {
   try {
@@ -89,7 +100,7 @@ async function punishNuker(guild, user, reasonType) {
     // A. Tenta remover todos os cargos (Quarentena imediata)
     if (member) {
       const roles = member.roles.cache.filter(
-        (r) => r.name !== "@everyone" && r.editable
+        (r) => r.name !== "@everyone" && r.editable,
       );
       await member.roles
         .remove(roles, `Anti-Nuke: Detectado ${reasonType}`)
@@ -101,11 +112,22 @@ async function punishNuker(guild, user, reasonType) {
       reason: `[SISTEMA DE SEGURANÇA] Anti-Nuke Trigger: ${reasonType}`,
     });
 
-    // C. Avisa no canal de logs de segurança (se houver, ou no geral)
-    // Você pode criar um SECURITY_LOG_CHANNEL_ID no .env se quiser
-    // Por enquanto, vamos tentar avisar no canal de logs geral
-    // const logChannel = guild.channels.cache.get(guild.client.config.LOG_CHANNEL_ID);
-    // if (logChannel) { ... envia embed ... }
+    // C. Avisa no canal de logs usando sua utilidade oficial
+    const logId = process.env.SECURITY_LOG_ID;
+    if (logId) {
+      await logEmbed(
+        guild.client,
+        logId,
+        "🚨 ATAQUE DETECTADO E BLOQUEADO",
+        `O sistema Anti-Nuke automático foi acionado e neutralizou uma ameaça.`,
+        0xff0000, // Cor Vermelha
+        [
+          { name: "Infrator", value: `${user} (\`${user.id}\`)`, inline: true },
+          { name: "Gatilho", value: `\`${reasonType}\``, inline: true },
+        ],
+        user.displayAvatarURL(),
+      );
+    }
   } catch (error) {
     console.error(`[ANTI-NUKE] Falha ao punir ${user.tag}:`, error);
   }

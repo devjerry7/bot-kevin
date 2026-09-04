@@ -1,216 +1,133 @@
-// commands/economy.js
-const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+// commands/gambling.js
 const {
-  getAccount,
-  addMoney,
-  removeMoney,
-  pay,
-  claimDaily,
-  work,
-  getLeaderboard,
-} = require("../services/economyManager");
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  Collection,
+} = require("discord.js");
+const { getAccount, removeMoney } = require("../services/economyManager");
 
-const HEADER_IMAGE = "LINK_DO_SEU_BANNER_NOVO_AQUI";
-const COLOR_DIAMOND = 0x00e5ff;
-const CURRENCY = "Kevins";
-
-const formatTime = (ms) => {
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-  return `${hours}h ${minutes}m`;
-};
-
-const createEcoEmbed = (title, desc, color = COLOR_DIAMOND) => {
-  return new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(desc)
-    .setColor(color)
-    .setImage(HEADER_IMAGE)
-    .setTimestamp();
-};
+// Cache para armazenar os jogos ativos em andamento
+const minesCache = new Collection();
 
 module.exports = {
-  handleEconomy: async (message, command, args) => {
+  minesCache,
+
+  handleGambling: async (message, command, args) => {
+    // Só responde se o comando for "mines"
+    if (command !== "mines") return;
+
+    // --- Lendo variáveis estéticas do .env ---
+    const BANNER_URL = process.env.BANNER_URL;
+    const PREFIX = process.env.PREFIX || "mc!";
+    const CURRENCY = process.env.CURRENCY_NAME || "Kevins";
+
+    // Cores
+    const COLOR_BASE = process.env.COLOR_BASE
+      ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
+      : 0x00e5ff;
+
+    // Emojis
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const EMOJI_DIAMOND = process.env.EMOJI_DIAMOND || "💎";
+    const EMOJI_MONEY = process.env.EMOJI_MONEY || "💰";
+    const EMOJI_QUESTION = process.env.EMOJI_QUESTION || "❓";
+
     const userId = message.author.id;
 
-    // --- k!atm / k!saldo ---
-    if (["atm", "saldo", "carteira"].includes(command)) {
-      const target = message.mentions.users.first() || message.author;
-      const acc = await getAccount(target.id);
-
-      const embed = createEcoEmbed("💳 Conta Bancária", `Titular: ${target}`)
-        .addFields(
-          {
-            name: "💵 Carteira",
-            value: `**${acc.wallet}** ${CURRENCY}`,
-            inline: true,
-          },
-          {
-            name: "🏦 Banco",
-            value: `**${acc.bank || 0}** ${CURRENCY}`,
-            inline: true,
-          },
-          {
-            name: "💰 Patrimônio Total",
-            value: `**${acc.wallet + (acc.bank || 0)}** ${CURRENCY}`,
-            inline: false,
-          },
-        )
-        .setThumbnail(target.displayAvatarURL());
-
-      return message.channel.send({ embeds: [embed] });
+    // --- 1. Verificações Iniciais (Usando channel.send para evitar crash de mensagem deletada) ---
+    if (minesCache.has(userId)) {
+      return message.channel.send(
+        `${EMOJI_ERROR} Você já tem um jogo em andamento! Termine-o antes de iniciar outro.`,
+      );
     }
 
-    // --- k!daily ---
-    if (command === "daily") {
-      const res = await claimDaily(userId);
-      if (res.success) {
-        return message.channel.send({
-          embeds: [
-            createEcoEmbed(
-              "📅 Recompensa Diária",
-              `Você recebeu **${res.amount} ${CURRENCY}**! Volte amanhã para resgatar mais.`,
-              0x00ff00,
-            ),
-          ],
-        });
-      } else {
-        return message.channel.send({
-          embeds: [
-            createEcoEmbed(
-              "⏳ Calma lá!",
-              `Você já resgatou sua recompensa diária. Volte em **${formatTime(res.remaining)}**.`,
-              0xe74c3c,
-            ),
-          ],
-        });
+    const betAmount = parseInt(args[0], 10);
+    const bombsCount = parseInt(args[1], 10) || 3; // Padrão: 3 bombas
+
+    if (isNaN(betAmount) || betAmount < 10) {
+      return message.channel.send(
+        `${EMOJI_ERROR} Uso correto: \`${PREFIX}mines <valor_aposta> [qnt_bombas]\`\nAposta mínima: 10 ${CURRENCY}.`,
+      );
+    }
+
+    if (bombsCount < 1 || bombsCount > 15) {
+      return message.channel.send(
+        `${EMOJI_ERROR} A quantidade de bombas deve ser entre 1 e 15 (grade 4x4 = 16 campos).`,
+      );
+    }
+
+    const acc = await getAccount(userId);
+
+    if (acc.wallet < betAmount) {
+      return message.channel.send(
+        `${EMOJI_ERROR} Saldo insuficiente! Você tem **${acc.wallet}** na carteira.`,
+      );
+    }
+
+    // --- 2. Cobrança e Preparação do Jogo ---
+    await removeMoney(userId, betAmount);
+
+    // Gera o campo 4x4 (16 campos)
+    const totalTiles = 16;
+    let board = Array(totalTiles).fill(0); // 0 = seguro (diamante)
+
+    // Sorteia as bombas
+    let bombsPlaced = 0;
+    while (bombsPlaced < bombsCount) {
+      const randIndex = Math.floor(Math.random() * totalTiles);
+      if (board[randIndex] === 0) {
+        board[randIndex] = 1; // 1 = bomba
+        bombsPlaced++;
       }
     }
 
-    // --- k!work ---
-    if (["work", "trabalhar"].includes(command)) {
-      const res = await work(userId);
-      if (res.success) {
-        const jobs = [
-          "Desenvolvedor",
-          "Designer Gráfico",
-          "Moderador do Discord",
-          "Streamer",
-          "Criador de Conteúdo",
-          "Investidor",
-        ];
-        const job = jobs[Math.floor(Math.random() * jobs.length)];
-        return message.channel.send({
-          embeds: [
-            createEcoEmbed(
-              "💼 Expediente Concluído",
-              `Você trabalhou como **${job}** e faturou **${res.amount} ${CURRENCY}**!`,
-              0x00ff00,
-            ),
-          ],
-        });
-      } else {
-        return message.channel.send({
-          embeds: [
-            createEcoEmbed(
-              "⏳ Descanso Necessário",
-              `Você está cansado. Volte ao trabalho em **${formatTime(res.remaining)}**.`,
-              0xe74c3c,
-            ),
-          ],
-        });
-      }
-    }
+    const gameData = {
+      bet: betAmount,
+      bombsCount,
+      board,
+      revealed: [], // Posições que o jogador já abriu
+      multiplier: 1.0,
+    };
 
-    // --- k!pay @user <valor> ---
-    if (["pay", "pagar"].includes(command)) {
-      const target = message.mentions.users.first();
-      const amount = parseInt(args[1], 10);
+    minesCache.set(userId, gameData);
 
-      if (!target || isNaN(amount) || amount <= 0) {
-        return message.reply("Uso correto: `k!pay @usuario <valor>`");
-      }
-      if (target.id === userId) {
-        return message.reply(
-          "Você não pode transferir dinheiro para si mesmo.",
+    // --- 3. Construção do Embed e Grade Inicial ---
+    const embed = new EmbedBuilder()
+      .setTitle(`${EMOJI_DIAMOND} CAMPO MINADO`)
+      .setDescription(
+        `Aposta: **${betAmount}** ${CURRENCY}\nMinas: **${bombsCount}**\nMultiplicador: **1.00x**\nLucro Atual: **0**`,
+      )
+      .setColor(COLOR_BASE)
+      .setImage(BANNER_URL)
+      .setFooter({ text: "Boa sorte!" });
+
+    const rows = [];
+    for (let i = 0; i < 4; i++) {
+      const row = new ActionRowBuilder();
+      for (let j = 0; j < 4; j++) {
+        const index = i * 4 + j;
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`mines_${index}`)
+            .setEmoji(EMOJI_QUESTION)
+            .setStyle(ButtonStyle.Secondary),
         );
       }
-
-      const res = await pay(userId, target.id, amount);
-      if (res.success) {
-        return message.channel.send({
-          embeds: [
-            createEcoEmbed(
-              "💸 Transferência Realizada",
-              `Você transferiu **${amount} ${CURRENCY}** com sucesso para ${target}.`,
-              0x00ff00,
-            ),
-          ],
-        });
-      } else {
-        return message.channel.send({
-          embeds: [
-            createEcoEmbed(
-              "❌ Falha na Transferência",
-              res.msg || "Erro ao processar o pagamento.",
-              0xe74c3c,
-            ),
-          ],
-        });
-      }
+      rows.push(row);
     }
 
-    // --- k!rank / k!leaderboard ---
-    if (["rank", "leaderboard", "top"].includes(command)) {
-      const list = await getLeaderboard();
-      const topString =
-        list
-          .map(
-            (acc, i) =>
-              `**${i + 1}.** <@${acc.userId}> — **${acc.wallet}** ${CURRENCY}`,
-          )
-          .join("\n") || "Nenhum membro registrado no ranking ainda.";
+    // Botão de Cashout
+    const cashoutRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("mines_cashout")
+        .setEmoji(EMOJI_MONEY)
+        .setLabel("SAIR E PEGAR O DINHEIRO")
+        .setStyle(ButtonStyle.Success),
+    );
+    rows.push(cashoutRow);
 
-      return message.channel.send({
-        embeds: [
-          createEcoEmbed("🏆 Ranking dos Mais Ricos", topString, COLOR_DIAMOND),
-        ],
-      });
-    }
-
-    // --- ADMIN: k!eco add/rem @user <valor> ---
-    if (command === "eco") {
-      if (
-        !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-      ) {
-        return;
-      }
-
-      const action = args[0];
-      const target = message.mentions.users.first();
-      const amount = parseInt(args[2], 10);
-
-      if (
-        !["add", "rem"].includes(action) ||
-        !target ||
-        isNaN(amount) ||
-        amount <= 0
-      ) {
-        return message.reply("Uso correto: `k!eco add/rem @user <valor>`");
-      }
-
-      if (action === "add") {
-        await addMoney(target.id, amount);
-        return message.channel.send(
-          `✅ Foram adicionados **${amount} ${CURRENCY}** para ${target}.`,
-        );
-      }
-      if (action === "rem") {
-        await removeMoney(target.id, amount);
-        return message.channel.send(
-          `🗑️ Foram removidos **${amount} ${CURRENCY}** de ${target}.`,
-        );
-      }
-    }
+    await message.channel.send({ embeds: [embed], components: rows });
   },
 };

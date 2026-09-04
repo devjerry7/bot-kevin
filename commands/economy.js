@@ -10,11 +10,6 @@ const {
   getLeaderboard,
 } = require("../services/economyManager");
 
-// ⚠️ ATENÇÃO: COLOQUE O LINK DO SEU BANNER NOVO AQUI ⚠️
-const HEADER_IMAGE = "LINK_DO_SEU_BANNER_NOVO_AQUI";
-const COLOR_DIAMOND = 0x00e5ff;
-const CURRENCY = "Kevins"; // Nome da moeda
-
 // Helper de Tempo
 const formatTime = (ms) => {
   const hours = Math.floor(ms / (1000 * 60 * 60));
@@ -22,38 +17,73 @@ const formatTime = (ms) => {
   return `${hours}h ${minutes}m`;
 };
 
-const createEcoEmbed = (title, desc, color = COLOR_DIAMOND) => {
-  return new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(desc)
-    .setColor(color)
-    .setImage(HEADER_IMAGE)
-    .setTimestamp();
-};
-
 module.exports = {
   handleEconomy: async (message, command, args) => {
+    // --- Lendo variáveis do .env ---
+    const BANNER_URL = process.env.BANNER_URL;
+    const PREFIX = process.env.PREFIX || "mc!";
+    const CURRENCY = process.env.CURRENCY_NAME || "Kevins";
+
+    // Cores
+    const COLOR_BASE = process.env.COLOR_BASE
+      ? parseInt(process.env.COLOR_BASE, 16)
+      : 0x00e5ff;
+    const COLOR_SUCCESS = process.env.COLOR_SUCCESS
+      ? parseInt(process.env.COLOR_SUCCESS, 16)
+      : 0x00ff00;
+    const COLOR_ERROR = process.env.COLOR_ERROR
+      ? parseInt(process.env.COLOR_ERROR, 16)
+      : 0xff0000;
+
+    // Emojis Base
+    const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const EMOJI_WAIT = process.env.EMOJI_WAIT || "⏳";
+    const EMOJI_MONEY = process.env.EMOJI_MONEY || "💰";
+
+    // Emojis Específicos
+    const EMOJI_BANK = process.env.EMOJI_BANK || "💳";
+    const EMOJI_WALLET = process.env.EMOJI_WALLET || "💵";
+    const EMOJI_BANK_BUILDING = process.env.EMOJI_BANK_BUILDING || "🏦";
+    const EMOJI_DAILY = process.env.EMOJI_DAILY || "📅";
+    const EMOJI_WORK = process.env.EMOJI_WORK || "💼";
+    const EMOJI_PAY = process.env.EMOJI_PAY || "💸";
+    const EMOJI_RANK = process.env.EMOJI_RANK || "🏆";
+    const EMOJI_TRASH = process.env.EMOJI_TRASH || "🗑️";
+
     const userId = message.author.id;
+
+    const createEcoEmbed = (title, desc, color = COLOR_BASE) => {
+      return new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(desc)
+        .setColor(color)
+        .setImage(BANNER_URL)
+        .setTimestamp();
+    };
 
     // --- k!atm / k!saldo ---
     if (["atm", "saldo", "carteira"].includes(command)) {
       const target = message.mentions.users.first() || message.author;
       const acc = await getAccount(target.id);
 
-      const embed = createEcoEmbed(`💳 Conta Bancária`, `Titular: ${target}`)
+      const embed = createEcoEmbed(
+        `${EMOJI_BANK} Conta Bancária`,
+        `Titular: ${target}`,
+      )
         .addFields(
           {
-            name: "💵 Carteira",
+            name: `${EMOJI_WALLET} Carteira`,
             value: `**${acc.wallet}** ${CURRENCY}`,
             inline: true,
           },
           {
-            name: "🏦 Banco",
+            name: `${EMOJI_BANK_BUILDING} Banco`,
             value: `**${acc.bank || 0}** ${CURRENCY}`,
             inline: true,
           },
           {
-            name: "💰 Patrimônio Total",
+            name: `${EMOJI_MONEY} Patrimônio Total`,
             value: `**${acc.wallet + (acc.bank || 0)}** ${CURRENCY}`,
             inline: false,
           },
@@ -70,9 +100,9 @@ module.exports = {
         return message.channel.send({
           embeds: [
             createEcoEmbed(
-              "📅 Recompensa Diária",
+              `${EMOJI_DAILY} Recompensa Diária`,
               `Você recebeu **${res.amount} ${CURRENCY}**! Volte amanhã para resgatar mais.`,
-              0x00ff00,
+              COLOR_SUCCESS,
             ),
           ],
         });
@@ -80,9 +110,9 @@ module.exports = {
         return message.channel.send({
           embeds: [
             createEcoEmbed(
-              "⏳ Calma lá!",
+              `${EMOJI_WAIT} Calma lá!`,
               `Você já resgatou sua recompensa diária. Volte em **${formatTime(res.remaining)}**.`,
-              0xe74c3c,
+              COLOR_ERROR,
             ),
           ],
         });
@@ -105,9 +135,9 @@ module.exports = {
         return message.channel.send({
           embeds: [
             createEcoEmbed(
-              "💼 Expediente Concluído",
+              `${EMOJI_WORK} Expediente Concluído`,
               `Você trabalhou como **${job}** e faturou **${res.amount} ${CURRENCY}**!`,
-              0x00ff00,
+              COLOR_SUCCESS,
             ),
           ],
         });
@@ -115,9 +145,9 @@ module.exports = {
         return message.channel.send({
           embeds: [
             createEcoEmbed(
-              "⏳ Descanso Necessário",
+              `${EMOJI_WAIT} Descanso Necessário`,
               `Você está cansado. Volte ao trabalho em **${formatTime(res.remaining)}**.`,
-              0xe74c3c,
+              COLOR_ERROR,
             ),
           ],
         });
@@ -130,11 +160,13 @@ module.exports = {
       const amount = parseInt(args[1], 10);
 
       if (!target || isNaN(amount) || amount <= 0) {
-        return message.reply("Uso correto: `k!pay @usuario <valor>`");
+        return message.reply(
+          `${EMOJI_ERROR} Uso correto: \`${PREFIX}pay @usuario <valor>\``,
+        );
       }
       if (target.id === userId) {
         return message.reply(
-          "Você não pode transferir dinheiro para si mesmo.",
+          `${EMOJI_ERROR} Você não pode transferir dinheiro para si mesmo.`,
         );
       }
 
@@ -143,9 +175,9 @@ module.exports = {
         return message.channel.send({
           embeds: [
             createEcoEmbed(
-              "💸 Transferência Realizada",
+              `${EMOJI_PAY} Transferência Realizada`,
               `Você transferiu **${amount} ${CURRENCY}** com sucesso para ${target}.`,
-              0x00ff00,
+              COLOR_SUCCESS,
             ),
           ],
         });
@@ -153,9 +185,9 @@ module.exports = {
         return message.channel.send({
           embeds: [
             createEcoEmbed(
-              "❌ Falha na Transferência",
+              `${EMOJI_ERROR} Falha na Transferência`,
               res.msg || "Erro ao processar o pagamento.",
-              0xe74c3c,
+              COLOR_ERROR,
             ),
           ],
         });
@@ -175,7 +207,11 @@ module.exports = {
 
       return message.channel.send({
         embeds: [
-          createEcoEmbed("🏆 Ranking dos Mais Ricos", topString, COLOR_DIAMOND),
+          createEcoEmbed(
+            `${EMOJI_RANK} Ranking dos Mais Ricos`,
+            topString,
+            COLOR_BASE,
+          ),
         ],
       });
     }
@@ -198,19 +234,21 @@ module.exports = {
         isNaN(amount) ||
         amount <= 0
       ) {
-        return message.reply("Uso correto: `k!eco add/rem @user <valor>`");
+        return message.reply(
+          `${EMOJI_ERROR} Uso correto: \`${PREFIX}eco add/rem @user <valor>\``,
+        );
       }
 
       if (action === "add") {
         await addMoney(target.id, amount);
         return message.channel.send(
-          `✅ Foram adicionados **${amount} ${CURRENCY}** para ${target}.`,
+          `${EMOJI_SUCCESS} Foram adicionados **${amount} ${CURRENCY}** para ${target}.`,
         );
       }
       if (action === "rem") {
         await removeMoney(target.id, amount);
         return message.channel.send(
-          `🗑️ Foram removidos **${amount} ${CURRENCY}** de ${target}.`,
+          `${EMOJI_TRASH} Foram removidos **${amount} ${CURRENCY}** de ${target}.`,
         );
       }
     }

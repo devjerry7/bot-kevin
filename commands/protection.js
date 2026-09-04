@@ -8,20 +8,37 @@ const {
   getList,
 } = require("../protectionManager");
 
-const PREFIX = "k!";
-
-const createEmbed = (title, desc, color = 0x00ff00) => {
-  return new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(desc)
-    .setColor(color)
-    .setTimestamp();
-};
-
 module.exports = {
   handleProtection: async (message, command, args) => {
-    // Acessa a configuração do cliente
-    const config = message.client.config;
+    // --- Lendo variáveis do .env ---
+    const PREFIX = process.env.PREFIX || "mc!";
+    const PANELA_LOG_ID = process.env.PANELA_LOG_ID;
+    const BLACKLIST_LOG_ID = process.env.BLACKLIST_LOG_ID;
+
+    // Cores
+    const COLOR_BASE = process.env.COLOR_BASE
+      ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
+      : 0x00e5ff;
+    const COLOR_SUCCESS = process.env.COLOR_SUCCESS
+      ? parseInt(process.env.COLOR_SUCCESS.replace("#", ""), 16)
+      : 0x00ff00;
+    const COLOR_ERROR = process.env.COLOR_ERROR
+      ? parseInt(process.env.COLOR_ERROR.replace("#", ""), 16)
+      : 0xff0000;
+
+    // Emojis
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const EMOJI_SHIELD = process.env.EMOJI_SHIELD || "🛡️";
+    const EMOJI_SKULL = process.env.EMOJI_SKULL || "💀";
+    const EMOJI_COMMUNITY = process.env.EMOJI_COMMUNITY || "👥";
+
+    const createEmbed = (title, desc, color = COLOR_SUCCESS) => {
+      return new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(desc)
+        .setColor(color)
+        .setTimestamp();
+    };
 
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
@@ -29,26 +46,19 @@ module.exports = {
       return message.channel.send({
         embeds: [
           createEmbed(
-            "<:cadeado:1443642375833518194> Sem Permissão",
+            `${EMOJI_ERROR} Sem Permissão`,
             "Apenas Administradores podem gerenciar a Proteção.",
-            0xff0000
+            COLOR_ERROR,
           ),
         ],
       });
     }
 
-    const action = args[0]?.toLowerCase(); // add, rem, list
+    const action = args[0]?.toLowerCase();
     const targetId = args[1]?.replace(/<@!?(\d+)>/, "$1");
 
-    // Função auxiliar para enviar Log para um canal específico
     const sendLog = async (channelId, title, desc, color) => {
-      if (!channelId) {
-        console.warn(
-          `[PROTECTION LOG] ID do canal de log não configurado para essa ação.`
-        );
-        return;
-      }
-
+      if (!channelId) return;
       const logChannel = message.guild.channels.cache.get(channelId);
       if (logChannel) {
         await logChannel.send({
@@ -59,10 +69,6 @@ module.exports = {
             }),
           ],
         });
-      } else {
-        console.warn(
-          `[PROTECTION LOG] Canal de log ${channelId} não encontrado.`
-        );
       }
     };
 
@@ -71,66 +77,70 @@ module.exports = {
       if (action === "list") {
         const list = await getList("panela");
         const description = list.length
-          ? list.map((id) => `<@${id}> (${id})`).join("\n")
+          ? list.map((id) => `<@${id}> (\`${id}\`)`).join("\n")
           : "Ninguém na panela.";
         return message.channel.send({
           embeds: [
             createEmbed(
-              "<:c_comunnitytkf:1446487578818904175> Membros da Panela (Anti-ban)",
+              `${EMOJI_COMMUNITY} Membros da Panela (Anti-ban)`,
               description,
-              0x3498db
+              COLOR_BASE,
             ),
           ],
         });
       }
 
-      if (!targetId)
+      if (!targetId) {
         return message.channel.send(
-          `Uso: \`${PREFIX}panela add/rem <id/menção>\` ou \`${PREFIX}panela list\``
+          `${EMOJI_ERROR} Uso: \`${PREFIX}panela add/rem <id/menção>\` ou \`${PREFIX}panela list\``,
         );
+      }
 
       if (action === "add") {
         if (await addToPanela(targetId)) {
-          // Log Específico da Panela
           await sendLog(
-            config.PANELA_LOG_ID,
-            "<:c_comunnitytkf:1446487578818904175> Panela Atualizada",
+            PANELA_LOG_ID,
+            `${EMOJI_COMMUNITY} Panela Atualizada`,
             `O usuário <@${targetId}> (\`${targetId}\`) foi **ADICIONADO** à Panela.`,
-            0x3498db
+            COLOR_BASE,
           );
 
           return message.channel.send({
             embeds: [
               createEmbed(
-                "<:c_comunnitytkf:1446487578818904175> Adicionado",
-                `<@${targetId}> agora está na **Panela** e não pode ser banido pelo bot.`
+                `${EMOJI_COMMUNITY} Adicionado`,
+                `<@${targetId}> agora está na **Panela** e não pode ser banido pelo bot.`,
               ),
             ],
           });
         }
-        return message.channel.send("Este usuário já está na panela.");
+        return message.channel.send(
+          `${EMOJI_ERROR} Este usuário já está na panela.`,
+        );
       }
+
       if (action === "rem") {
         if (await removeFromPanela(targetId)) {
-          // Log Específico da Panela
           await sendLog(
-            config.PANELA_LOG_ID,
-            "🛡️ Panela Atualizada",
+            PANELA_LOG_ID,
+            `${EMOJI_SHIELD} Panela Atualizada`,
             `O usuário <@${targetId}> (\`${targetId}\`) foi **REMOVIDO** da Panela.`,
-            0xe74c3c
+            COLOR_ERROR,
           );
 
           return message.channel.send({
             embeds: [
               createEmbed(
-                "<:c_comunnitytkf:1446487578818904175> Removido",
+                `${EMOJI_COMMUNITY} Removido`,
                 `<@${targetId}> foi removido da Panela.`,
-                0xe74c3c
+                COLOR_ERROR,
               ),
             ],
           });
         }
-        return message.channel.send("Este usuário não estava na panela.");
+        return message.channel.send(
+          `${EMOJI_ERROR} Este usuário não estava na panela.`,
+        );
       }
     }
 
@@ -143,19 +153,16 @@ module.exports = {
           : "Ninguém na blacklist.";
         return message.channel.send({
           embeds: [
-            createEmbed(
-              "<:caveira:1443655598427344996> Blacklist",
-              description,
-              0x000000
-            ),
+            createEmbed(`${EMOJI_SKULL} Blacklist`, description, 0x2f3136),
           ],
         });
       }
 
-      if (!targetId)
+      if (!targetId) {
         return message.channel.send(
-          `Uso: \`${PREFIX}blacklist add/rem <id>\` ou \`${PREFIX}blacklist list\``
+          `${EMOJI_ERROR} Uso: \`${PREFIX}blacklist add/rem <id>\` ou \`${PREFIX}blacklist list\``,
         );
+      }
 
       if (action === "add") {
         const member = await message.guild.members
@@ -163,60 +170,64 @@ module.exports = {
           .catch(() => null);
 
         if (member) {
-          if (!member.bannable)
+          if (!member.bannable) {
             return message.channel.send(
-              "<:Nao:1443642030637977743> Não consigo banir este usuário agora (cargo alto), mas adicionei à lista."
+              `${EMOJI_ERROR} Não consigo banir este usuário agora (cargo alto), mas adicionei à lista.`,
             );
+          }
           await member.ban({
             reason: `Blacklist adicionada por ${message.author.tag}`,
           });
         }
 
         if (await addToBlacklist(targetId)) {
-          // Log Específico da Blacklist
           await sendLog(
-            config.BLACKLIST_LOG_ID,
+            BLACKLIST_LOG_ID,
             "🚫 Blacklist Atualizada",
             `O ID \`${targetId}\` foi **ADICIONADO** à Blacklist.`,
-            0x000000
+            0x2f3136,
           );
 
           return message.channel.send({
             embeds: [
               createEmbed(
-                "<:caveira:1443655598427344996> Blacklist",
-                `O ID \`${targetId}\` foi adicionado à Blacklist e será banido se entrar.`
+                `${EMOJI_SKULL} Blacklist`,
+                `O ID \`${targetId}\` foi adicionado à Blacklist e será banido se entrar.`,
               ),
             ],
           });
         }
-        return message.channel.send("Este ID já está na blacklist.");
+        return message.channel.send(
+          `${EMOJI_ERROR} Este ID já está na blacklist.`,
+        );
       }
+
       if (action === "rem") {
         if (await removeFromBlacklist(targetId)) {
           try {
             await message.guild.members.unban(targetId);
           } catch (e) {}
 
-          // Log Específico da Blacklist
           await sendLog(
-            config.BLACKLIST_LOG_ID,
+            BLACKLIST_LOG_ID,
             "🚫 Blacklist Atualizada",
             `O ID \`${targetId}\` foi **REMOVIDO** da Blacklist.`,
-            0xe74c3c
+            COLOR_ERROR,
           );
 
           return message.channel.send({
             embeds: [
               createEmbed(
-                "<:caveira:1443655598427344996> Blacklist",
+                `${EMOJI_SKULL} Blacklist`,
                 `O ID \`${targetId}\` foi removido da Blacklist.`,
-                0xe74c3c
+                COLOR_ERROR,
               ),
             ],
           });
         }
-        return message.channel.send("Este ID não estava na blacklist.");
+        return message.channel.send(
+          `${EMOJI_ERROR} Este ID não estava na blacklist.`,
+        );
       }
     }
   },

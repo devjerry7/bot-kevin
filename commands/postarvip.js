@@ -1,62 +1,102 @@
-const { EmbedBuilder } = require("discord.js");
+// commands/postarvip.js
+const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 
 const handlePostVip = async (message) => {
-  // 🎨 Cor Azul Diamond
-  const COLOR_DIAMOND = 0x00e5ff;
+  // Apenas Administradores podem postar o painel
+  if (
+    !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
+  ) {
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    return message.reply(
+      `${EMOJI_ERROR} Apenas administradores podem postar o painel VIP.`,
+    );
+  }
 
-  // 🖼️ URL do Banner (Substitua pelo link da imagem gerada pelo Midjourney/IA)
-  const BANNER_URL =
-    "https://cdn.discordapp.com/attachments/816922172760522772/1537963016098680883/banner-vips.png?ex=6a80f32d&is=6a7fa1ad&hm=5f890963658a1491f2d8f3a7f95dbbf52742d77b7208bcf6b480d7515c5f71be&";
+  try {
+    // --- Lendo variáveis do .env ---
+    const COLOR_BASE = process.env.COLOR_BASE
+      ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
+      : 0x00e5ff;
+    const BANNER_URL = process.env.BANNER_VIP;
 
-  // 👤 IDs dos Donos (Substitua pelos IDs reais para a galera clicar e chamar na DM)
-  const DONO_1 = "578307859964624928";
-  const DONO_2 = "697947696702554223";
+    // Contato
+    const DONO_1 = process.env.OWNER_1_ID;
+    const DONO_2 = process.env.OWNER_2_ID;
 
-  const embed = new EmbedBuilder()
-    .setTitle("💎 Vantagens Apoiadores")
-    .setDescription(
-      "Confira abaixo as vantagens de cada Tier no nosso servidor e escolha o seu!\n\n" +
-        `<:carrinho:1537973767182098512> **COMO COMPRAR:**\nPara adquirir o seu VIP, entre em contato <@${DONO_1}> ou <@${DONO_2}>`,
-    )
-    .setColor(COLOR_DIAMOND)
-    .setImage(BANNER_URL) // Adiciona o banner gerado
-    .addFields(
-      {
-        name: "<:pureza_h:1536051972946403360> SERVERBOOST - (Grátis via Boost)",
-        value:
-          "・Cargo destacado no servidor\n・ Permissão de enviar imagem\n・ Call Exclusiva",
-        inline: false,
-      },
-      {
-        name: "<:Dinheiro:1535775870168469624> VIP PLATINUM - R$14,97",
-        value:
-          "・Cargo destacado no servidor\n・ Permissão de enviar imagem\n・ Canal Privado exclusivo\n・ Tag Personalizada",
-        inline: false,
-      },
-      {
-        name: "<:1286054799808397322:1537956686533501008> VIP LIVE - R$29,97",
-        value:
-          "・Cargo destacado no servidor\n・ Permissão de enviar imagem\n・ Canal Privado e Tag Personalizada\n・ Acesso liberado ao chat de Divulgação (Lives/Vídeos)\n・ **Moderação Básica:** Permissão para aceitar novos membros, Mute e Mover membros",
-        inline: false,
-      },
-      {
-        name: "<:embeddiamante:1536498067912790026> VIP DIMA - R$49,97",
-        value:
-          "・**Cargo em destaque máximo (Acima de todos os VIPs)**\n・ Permissão de enviar imagem\n・ **Canal Privado posicionado no topo** e Tag Personalizada\n・ Acesso liberado ao chat de Divulgação\n・ **Moderação Avançada:** Aceitar novos membros, Mute, Mover e Adicionar membros à Blacklist ou ao chat de Exposed",
-        inline: false,
-      },
-    )
-    .setFooter({
-      text: "Ao adquirir um VIP, você ajuda a manter o servidor ativo e com novidades!",
-      iconURL: message.guild.iconURL(),
-    })
-    .setTimestamp();
+    // Preços
+    const PRICE_SELECT = process.env.PRICE_VIP_SELECT || "A definir";
+    const PRICE_STREAM = process.env.PRICE_VIP_STREAM || "A definir";
+    const PRICE_NIGHT = process.env.PRICE_VIP_NIGHT || "A definir";
 
-  // Envia a embed no canal
-  await message.channel.send({ embeds: [embed] });
+    // Emojis
+    const EMOJI_DIAMOND = process.env.EMOJI_DIAMOND || "💎";
+    const EMOJI_CART = process.env.EMOJI_CART || "🛒";
+    const EMOJI_DOT = process.env.EMOJI_DOT || "•";
+    const EMOJI_BOOST = process.env.EMOJI_BOOST || "🚀";
+    const EMOJI_VIP_SELECT = process.env.EMOJI_VIP_SELECT || "💳";
+    const EMOJI_VIP_STREAM = process.env.EMOJI_VIP_STREAM || "🎥";
+    const EMOJI_VIP_NIGHT = process.env.EMOJI_VIP_NIGHT || "🌙";
 
-  // Apaga o comando original para manter o chat limpo
-  if (message.deletable) await message.delete().catch(() => {});
+    const embed = new EmbedBuilder()
+      .setTitle(`${EMOJI_DIAMOND} Vantagens & Apoiadores`)
+      .setDescription(
+        `Confira abaixo os benefícios de cada Tier no nosso servidor e escolha o seu!\n\n` +
+          `${EMOJI_CART} **COMO COMPRAR:**\nPara adquirir o seu VIP, entre em contato com <@${DONO_1}> ou <@${DONO_2}>.`,
+      )
+      .setColor(COLOR_BASE)
+      .setImage(BANNER_URL)
+      .addFields(
+        {
+          name: `${EMOJI_BOOST} LEVEL UP - BOOSTER (Grátis via Boost)`,
+          value:
+            `${EMOJI_DOT} Cargo destacado no servidor\n` +
+            `${EMOJI_DOT} Permissão de enviar imagem\n` +
+            `${EMOJI_DOT} Sorteios exclusivos`,
+          inline: false,
+        },
+        {
+          name: `${EMOJI_VIP_SELECT} VIP SELECT - ${PRICE_SELECT}`,
+          value:
+            `${EMOJI_DOT} Cargo destacado no Servidor\n` +
+            `${EMOJI_DOT} Permissão de enviar imagem\n` +
+            `${EMOJI_DOT} Tag personalizada`,
+          inline: false,
+        },
+        {
+          name: `${EMOJI_VIP_STREAM} VIP STREAM - ${PRICE_STREAM}`,
+          value:
+            `${EMOJI_DOT} Cargo destacado no servidor\n` +
+            `${EMOJI_DOT} Permissão de enviar imagem\n` +
+            `${EMOJI_DOT} Call privada + tag personalizada\n` +
+            `${EMOJI_DOT} Acesso liberado ao chat de divulgação\n` +
+            `${EMOJI_DOT} Vantagens no servidor (permv4)`,
+          inline: false,
+        },
+        {
+          name: `${EMOJI_VIP_NIGHT} VIP NIGHT - ${PRICE_NIGHT}`,
+          value:
+            `${EMOJI_DOT} Cargo destacado no servidor\n` +
+            `${EMOJI_DOT} Permissão de enviar imagem\n` +
+            `${EMOJI_DOT} Call privada + tag personalizada\n` +
+            `${EMOJI_DOT} Acesso liberado ao chat de divulgação\n` +
+            `${EMOJI_DOT} Vantagens no servidor (permiog)\n` +
+            `${EMOJI_DOT} Direito a 1 Primeira Dama\n` +
+            `${EMOJI_DOT} Vantagens em eventos (se houver)`,
+          inline: false,
+        },
+      )
+      .setFooter({
+        text: "Ao adquirir um VIP, você ajuda a manter o servidor ativo e com novidades!",
+        iconURL: message.guild.iconURL(),
+      })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [embed] });
+
+    if (message.deletable) await message.delete().catch(() => {});
+  } catch (error) {
+    console.error("[POSTVIP ERROR] Erro ao postar painel VIP:", error);
+  }
 };
 
 module.exports = { handlePostVip };

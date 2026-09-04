@@ -9,40 +9,50 @@ const {
 
 const BTN_OPEN = "btn_ticket_open";
 
-// CONFIG VISUAL
-const HEADER_IMAGE =
-  "https://cdn.discordapp.com/attachments/885926443220107315/1446478914468974742/ticket-banner.png?ex=693421f7&is=6932d077&hm=cf586cf1ba2ae3770bcc3d436cbbf044df522986ead23ff6cbff17e876d07570&";
-const COLOR_NEUTRAL = 0x3498db;
-
 module.exports = {
   BTN_OPEN,
 
   handleTicketPanel: async (message) => {
-    // Verifica se é staff
+    // --- Lendo variáveis do .env ---
+    const COLOR_BASE = process.env.COLOR_BASE
+      ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
+      : 0x3498db;
+    const BANNER_URL = process.env.BANNER_TICKET || process.env.BANNER_URL;
+    const PARENT_ID = process.env.TICKET_PARENT_CHANNEL_ID;
+    const EMOJI_TICKET = process.env.EMOJI_TICKET || "🎫";
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
+
+    // Verifica permissão de moderação
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)
     ) {
-      return message.reply("<:cadeado:1443642375833518194> Apenas Moderação.");
+      return message.reply(`${EMOJI_ERROR} Apenas Moderação.`);
     }
 
-    // Pega o canal configurado no .env
-    const parentId = message.client.config.TICKET_PARENT_CHANNEL_ID;
-    const targetChannel = message.guild.channels.cache.get(parentId);
-
-    if (!targetChannel)
+    if (!PARENT_ID) {
       return message.reply(
-        "<:am_avisoK:1443645307358544124> Canal Pai de Tickets não configurado ou não encontrado no `.env`."
+        `${EMOJI_ERROR} Canal Pai de Tickets não configurado ou não encontrado no \`.env\`.`,
       );
+    }
+
+    const targetChannel = message.guild.channels.cache.get(PARENT_ID);
+
+    if (!targetChannel) {
+      return message.reply(
+        `${EMOJI_ERROR} Canal configurado não encontrado no servidor.`,
+      );
+    }
 
     const embed = new EmbedBuilder()
-      .setTitle("<:W_Ticket:1446489399897358336> Central de Atendimento")
+      .setTitle(`${EMOJI_TICKET} Central de Atendimento`)
       .setDescription(
-        "Precisa de algo?\n" +
+        "Precisa de algo?\n\n" +
           "**Clique no botão abaixo**.\n\n" +
-          "Um atendimento privado será aberto neste mesmo canal."
+          "Um atendimento privado será aberto neste mesmo canal.",
       )
-      .setColor(COLOR_NEUTRAL)
-      .setImage(HEADER_IMAGE)
+      .setColor(COLOR_BASE)
+      .setImage(BANNER_URL)
       .setThumbnail(message.guild.iconURL())
       .setFooter({ text: "Sistema de Suporte via Threads" });
 
@@ -50,14 +60,16 @@ module.exports = {
       new ButtonBuilder()
         .setCustomId(BTN_OPEN)
         .setLabel("Abrir Chamado")
-        .setEmoji("<:W_Ticket:1446489399897358336>")
-        .setStyle(ButtonStyle.Secondary)
+        .setEmoji(EMOJI_TICKET)
+        .setStyle(ButtonStyle.Secondary),
     );
 
     await targetChannel.send({ embeds: [embed], components: [row] });
+
     if (message.channel.id !== targetChannel.id) {
-      message.reply(`✅ Painel enviado para ${targetChannel}.`);
+      message.reply(`${EMOJI_SUCCESS} Painel enviado para ${targetChannel}.`);
     }
+
     if (message.deletable) message.delete().catch(() => {});
   },
 };

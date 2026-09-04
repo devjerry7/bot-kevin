@@ -21,7 +21,9 @@ const { startRound } = require("../game/gameManager");
 module.exports = async (interaction) => {
   const isButton = interaction.isButton();
   const isModal = interaction.isModalSubmit();
-  const state = getGameState(interaction.guild.id);
+
+  // Ajustado para o estado global de servidor único
+  const state = getGameState();
 
   // 1. Botão de Correção
   if (isButton && interaction.customId === EDIT_BUTTON_ID) {
@@ -39,15 +41,15 @@ module.exports = async (interaction) => {
           .setCustomId(PLAYER_INPUT_ID)
           .setLabel("ID/Menção")
           .setStyle(TextInputStyle.Short)
-          .setRequired(true)
+          .setRequired(true),
       ),
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId(CATEGORY_INPUT_ID)
           .setLabel("Categoria (ou TODOS)")
           .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-      )
+          .setRequired(true),
+      ),
     );
     await interaction.showModal(modal);
     return true;
@@ -68,9 +70,11 @@ module.exports = async (interaction) => {
     if (!playerID && !isNaN(playerIdentifier) && playerIdentifier.length > 15)
       playerID = playerIdentifier;
 
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "<:Nao:1443642030637977743>";
+
     if (!playerID || !state.players[playerID])
       return interaction.followUp({
-        content: "<:Nao:1443642030637977743> Jogador não encontrado na rodada.",
+        content: `${EMOJI_ERROR} Jogador não encontrado na rodada.`,
         ephemeral: true,
       });
 
@@ -85,14 +89,16 @@ module.exports = async (interaction) => {
       playerState.answers[categoryIndex] = "";
     } else {
       return interaction.followUp({
-        content: `<:Nao:1443642030637977743> Categoria inválida.`,
+        content: `${EMOJI_ERROR} Categoria inválida.`,
         ephemeral: true,
       });
     }
 
     await postReviewEmbed(state, interaction.channel);
+    const EMOJI_SUCCESS =
+      process.env.EMOJI_SUCCESS || "<:certo_froid:1443643346722754692>";
     await interaction.followUp({
-      content: `<:certo_froid:1443643346722754692> Atualizado.`,
+      content: `${EMOJI_SUCCESS} Atualizado.`,
       ephemeral: true,
     });
     return true;
@@ -106,8 +112,10 @@ module.exports = async (interaction) => {
       return interaction.reply({ content: "Apenas Staff.", ephemeral: true });
 
     await interaction.deferUpdate();
+    const EMOJI_SUCCESS =
+      process.env.EMOJI_SUCCESS || "<:certo_froid:1443643346722754692>";
     await interaction.editReply({
-      content: `<:certo_froid:1443643346722754692> Finalizado por ${interaction.user.tag}.`,
+      content: `${EMOJI_SUCCESS} Finalizado por ${interaction.user.tag}.`,
       components: [],
     });
 

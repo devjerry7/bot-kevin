@@ -8,12 +8,19 @@ const {
 module.exports = {
   // --- TRANCA UM CANAL ---
   handleLockdown: async (message) => {
+    const EMOJI_SECURITY = process.env.EMOJI_SECURITY || "🔒";
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const COLOR_ERROR = process.env.COLOR_ERROR
+      ? parseInt(process.env.COLOR_ERROR.replace("#", ""), 16)
+      : 0xff0000;
+
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-    )
+    ) {
       return message.channel.send(
-        "🔒 Apenas Administradores podem trancar o canal."
+        `${EMOJI_SECURITY} Apenas Administradores podem trancar o canal.`,
       );
+    }
 
     const channel = message.channel;
 
@@ -24,33 +31,37 @@ module.exports = {
       });
 
       const embed = new EmbedBuilder()
-        .setTitle("🔒 CANAL TRANCADO")
+        .setTitle(`${EMOJI_SECURITY} CANAL TRANCADO`)
         .setDescription("Este canal foi bloqueado pela administração.")
-        .setColor(0xff0000);
+        .setColor(COLOR_ERROR);
 
       message.channel.send({ embeds: [embed] });
     } catch (e) {
       console.error(e);
-      message.channel.send("❌ Erro ao tentar trancar este canal.");
+      message.channel.send(`${EMOJI_ERROR} Erro ao tentar trancar este canal.`);
     }
   },
 
   // --- TRANCA TODOS OS CANAIS (GLOBAL) ---
   handleLockdownAll: async (message) => {
+    const EMOJI_SECURITY = process.env.EMOJI_SECURITY || "🔒";
+    const EMOJI_ALERT = process.env.EMOJI_ALERT || "🚨";
+
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-    )
+    ) {
       return message.channel.send(
-        "🔒 Apenas Admins podem iniciar Lockdown Global."
+        `${EMOJI_SECURITY} Apenas Admins podem iniciar Lockdown Global.`,
       );
+    }
 
     // Filtra apenas canais de texto
     const channels = message.guild.channels.cache.filter(
-      (c) => c.type === ChannelType.GuildText
+      (c) => c.type === ChannelType.GuildText,
     );
 
     await message.channel.send(
-      `🚨 **INICIANDO LOCKDOWN GLOBAL...** (${channels.size} canais detectados). Isso pode levar um momento.`
+      `${EMOJI_ALERT} **INICIANDO LOCKDOWN GLOBAL...** (${channels.size} canais detectados). Isso pode levar um momento.`,
     );
 
     let count = 0;
@@ -67,11 +78,19 @@ module.exports = {
       }
     }
 
-    message.channel.send(`🔒 **SUCESSO:** ${count} canais foram trancados.`);
+    message.channel.send(
+      `${EMOJI_SECURITY} **SUCESSO:** ${count} canais foram trancados.`,
+    );
   },
 
   // --- DESTRANCA UM CANAL ---
   handleUnlockdown: async (message) => {
+    const EMOJI_UNLOCK = process.env.EMOJI_UNLOCK || "🔓";
+    const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+    const COLOR_SUCCESS = process.env.COLOR_SUCCESS
+      ? parseInt(process.env.COLOR_SUCCESS.replace("#", ""), 16)
+      : 0x00ff00;
+
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
     )
@@ -80,35 +99,38 @@ module.exports = {
     const channel = message.channel;
 
     try {
-      // Define como null para voltar ao padrão (herdado da categoria) ou true para forçar
+      // Define como null para voltar ao padrão (herdado da categoria)
       await channel.permissionOverwrites.edit(message.guild.roles.everyone, {
         SendMessages: null,
       });
 
       const embed = new EmbedBuilder()
-        .setTitle("🔓 CANAL DESTRANCADO")
+        .setTitle(`${EMOJI_UNLOCK} CANAL DESTRANCADO`)
         .setDescription("Chat liberado.")
-        .setColor(0x00ff00);
+        .setColor(COLOR_SUCCESS);
 
       message.channel.send({ embeds: [embed] });
     } catch (e) {
-      message.channel.send("❌ Erro ao destrancar.");
+      message.channel.send(`${EMOJI_ERROR} Erro ao destrancar.`);
     }
   },
 
   // --- DESTRANCA TODOS OS CANAIS (GLOBAL) ---
   handleUnlockdownAll: async (message) => {
+    const EMOJI_UNLOCK = process.env.EMOJI_UNLOCK || "🔓";
+    const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
+
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
     )
       return;
 
     const channels = message.guild.channels.cache.filter(
-      (c) => c.type === ChannelType.GuildText
+      (c) => c.type === ChannelType.GuildText,
     );
 
     await message.channel.send(
-      `🔓 **INICIANDO DESBLOQUEIO GLOBAL...** (${channels.size} canais).`
+      `${EMOJI_UNLOCK} **INICIANDO DESBLOQUEIO GLOBAL...** (${channels.size} canais).`,
     );
 
     let count = 0;
@@ -124,6 +146,8 @@ module.exports = {
       }
     }
 
-    message.channel.send(`✅ **SUCESSO:** ${count} canais foram liberados.`);
+    message.channel.send(
+      `${EMOJI_SUCCESS} **SUCESSO:** ${count} canais foram liberados.`,
+    );
   },
 };

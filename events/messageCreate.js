@@ -1,9 +1,6 @@
 // events/messageCreate.js
 const { EmbedBuilder } = require("discord.js");
 
-// --- IMPORTAÇÃO DO GERENCIADOR DE CONFIG (SAAS) ---
-const { getGuildConfig } = require("../utils/guildConfigManager");
-
 // --- IMPORTAÇÕES DOS SISTEMAS DE JOGO E ESTADO ---
 const { getGameState } = require("../game/gameState");
 const { calculateScores, postReviewEmbed } = require("../game/scoreSystem");
@@ -39,27 +36,24 @@ const { handleBotInfo } = require("../commands/botinfo");
 const { handleListMembers } = require("../commands/listMembers");
 const { handleVoice } = require("../commands/voice");
 
-// --- NOVOS PAINÉIS VISUAIS E EMBEDS ---
-const { sendRolePanel } = require("../commands/rolePanel"); // k!cargo
-const { handleChannelPanel } = require("../commands/channelPanel"); // k!canal
-const { handleModPanel } = require("../commands/modPanel"); // k!mod
-const { handleGameRolesPanel } = require("../commands/gameRoles"); // k!roles (ATUALIZADO AQUI)
-const { handleBoosterPanel } = require("../commands/booster"); // k!booster
+// --- PAINÉIS VISUAIS E EMBEDS (Removidos os painéis excluídos: rolePanel, channelPanel, modPanel, roles, setupVerify) ---
+const { handleGameRolesPanel } = require("../commands/gameRoles"); // k!roles
 const { handleEconomy } = require("../commands/economy");
 const { handleGambling } = require("../commands/gambling");
 const { handleCrime } = require("../commands/crime");
 const { handleTicketPanel } = require("../commands/ticketPanel");
 const { handleMassRemove } = require("../commands/massRemove");
+const { handlePostVip } = require("../commands/postarVip");
 
-// 👇 NOVO: Importação do comando de postar a embed VIP
-const { handlePostVip } = require("../commands/postarVip"); // Ajuste o caminho se tiver salvo com outro nome
-
-// Helper Visual
-const createFeedbackEmbed = (title, description, color = 0xff0000) => {
+// Helper Visual Dinâmico
+const createFeedbackEmbed = (title, description, color) => {
+  const COLOR_ERROR = process.env.COLOR_ERROR
+    ? parseInt(process.env.COLOR_ERROR.replace("#", ""), 16)
+    : 0xff0000;
   return new EmbedBuilder()
     .setTitle(title)
     .setDescription(description)
-    .setColor(color)
+    .setColor(color || COLOR_ERROR)
     .setTimestamp();
 };
 
@@ -68,33 +62,25 @@ module.exports = async (message) => {
   // Ignora bots e DMs
   if (message.author.bot || !message.guild) return;
 
-  // ====================================================
-  // 1. CARREGAR CONFIGURAÇÃO (SAAS)
-  // ====================================================
-  // Busca as configs do servidor no Banco de Dados (com cache)
-  const config = await getGuildConfig(message.guild.id);
+  const PREFIX = process.env.PREFIX || "mc!";
 
-  // Define o prefixo: Se tiver no banco usa ele, senão usa 'k!'
-  const PREFIX = config.prefix || "k!";
+  // --- Lendo emojis globais do .env ---
+  const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
+  const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
+  const EMOJI_STOP = process.env.EMOJI_STOP || "🛑";
 
   // ====================================================
   // 2. CAMADA DE SEGURANÇA (Prioridade Máxima)
   // ====================================================
-
-  // A. Proteção de Chat (Anti-Everyone, Anti-Link)
   if (await handleChatProtection(message)) return;
-
-  // B. Anti-Spam
   if (await handleAntiSpam(message)) return;
 
   // ====================================================
   // 3. LÓGICA DE JOGO E MENÇÃO
   // ====================================================
-
   const state = getGameState(message.guild.id);
   const userId = message.author.id;
 
-  // A. Resposta a Menção (Bot foi marcado?)
   if (
     message.mentions.has(message.client.user.id) &&
     !message.mentions.everyone
@@ -102,7 +88,6 @@ module.exports = async (message) => {
     if (await handleMention(message)) return;
   }
 
-  // B. Resposta Rápida do Jogo (Sem Prefixo)
   if (!message.content.startsWith(PREFIX)) {
     if (state.isActive) {
       const currentLetter = state.currentLetter;
@@ -121,13 +106,16 @@ module.exports = async (message) => {
             (ans) => !ans.startsWith(currentLetter),
           );
           if (hasInvalidLetter) {
+            const COLOR_INFO = process.env.COLOR_INFO
+              ? parseInt(process.env.COLOR_INFO.replace("#", ""), 16)
+              : 0x00bfff;
             return message.channel
               .send({
                 embeds: [
                   createFeedbackEmbed(
-                    "❌ Resposta Inválida",
+                    `${EMOJI_ERROR} Resposta Inválida`,
                     `Todas as respostas devem começar com a letra **${currentLetter}**!`,
-                    0x00bfff,
+                    COLOR_INFO,
                   ),
                 ],
               })
@@ -138,7 +126,7 @@ module.exports = async (message) => {
             isStopped: true,
             score: 0,
           };
-          await message.react("✅");
+          await message.react(EMOJI_SUCCESS);
           if (message.deletable)
             try {
               await message.delete();
@@ -153,8 +141,6 @@ module.exports = async (message) => {
   // ====================================================
   // 4. PROCESSAMENTO DE COMANDOS
   // ====================================================
-
-  // Auto-Delete do comando (Limpeza do Chat)
   if (message.deletable) {
     try {
       await message.delete();
@@ -163,7 +149,6 @@ module.exports = async (message) => {
     }
   }
 
-  // Separa comando e argumentos usando o prefixo dinâmico
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
@@ -173,7 +158,7 @@ module.exports = async (message) => {
   if (["sistemas", "botinfo"].includes(command)) return handleBotInfo(message);
 
   // --- SISTEMA VIP & PAINÉIS DE POSTAGEM ---
-  if (command === "postarvip") return handlePostVip(message); // 👇 Chamada do novo comando
+  if (command === "postarvip") return handlePostVip(message);
 
   if (
     [
@@ -187,8 +172,6 @@ module.exports = async (message) => {
     ].includes(command)
   )
     return handleVipCommands(message, command, args);
-  if (["booster", "boost"].includes(command))
-    return handleBoosterPanel(message);
 
   // --- SISTEMA DE PROTEÇÃO ---
   if (["panela", "blacklist"].includes(command))
@@ -196,14 +179,7 @@ module.exports = async (message) => {
   if (["pd", "setpd", "removepd"].includes(command))
     return handlePDCommand(message, command, args);
 
-  // --- PAINÉIS DE GESTÃO ---
-  if (["cargo", "cargosadmin"].includes(command)) return sendRolePanel(message);
-  if (["canal", "canais", "infra"].includes(command))
-    return handleChannelPanel(message);
-  if (["mod", "punir", "justice"].includes(command))
-    return handleModPanel(message);
-
-  // --- MODERAÇÃO MANUAL ---
+  // --- MODERAÇÃO MANUAL & TIME ---
   if (command === "ban") return handleBan(message, args);
   if (command === "unban") return handleUnban(message, args);
   if (command === "kick") return handleKick(message, args);
@@ -237,7 +213,7 @@ module.exports = async (message) => {
 
   // --- PAINEL DE JOGOS (AUTO-ROLE) ---
   if (["roles", "cargos", "jogos"].includes(command)) {
-    return handleGameRolesPanel(message); // (ATUALIZADO AQUI)
+    return handleGameRolesPanel(message);
   }
 
   // --- SUPORTE ---
@@ -280,7 +256,7 @@ module.exports = async (message) => {
       return message.channel.send({
         embeds: [
           createFeedbackEmbed(
-            "🛑 Jogo Ativo",
+            `${EMOJI_STOP} Jogo Ativo`,
             `Já existe um jogo ativo (Letra **${state.currentLetter}**).`,
           ),
         ],
@@ -291,13 +267,21 @@ module.exports = async (message) => {
   if (command === "parar") {
     if (!state.isActive)
       return message.channel.send({
-        embeds: [createFeedbackEmbed("❌ Jogo Inativo", `Não há jogo ativo.`)],
+        embeds: [
+          createFeedbackEmbed(
+            `${EMOJI_ERROR} Jogo Inativo`,
+            `Não há jogo ativo.`,
+          ),
+        ],
       });
     clearTimeout(state.timer);
     state.isActive = false;
     await message.channel.send({
       embeds: [
-        createFeedbackEmbed("✅ STOP!", "Rodada encerrada manualmente."),
+        createFeedbackEmbed(
+          `${EMOJI_SUCCESS} STOP!`,
+          "Rodada encerrada manualmente.",
+        ),
       ],
     });
     await postReviewEmbed(state, message.channel);
