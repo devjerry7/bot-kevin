@@ -19,7 +19,7 @@ const { checkExpiredVips } = require("./services/vipManager");
 // Importações dos Eventos Principais
 const handleMessageCreate = require("./events/messageCreate");
 const handleInteractionCreate = require("./events/interactionCreate");
-const tempVoiceHandler = require("./handlers/tempVoiceHandler");
+const handleVoiceState = require("./events/voiceStateUpdate");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
@@ -70,30 +70,9 @@ if (fs.existsSync(slashCommandsPath)) {
 // --- 4. EVENTOS BASE ---
 client.on("messageCreate", handleMessageCreate);
 client.on("interactionCreate", handleInteractionCreate);
-client.on("voiceStateUpdate", (oldState, newState) => {
-  tempVoiceHandler(oldState, newState);
-});
-
-// --- 5. LOGGERS AUTOMÁTICOS ---
-/*
-const loggersPath = path.join(__dirname, "events", "loggers");
-if (fs.existsSync(loggersPath)) {
-  const loggerFiles = fs
-    .readdirSync(loggersPath)
-    .filter((file) => file.endsWith(".js"));
-
-  for (const file of loggerFiles) {
-    try {
-      const logger = require(path.join(loggersPath, file));
-      if (logger.name && logger.execute) {
-        client.on(logger.name, (...args) => logger.execute(client, ...args));
-      }
-    } catch (e) {
-      console.error(`[LOGS] Erro ao carregar ${file}:`, e);
-    }
-  }
-  console.log(`[LOGS] Módulos de auditoria carregados.`);
-}*/
+client.on("voiceStateUpdate", (oldState, newState) =>
+  handleVoiceState(oldState, newState, client),
+);
 
 // Tratamento de Erros Críticos (Impede que o bot desligue do nada)
 process.on("uncaughtException", (err) =>
@@ -103,7 +82,7 @@ process.on("unhandledRejection", (reason) =>
   console.error(`[CRÍTICO] Unhandled Rejection:`, reason),
 );
 
-// --- 6. EVENTO READY ---
+// --- 5. EVENTO READY ---
 client.once("ready", async () => {
   console.log(`🤖 Bot conectado como ${client.user.tag}!`);
 
@@ -130,7 +109,7 @@ client.once("ready", async () => {
   }, 10000);
 });
 
-// --- 7. SERVIDOR HTTP (Health Check para Hosts) ---
+// --- 6. SERVIDOR HTTP (Health Check para Hosts) ---
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("MC KEVIN Bot is Online!\n");
@@ -138,5 +117,5 @@ const server = http.createServer((req, res) => {
 const port = process.env.PORT || 3000;
 server.listen(port, () => console.log(`Health check rodando na porta ${port}`));
 
-// --- 8. LOGIN ---
+// --- 7. LOGIN ---
 client.login(TOKEN);

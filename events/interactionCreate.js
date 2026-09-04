@@ -8,6 +8,7 @@ const handleVip = require("../handlers/vipHandler");
 const handleGameRoles = require("../handlers/gameRoleHandler");
 const handleGamblingInteract = require("../handlers/gamblingHandler");
 const handleTicket = require("../handlers/ticketHandler");
+const handleTempVoicePanel = require("../handlers/tempVoicePanelHandler");
 
 module.exports = async (interaction) => {
   try {
@@ -23,6 +24,7 @@ module.exports = async (interaction) => {
     if (await handleVip(interaction)) return;
     if (await handleGamblingInteract(interaction)) return;
     if (await handleTicket(interaction)) return;
+    if (await handleTempVoicePanel(interaction)) return;
   } catch (error) {
     console.error("[FATAL ERROR] Erro crítico no interactionCreate:", error);
 
