@@ -43,7 +43,7 @@ const { handleGambling } = require("../commands/gambling");
 const { handleCrime } = require("../commands/crime");
 const { handleTicketPanel } = require("../commands/ticketPanel");
 const { handleMassRemove } = require("../commands/massRemove");
-const { handlePostVip } = require("../commands/postarVip");
+const { handlePostVip } = require("../commands/postarvip");
 
 // Helper Visual Dinâmico
 const createFeedbackEmbed = (title, description, color) => {
