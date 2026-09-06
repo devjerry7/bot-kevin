@@ -12,7 +12,7 @@ const config = {
   // --- IDENTIDADE VISUAL ---
   bannerUrl:
     "https://media.discordapp.net/attachments/1539757756272091177/1540170399369662484/14_de_ago._de_2026_18_19_38.png?ex=6a88faf6&is=6a87a976&hm=9e613c70cf8982eb821bb1d6d0e9afb08f48de6a1932c2d51f7a8403effa30d8&=&format=webp&quality=lossless&width=1536&height=615",
-  colorBase: 0x00e5ff,
+  colorBase: 0x962dc0, // Cor Roxa Atualizada
 
   // --- EMOJIS GERAIS ---
   emoji: {
@@ -36,24 +36,24 @@ const config = {
     panelGames: "<:emoji_14:1540175395993690173>",
   },
 
-  // --- EMOJIS DOS JOGOS ---
+  // --- EMOJIS DOS JOGOS (ATUALIZADOS) ---
   gameEmojis: {
-    ff: "<:jogo_freefire:1537237851127816232>",
-    val: "<:valorant:1537237880089608252>",
-    cs: "<:csemoji:1540150893322829904>",
-    gta: "<:gtaemoji:1540172171257581628>",
-    roblox: "<:jogo_roblox:1537237864847249568>",
-    mine: "<:mineicon:1540172781386342450>",
-    codenames: "<:b_emoji:1537237908547965001>",
-    amongus: "<:amongemoji:1540174838596108298>",
-    lol: "<:lolemoji:1545477440283873431>",
-    plato: "<:platoemoji:1545477751165943858>",
-    gartic: "<:garticemoji:1545478093140131911>",
-    bloodstrike: "<:bloodstrikeemoji:1545478456626774177>",
-    clash: "<:clashemoji:1545478824135893092>",
-    standoff: "<:standoffemoji:1545479812305387642>",
-    stumble: "<:stumbleemoji:1545479355529044040>",
-    fortnite: "<:fortniteemoji:1545479391935467541>",
+    ff: "<:freefire:1542643584488964126>",
+    val: "<:valorant:1542643586309300295>",
+    cs: "<:csgo:1542345431021920336>",
+    gta: "<:GTAV:1545831727736557648>",
+    roblox: "<:robloxxa:1542345429562171452>",
+    mine: "<:minecraft:1542345428413059132>",
+    codenames: "<:codnames:1542351228045103124>",
+    amongus: "<:amongs:1542345434779877446>",
+    lol: "<:lol:1545833983508615261>",
+    plato: "<:PLATO:1545831775471927367>",
+    gartic: "<:Gartic:1545831819428241591>",
+    bloodstrike: "<:bloodstrike:1545832296567804035>",
+    clash: "<:clashroyal:1545831363318648874>",
+    standoff: "<:standoff:1545831512572960921>",
+    stumble: "<:stumbleguys:1545831580952559616>",
+    fortnite: "<:Fortnite:1545831642021494895>",
   },
 
   // --- IDS DOS CARGOS DE JOGOS ---
@@ -115,7 +115,7 @@ process.env.EMOJI_UNLOCK = config.emoji.unlock;
 process.env.EMOJI_RENAME = config.emoji.rename || "✏️";
 process.env.EMOJI_PANEL_GAMES = config.emoji.panelGames;
 
-// Emojis de Jogos
+// Emojis de Jogos (Atualizados)
 process.env.EMOJI_GAME_FF = config.gameEmojis.ff;
 process.env.EMOJI_GAME_VAL = config.gameEmojis.val;
 process.env.EMOJI_GAME_CS = config.gameEmojis.cs;
