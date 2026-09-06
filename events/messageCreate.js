@@ -36,8 +36,9 @@ const { handleBotInfo } = require("../commands/botinfo");
 const { handleListMembers } = require("../commands/listMembers");
 const { handleVoice } = require("../commands/voice");
 
-// --- PAINÉIS VISUAIS E EMBEDS (Removidos os painéis excluídos: rolePanel, channelPanel, modPanel, roles, setupVerify) ---
+// --- PAINÉIS VISUAIS E EMBEDS ---
 const { handleGameRolesPanel } = require("../commands/gameRoles"); // k!roles
+const { handleNotifyRolesPanel } = require("../commands/notifyRoles"); // 👈 IMPORTAÇÃO DO NOVO PAINEL DE NOTIFICAÇÕES
 const { handleEconomy } = require("../commands/economy");
 const { handleGambling } = require("../commands/gambling");
 const { handleCrime } = require("../commands/crime");
@@ -214,6 +215,11 @@ module.exports = async (message) => {
   // --- PAINEL DE JOGOS (AUTO-ROLE) ---
   if (["roles", "cargos", "jogos"].includes(command)) {
     return handleGameRolesPanel(message);
+  }
+
+  // --- PAINEL DE NOTIFICAÇÕES (AUTO-ROLE) --- 👈 COMANDO ADICIONADO AQUI!
+  if (["notificacoes", "tags", "ping"].includes(command)) {
+    return handleNotifyRolesPanel(message);
   }
 
   // --- SUPORTE ---
