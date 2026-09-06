@@ -22,33 +22,19 @@ const handleNotifyRolesPanel = async (message) => {
     : 0x962dc0;
   const BANNER_URL = process.env.BANNER_URL;
 
-  // Montando o design idêntico usando "Fields" para simular o texto na esquerda
+  // Design limpo, objetivo e com espaçamento forçado (\n\n)
   const embed = new EmbedBuilder()
     .setTitle("🔔 CENTRAL DE NOTIFICAÇÕES")
     .setDescription(
-      "Pegue sua tag abaixo para receber notificações específicas no servidor e não perder nada importante:",
+      "Pegue sua tag abaixo para receber notificações sobre:\n\n" +
+        "🎁 **SORTEIOS**\n" +
+        "Receba notificações de sorteios.\n\n" +
+        "🎉 **INTERAÇÕES**\n" +
+        "Receba notificações de interações e eventos.\n\n" +
+        "🔴 **LIVES**\n" +
+        "Receba notificações de transmissões ao vivo.",
     )
     .setColor(COLOR_BASE)
-    .addFields(
-      {
-        name: "🎁 SORTEIOS",
-        value:
-          "Receba alertas sobre novos sorteios, eventos e prêmios da comunidade.",
-        inline: false,
-      },
-      {
-        name: "🎉 INTERAÇÕES",
-        value:
-          "Seja notificado sobre eventos, brincadeiras, avisos e salinhas.",
-        inline: false,
-      },
-      {
-        name: "🔴 LIVES",
-        value:
-          "Saiba na hora quando a galera entrar ao vivo para assistir e interagir.",
-        inline: false,
-      },
-    )
     .setFooter({
       text: "Sistema de Auto-Role",
       iconURL: message.guild.iconURL(),
@@ -56,7 +42,6 @@ const handleNotifyRolesPanel = async (message) => {
 
   if (BANNER_URL) embed.setImage(BANNER_URL);
 
-  // Criando a fileira de 3 botões perfeitamente alinhada
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("btn_notify_giveaway")
