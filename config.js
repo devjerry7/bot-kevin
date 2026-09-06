@@ -33,7 +33,7 @@ const config = {
     boom: "<:boomemoji:1545469923311231017>",
     ticket: "<:W_Ticket:1446489399897358336>",
     trash: "<:lixeiraemoji:1545465798884327452>",
-    panelGames: "<:emoji_189:1545834657973542913>",
+    panelGames: "<:jogos:1546273610971218000>",
     notifySorteio: "<:sorteios:1546265787776503888>",
     notifyInteracao: "<:interaes:1546265751730790411>",
     notifyLive: "<:transmisso:1546265901161255085>",
