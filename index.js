@@ -1,6 +1,7 @@
 // index.js
 
 // --- 1. IMPORTAÇÕES ---
+require("./config.js");
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
