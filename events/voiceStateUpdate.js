@@ -33,6 +33,7 @@ module.exports = async (oldState, newState, client) => {
           {
             id: member.id,
             allow: [
+              PermissionFlagsBits.Connect, // 🔥 ADICIONADO AQUI PARA O DONO NÃO PERDER ACESSO
               PermissionFlagsBits.ManageChannels,
               PermissionFlagsBits.MoveMembers,
               PermissionFlagsBits.MuteMembers,
@@ -58,7 +59,7 @@ module.exports = async (oldState, newState, client) => {
         )
         .setColor(COLOR_BASE);
 
-      // Botões todos transparentes (Secondary)
+      // Botões transparentes (Secondary)
       const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("vpanel_lock")

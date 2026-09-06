@@ -38,53 +38,39 @@ const handlePostVip = async (message) => {
     const EMOJI_VIP_NIGHT = process.env.EMOJI_VIP_NIGHT || "🌙";
 
     const embed = new EmbedBuilder()
-      .setTitle(`${EMOJI_DIAMOND} Vantagens & Apoiadores`)
+      .setTitle(`Vantagens e Apoiadores`)
       .setDescription(
-        `Confira abaixo os benefícios de cada Tier no nosso servidor e escolha o seu!\n\n` +
-          `${EMOJI_CART} **COMO COMPRAR:**\nPara adquirir o seu VIP, entre em contato com <@${DONO_1}> ou <@${DONO_2}>.`,
+        `Confira os benefícios de cada tier no nosso servidor e escolha o seu!\n\n` +
+          `${EMOJI_CART} **COMO COMPRAR:**\n` +
+          `Para adquirir o seu VIP, entre em contato com <@${DONO_1}> e <@${DONO_2}>.\n\n` +
+          `${EMOJI_BOOST} **LEVEL UP - BOOSTER**\n` +
+          `${EMOJI_DOT} Cargo destacado no servidor;\n` +
+          `${EMOJI_DOT} Permissão de enviar imagem;\n` +
+          `${EMOJI_DOT} Sorteios exclusivos.\n` +
+          `${EMOJI_DOT} Permissão de <#1545530073686347776>.\n\n` +
+          `${EMOJI_VIP_SELECT} **VIP SELECT - ${PRICE_SELECT}**\n` +
+          `${EMOJI_DOT} Cargo destacado no Servidor;\n` +
+          `${EMOJI_DOT} Permissão de enviar imagem;\n` +
+          `${EMOJI_DOT} Tag personalizada;\n` +
+          `${EMOJI_DOT} Sorteios exclusivos;\n` +
+          `${EMOJI_DOT} Permissão de <#1545530073686347776>.\n\n` +
+          `${EMOJI_VIP_STREAM} **VIP STREAM - EXCLUSIVO PARA INFLUENCERS**\n` +
+          `${EMOJI_DOT} Cargo destacado no servidor;\n` +
+          `${EMOJI_DOT} Permissão de enviar imagem;\n` +
+          `${EMOJI_DOT} Call privada + tag personalizada;\n` +
+          `${EMOJI_DOT} Acesso liberado ao chat <#1535759130298421258>;\n` +
+          `${EMOJI_DOT} Sorteios exclusivos;\n` +
+          `${EMOJI_DOT} Vantagens no servidor. (<@&1537258569265717258>).\n\n` +
+          `${EMOJI_VIP_NIGHT} **VIP NIGHT - ${PRICE_NIGHT}**\n` +
+          `${EMOJI_DOT} Cargo destacado no servidor;\n` +
+          `${EMOJI_DOT} Permissão de enviar imagem;\n` +
+          `${EMOJI_DOT} Call privada + tag personalizada;\n` +
+          `${EMOJI_DOT} Acesso liberado ao chat <#1535759130298421258>;\n` +
+          `${EMOJI_DOT} Sorteios exclusivos;\n` +
+          `${EMOJI_DOT} Vantagens no servidor. (<@&1542372640319213590>)\n` +
+          `${EMOJI_DOT} Direito a <@&1535758383297073202>`,
       )
       .setColor(COLOR_BASE)
-      .setImage(BANNER_URL)
-      .addFields(
-        {
-          name: `${EMOJI_BOOST} LEVEL UP - BOOSTER (Grátis via Boost)`,
-          value:
-            `${EMOJI_DOT} Cargo destacado no servidor\n` +
-            `${EMOJI_DOT} Permissão de enviar imagem\n` +
-            `${EMOJI_DOT} Sorteios exclusivos`,
-          inline: false,
-        },
-        {
-          name: `${EMOJI_VIP_SELECT} VIP SELECT - ${PRICE_SELECT}`,
-          value:
-            `${EMOJI_DOT} Cargo destacado no Servidor\n` +
-            `${EMOJI_DOT} Permissão de enviar imagem\n` +
-            `${EMOJI_DOT} Tag personalizada`,
-          inline: false,
-        },
-        {
-          name: `${EMOJI_VIP_STREAM} VIP STREAM - ${PRICE_STREAM}`,
-          value:
-            `${EMOJI_DOT} Cargo destacado no servidor\n` +
-            `${EMOJI_DOT} Permissão de enviar imagem\n` +
-            `${EMOJI_DOT} Call privada + tag personalizada\n` +
-            `${EMOJI_DOT} Acesso liberado ao chat de divulgação\n` +
-            `${EMOJI_DOT} Vantagens no servidor (permv4)`,
-          inline: false,
-        },
-        {
-          name: `${EMOJI_VIP_NIGHT} VIP NIGHT - ${PRICE_NIGHT}`,
-          value:
-            `${EMOJI_DOT} Cargo destacado no servidor\n` +
-            `${EMOJI_DOT} Permissão de enviar imagem\n` +
-            `${EMOJI_DOT} Call privada + tag personalizada\n` +
-            `${EMOJI_DOT} Acesso liberado ao chat de divulgação\n` +
-            `${EMOJI_DOT} Vantagens no servidor (permiog)\n` +
-            `${EMOJI_DOT} Direito a 1 Primeira Dama\n` +
-            `${EMOJI_DOT} Vantagens em eventos (se houver)`,
-          inline: false,
-        },
-      )
       .setFooter({
         text: "Ao adquirir um VIP, você ajuda a manter o servidor ativo e com novidades!",
         iconURL: message.guild.iconURL(),

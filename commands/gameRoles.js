@@ -2,10 +2,17 @@
 const {
   EmbedBuilder,
   ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
   PermissionsBitField,
 } = require("discord.js");
+
+// Função para extrair apenas o ID do emoji do .env e evitar erros na renderização
+const parseEmoji = (emojiString, fallback = "🎮") => {
+  if (!emojiString) return fallback;
+  const match = emojiString.match(/:(\d+)>$/);
+  return match ? match[1] : emojiString;
+};
 
 const handleGameRolesPanel = async (message) => {
   if (
@@ -25,118 +32,98 @@ const handleGameRolesPanel = async (message) => {
   const EMOJI_PANEL_GAMES = process.env.EMOJI_PANEL_GAMES || "🎮";
 
   const embed = new EmbedBuilder()
-    .setTitle(`${EMOJI_PANEL_GAMES} SELECIONE SEUS JOGOS`)
+    .setTitle(`${EMOJI_PANEL_GAMES}  GAMES`)
     .setDescription(
-      "Clique nos botões abaixo para adicionar ou remover as tags de jogo no seu perfil.\n\n" +
-        "Isso liberará o acesso aos canais específicos de cada game e você poderá ser notificado para jogar com a galera!",
+      "**Mostre quais jogos você curte!**\n\n" +
+        "<:pontinho:1545828067035848814> Selecione seus jogos favoritos para receber notificações quando a galera estiver jogando.",
     )
     .setColor(COLOR_BASE)
     .setImage(BANNER_URL)
     .setFooter({
-      text: "Sistema de Auto-Role",
+      text: "2qn",
       iconURL: message.guild.iconURL(),
     });
 
-  // Linha 1 (4 Botões)
-  const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("btn_role_ff")
-      .setLabel("Free Fire")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_FF || "🔥"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_val")
-      .setLabel("Valorant")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_VAL || "🎯"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_cs")
-      .setLabel("CS:GO/2")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_CS || "🔫"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_gta")
-      .setLabel("GTA V")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_GTA || "🚗"),
-  );
+  // --- Criando o Menu Suspenso Múltiplo ---
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId("select_game_roles")
+    .setPlaceholder("Selecione os jogos que você joga...")
+    .setMinValues(0) // 0 permite que o cara desmarque tudo se quiser
+    .setMaxValues(16) // Permite selecionar vários de uma vez só!
+    .addOptions([
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Free Fire")
+        .setValue("role_ff")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_FF, "🔥")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Valorant")
+        .setValue("role_val")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_VAL, "🎯")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("CS:GO/2")
+        .setValue("role_cs")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_CS, "🔫")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("GTA V")
+        .setValue("role_gta")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_GTA, "🚗")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Roblox")
+        .setValue("role_roblox")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_ROBLOX, "🧱")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Minecraft")
+        .setValue("role_mine")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_MINE, "⛏️")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Codenames")
+        .setValue("role_codenames")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_CODENAMES, "🕵️")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Among Us")
+        .setValue("role_amongus")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_AMONGUS, "🔪")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("League of Legends")
+        .setValue("role_lol")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_LOL, "🪄")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Plato")
+        .setValue("role_plato")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_PLATO, "📱")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Gartic")
+        .setValue("role_gartic")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_GARTIC, "🎨")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Bloodstrike")
+        .setValue("role_bloodstrike")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_BLOODSTRIKE, "🩸")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Clash Royale")
+        .setValue("role_clash")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_CLASH, "👑")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Standoff 2")
+        .setValue("role_standoff")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_STANDOFF, "🔫")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Stumble Guys")
+        .setValue("role_stumble")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_STUMBLE, "🏃")),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Fortnite")
+        .setValue("role_fortnite")
+        .setEmoji(parseEmoji(process.env.EMOJI_GAME_FORTNITE, "⛏️")),
+    ]);
 
-  // Linha 2 (4 Botões)
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("btn_role_roblox")
-      .setLabel("Roblox")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_ROBLOX || "🧱"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_mine")
-      .setLabel("Minecraft")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_MINE || "⛏️"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_codenames")
-      .setLabel("Codenames")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_CODENAMES || "🕵️"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_amongus")
-      .setLabel("Among Us")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_AMONGUS || "🔪"),
-  );
+  // Colocando o menu na ActionRow
+  const row = new ActionRowBuilder().addComponents(selectMenu);
 
-  // Linha 3 (4 Botões Novos)
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("btn_role_lol")
-      .setLabel("League of Legends")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_LOL || "🪄"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_plato")
-      .setLabel("Plato")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_PLATO || "📱"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_gartic")
-      .setLabel("Gartic")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_GARTIC || "🎨"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_bloodstrike")
-      .setLabel("Bloodstrike")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_BLOODSTRIKE || "🩸"),
-  );
-
-  // Linha 4 (4 Botões Novos)
-  const row4 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("btn_role_clash")
-      .setLabel("Clash Royale")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_CLASH || "👑"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_standoff")
-      .setLabel("Standoff 2")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_STANDOFF || "🔫"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_stumble")
-      .setLabel("Stumble Guys")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_STUMBLE || "🏃"),
-    new ButtonBuilder()
-      .setCustomId("btn_role_fortnite")
-      .setLabel("Fortnite")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(process.env.EMOJI_GAME_FORTNITE || "⛏️"),
-  );
-
-  // Envio com as 4 linhas
+  // Envio da mensagem limpa e compacta
   await message.channel.send({
     embeds: [embed],
-    components: [row1, row2, row3, row4],
+    components: [row],
   });
 
   if (message.deletable) await message.delete().catch(() => {});

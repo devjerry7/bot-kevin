@@ -24,14 +24,26 @@ module.exports = async (interaction) => {
   )
     return;
 
+  // Pega o canal exato onde o botão foi apertado (independente de onde você esteja agora)
+  const channel = interaction.channel;
   const member = interaction.member;
-  const channel = member.voice.channel;
 
   const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
 
   if (!channel) {
     return interaction.reply({
-      content: `${EMOJI_ERROR} Você precisa estar em uma call temporária para usar este painel.`,
+      content: `${EMOJI_ERROR} Canal não encontrado para este painel.`,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  // Valida se quem clicou é o dono da sala (possui ManageChannels explícito nela)
+  const isOwner = channel
+    .permissionsFor(member)
+    ?.has(PermissionFlagsBits.ManageChannels);
+  if (!isOwner) {
+    return interaction.reply({
+      content: `${EMOJI_ERROR} Apenas o **dono** desta sala específica pode usar este painel!`,
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -41,6 +53,7 @@ module.exports = async (interaction) => {
     await channel.permissionOverwrites.edit(interaction.guild.id, {
       Connect: false,
     });
+    await channel.permissionOverwrites.edit(member.id, { Connect: true });
     return interaction.reply({
       content: "🔒 Sua call foi **privada** com sucesso!",
       flags: MessageFlags.Ephemeral,
@@ -115,7 +128,7 @@ module.exports = async (interaction) => {
     });
   }
 
-  // ➕ Permitir Amigo (Gera menu para selecionar usuário)
+  // ➕ Permitir Amigo
   if (customId === "vpanel_add") {
     const { UserSelectMenuBuilder } = require("discord.js");
     const select = new UserSelectMenuBuilder()
@@ -140,7 +153,7 @@ module.exports = async (interaction) => {
     });
   }
 
-  // 👢 Expulsar Usuário da Call
+  // 👢 Expulsar Usuário
   if (customId === "vpanel_kick") {
     const { UserSelectMenuBuilder } = require("discord.js");
     const select = new UserSelectMenuBuilder()
