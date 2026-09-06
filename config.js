@@ -34,6 +34,10 @@ const config = {
     ticket: "<:W_Ticket:1446489399897358336>",
     trash: "<:lixeiraemoji:1545465798884327452>",
     panelGames: "<:emoji_14:1540175395993690173>",
+    notifySorteio: "<:sorteios:1546265787776503888>",
+    notifyInteracao: "<:interaes:1546265751730790411>",
+    notifyLive: "<:transmisso:1546265901161255085>",
+    notifyIcon: "<:notificao:1546265830457606285>",
   },
 
   // --- EMOJIS DOS JOGOS (ATUALIZADOS) ---
@@ -121,6 +125,12 @@ process.env.EMOJI_LOCK = config.emoji.lock;
 process.env.EMOJI_UNLOCK = config.emoji.unlock;
 process.env.EMOJI_RENAME = config.emoji.rename || "✏️";
 process.env.EMOJI_PANEL_GAMES = config.emoji.panelGames;
+
+// Emojis de Notificação
+process.env.EMOJI_NOTIFY_SORTEIO = config.emoji.notifySorteio;
+process.env.EMOJI_NOTIFY_INTERACAO = config.emoji.notifyInteracao;
+process.env.EMOJI_NOTIFY_LIVE = config.emoji.notifyLive;
+process.env.EMOJI_NOTIFY_ICON = config.emoji.notifyIcon;
 
 // Emojis de Jogos (Atualizados)
 process.env.EMOJI_GAME_FF = config.gameEmojis.ff;

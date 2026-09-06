@@ -22,42 +22,49 @@ const handleNotifyRolesPanel = async (message) => {
     : 0x962dc0;
   const BANNER_URL = process.env.BANNER_URL;
 
-  // Design limpo, objetivo e com espaçamento forçado (\n\n)
+  // Puxando os emojis customizados do .env (Se não achar, usa os normais de segurança)
+  const EMOJI_SORTEIO = process.env.EMOJI_NOTIFY_SORTEIO || "🎁";
+  const EMOJI_INTERACAO = process.env.EMOJI_NOTIFY_INTERACAO || "🎉";
+  const EMOJI_LIVE = process.env.EMOJI_NOTIFY_LIVE || "🔴";
+  const EMOJI_ICON = process.env.EMOJI_NOTIFY_ICON || "🔔";
+
+  // Design limpo, objetivo e com seus emojis no texto
   const embed = new EmbedBuilder()
-    .setTitle("🔔 CENTRAL DE NOTIFICAÇÕES")
+    .setTitle(`${EMOJI_ICON} CENTRAL DE NOTIFICAÇÕES`)
     .setDescription(
       "Pegue sua tag abaixo para receber notificações sobre:\n\n" +
-        "🎁 **SORTEIOS**\n" +
+        `${EMOJI_SORTEIO} **SORTEIOS**\n` +
         "Receba notificações de sorteios.\n\n" +
-        "🎉 **INTERAÇÕES**\n" +
+        `${EMOJI_INTERACAO} **INTERAÇÕES**\n` +
         "Receba notificações de interações e eventos.\n\n" +
-        "🔴 **LIVES**\n" +
+        `${EMOJI_LIVE} **LIVES**\n` +
         "Receba notificações de transmissões ao vivo.",
     )
     .setColor(COLOR_BASE)
     .setFooter({
-      text: "Sistema de Auto-Role",
+      text: "2qn",
       iconURL: message.guild.iconURL(),
     });
 
   if (BANNER_URL) embed.setImage(BANNER_URL);
 
+  // Colocando seus emojis customizados nos botões
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("btn_notify_giveaway")
       .setLabel("Sorteios")
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji("🎁"),
+      .setEmoji(EMOJI_SORTEIO),
     new ButtonBuilder()
       .setCustomId("btn_notify_interaction")
       .setLabel("Interações")
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji("🎉"),
+      .setEmoji(EMOJI_INTERACAO),
     new ButtonBuilder()
       .setCustomId("btn_notify_live")
       .setLabel("Lives")
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji("🔴"),
+      .setEmoji(EMOJI_LIVE),
   );
 
   await message.channel.send({
