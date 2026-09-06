@@ -60,7 +60,7 @@ const handleGameRolesPanel = async (message) => {
         .setValue("role_val")
         .setEmoji(parseEmoji(process.env.EMOJI_GAME_VAL, "🎯")),
       new StringSelectMenuOptionBuilder()
-        .setLabel("CS:GO/2")
+        .setLabel("CS2")
         .setValue("role_cs")
         .setEmoji(parseEmoji(process.env.EMOJI_GAME_CS, "🔫")),
       new StringSelectMenuOptionBuilder()
