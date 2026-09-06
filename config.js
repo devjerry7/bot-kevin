@@ -76,6 +76,13 @@ const config = {
     fortnite: "1545472181637488650",
   },
 
+  // --- IDS DOS CARGOS DE NOTIFICAÇÃO ---
+  notifyRoles: {
+    interaction: "1546256823965974679",
+    giveaway: "1546256710778359869",
+    live: "1541782081917554779",
+  },
+
   // --- SISTEMA DE VOZ ---
   voice: {
     joinToCreateId: "1545530073686347776",
@@ -150,5 +157,10 @@ process.env.ROLE_CLASH = config.gameRoles.clash;
 process.env.ROLE_STANDOFF = config.gameRoles.standoff;
 process.env.ROLE_STUMBLE = config.gameRoles.stumble;
 process.env.ROLE_FORTNITE = config.gameRoles.fortnite;
+
+// Roles (Cargos) de Notificação
+process.env.ROLE_NOTIFY_INTERACTION = config.notifyRoles.interaction;
+process.env.ROLE_NOTIFY_GIVEAWAY = config.notifyRoles.giveaway;
+process.env.ROLE_NOTIFY_LIVE = config.notifyRoles.live;
 
 module.exports = config;

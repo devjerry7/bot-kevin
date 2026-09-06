@@ -10,6 +10,9 @@ const handleGamblingInteract = require("../handlers/gamblingHandler");
 const handleTicket = require("../handlers/ticketHandler");
 const handleTempVoicePanel = require("../handlers/tempVoicePanelHandler");
 
+// 🔔 IMPORTANDO O NOSSO NOVO SISTEMA DE NOTIFICAÇÕES
+const handleNotifyRoles = require("../handlers/notifyRoleHandler");
+
 module.exports = async (interaction) => {
   try {
     // 1. Tenta tratar Slash Commands (/config, /ping)
@@ -19,7 +22,9 @@ module.exports = async (interaction) => {
     }
 
     // 2. ROTEAMENTO DOS SISTEMAS PRINCIPAIS (Botões, Menus e Modais ativos)
+    // 💡 Dica: A ordem aqui não importa tanto, contanto que todos estejam na lista
     if (await handleGameRoles(interaction)) return;
+    if (await handleNotifyRoles(interaction)) return; // 👈 ROTEADOR ACIONADO AQUI!
     if (await handleStopGame(interaction)) return;
     if (await handleVip(interaction)) return;
     if (await handleGamblingInteract(interaction)) return;
