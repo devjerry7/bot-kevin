@@ -115,7 +115,7 @@ const config = {
     blacklistLogId: "1545510794589118495",
     jailRoleId: "1545516786072686623",
     antiSpam: {
-      limit: 10,
+      limit: 15,
       timeMs: 5000,
       timeoutMin: 10,
     },
