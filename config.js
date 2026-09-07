@@ -13,6 +13,10 @@ const config = {
   bannerUrl:
     "https://media.discordapp.net/attachments/1539757756272091177/1540170399369662484/14_de_ago._de_2026_18_19_38.png?ex=6a88faf6&is=6a87a976&hm=9e613c70cf8982eb821bb1d6d0e9afb08f48de6a1932c2d51f7a8403effa30d8&=&format=webp&quality=lossless&width=1536&height=615",
   colorBase: 0x962dc0, // Cor Roxa Atualizada
+  // Cores extras que faltavam
+  colorWarning: 0xffa500,
+  colorSuccess: 0x00ff00,
+  colorError: 0xff0000,
 
   // --- EMOJIS GERAIS ---
   emoji: {
@@ -38,6 +42,7 @@ const config = {
     notifyInteracao: "<:interaes:1546265751730790411>",
     notifyLive: "<:transmisso:1546265901161255085>",
     notifyIcon: "<:notificao:1546265830457606285>",
+    warning: "<:avisoemoji:1545494059081142403>", // Emoji de aviso que faltava
   },
 
   // --- EMOJIS DOS JOGOS (ATUALIZADOS) ---
@@ -99,6 +104,43 @@ const config = {
     dailyAmount: 500,
     workMin: 50,
     workMax: 200,
+  },
+
+  // 👇 BLOCOS NOVOS ADICIONADOS A PARTIR DAQUI 👇
+
+  // --- SEGURANÇA E PUNIÇÕES ---
+  security: {
+    logId: "1535946213520711751",
+    panelaLogId: "1545510700003106926",
+    blacklistLogId: "1545510794589118495",
+    jailRoleId: "1545516786072686623",
+    antiSpam: {
+      limit: 10,
+      timeMs: 5000,
+      timeoutMin: 10,
+    },
+    antiNuke: {
+      timeMs: 10000,
+      maxChannels: 5,
+      maxRoles: 5,
+      maxBans: 5,
+      maxKicks: 5,
+    },
+  },
+
+  // --- TICKETS ---
+  tickets: {
+    parentChannelId: "id_do_canal_de_tickets",
+    logId: "id_do_canal_de_logs_dos_tickets",
+    approverRoleId: "id_do_cargo_da_staff_dos_tickets",
+  },
+
+  // --- MÍDIAS EXTRAS ---
+  media: {
+    gifNuke:
+      "https://i.pinimg.com/originals/20/ef/07/20ef07f361063277c58146322eb6880f.gif",
+    gifPolice:
+      "https://i.pinimg.com/originals/ea/0c/cd/ea0ccd11f06cba1bfe842f1c47e7242d.gif",
   },
 };
 
@@ -172,5 +214,37 @@ process.env.ROLE_FORTNITE = config.gameRoles.fortnite;
 process.env.ROLE_NOTIFY_INTERACTION = config.notifyRoles.interaction;
 process.env.ROLE_NOTIFY_GIVEAWAY = config.notifyRoles.giveaway;
 process.env.ROLE_NOTIFY_LIVE = config.notifyRoles.live;
+
+// 👇 INJEÇÕES NOVAS ADICIONADAS A PARTIR DAQUI 👇
+
+// Cores Extras
+process.env.COLOR_WARNING = `#${config.colorWarning.toString(16)}`;
+process.env.COLOR_SUCCESS = `#00ff00`; // Passado direto pra não dar erro de formatação
+process.env.COLOR_ERROR = `#ff0000`; // Passado direto pra não dar erro de formatação
+
+// Segurança e Logs
+process.env.SECURITY_LOG_ID = config.security.logId;
+process.env.PANELA_LOG_ID = config.security.panelaLogId;
+process.env.BLACKLIST_LOG_ID = config.security.blacklistLogId;
+process.env.JAIL_ROLE_ID = config.security.jailRoleId;
+
+// Anti-Spam & Anti-Nuke Injeções
+process.env.ANTI_SPAM_LIMIT = config.security.antiSpam.limit;
+process.env.ANTI_SPAM_TIME_MS = config.security.antiSpam.timeMs;
+process.env.ANTI_SPAM_TIMEOUT_MIN = config.security.antiSpam.timeoutMin;
+process.env.ANTI_NUKE_TIME_MS = config.security.antiNuke.timeMs;
+process.env.ANTI_NUKE_MAX_CHANNELS = config.security.antiNuke.maxChannels;
+process.env.ANTI_NUKE_MAX_ROLES = config.security.antiNuke.maxRoles;
+process.env.ANTI_NUKE_MAX_BANS = config.security.antiNuke.maxBans;
+process.env.ANTI_NUKE_MAX_KICKS = config.security.antiNuke.maxKicks;
+
+// Tickets e Mídias
+process.env.TICKET_PARENT_CHANNEL_ID = config.tickets.parentChannelId;
+process.env.TICKET_LOG_ID = config.tickets.logId;
+process.env.TICKET_APPROVER_ROLE_ID = config.tickets.approverRoleId;
+process.env.GIF_NUKE = config.media.gifNuke;
+process.env.GIF_POLICE = config.media.gifPolice;
+process.env.EMOJI_NUKE = config.emoji.boom;
+process.env.EMOJI_WARNING = config.emoji.warning;
 
 module.exports = config;
