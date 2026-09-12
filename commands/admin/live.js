@@ -60,6 +60,7 @@ module.exports = {
               streamerId: streamer.id,
               platform,
               platformUsername: cleanUsername,
+              platformUserId: cleanUsername, // Valor temporário até o rastreador atualizar
               enabled: true,
             },
           });
