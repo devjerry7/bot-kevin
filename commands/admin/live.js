@@ -32,14 +32,11 @@ module.exports = {
         );
       }
 
-      // Tratamento de limpeza do nome de usuário
-      const cleanUsername = username.replace("@", "").trim();
+      const cleanUsername = username.replace("@", "").trim().toLowerCase();
 
       try {
         let streamer = await prisma.streamer.findFirst({
-          where: {
-            displayName: { equals: cleanUsername, mode: "insensitive" },
-          },
+          where: { displayName: cleanUsername },
         });
 
         if (!streamer) {
@@ -69,7 +66,7 @@ module.exports = {
         }
 
         return message.channel.send(
-          `${config.emoji.success} Streamer **${cleanUsername}** da plataforma **${platform}** cadastrado com sucesso! O sistema validará a existência no próximo ciclo de rastreamento.`,
+          `${config.emoji.success} Streamer **${cleanUsername}** da plataforma **${platform}** cadastrado com sucesso!`,
         );
       } catch (error) {
         console.error("[LiveCommand] Erro ao adicionar streamer:", error);
@@ -90,14 +87,13 @@ module.exports = {
         );
       }
 
+      const cleanUsername = username.replace("@", "").trim().toLowerCase();
+
       try {
         const platformRecord = await prisma.streamerPlatform.findFirst({
           where: {
             platform,
-            platformUsername: {
-              equals: username.replace("@", ""),
-              mode: "insensitive",
-            },
+            platformUsername: cleanUsername,
           },
         });
 
@@ -157,7 +153,6 @@ module.exports = {
       }
     }
 
-    // Ajuda Padrão do Comando
     return message.channel.send(
       `📌 **Painel de Controle - Lives**\n` +
         `• \`${PREFIX}live add <twitch/youtube/kick/tiktok> <usuario>\` - Adiciona um streamer\n` +
