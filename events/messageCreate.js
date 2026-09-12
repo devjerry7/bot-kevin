@@ -2,6 +2,7 @@
 const { EmbedBuilder } = require("discord.js");
 const config = require("../config");
 const path = require("path");
+const fs = require("fs");
 
 // --- IMPORTAÇÕES DOS SISTEMAS DE JOGO E ESTADO ---
 const { getGameState } = require("../game/gameState");
