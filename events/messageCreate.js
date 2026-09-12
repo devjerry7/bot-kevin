@@ -162,6 +162,34 @@ module.exports = async (message) => {
     }
     try {
       const adminCommand = require(adminCommandPath);
+      // Passamos um wrapper para garantir que o comando use channel.send em vez de reply deletado
+      const safeMessage = Object.create(message, {
+        reply: {
+          value: (content) =>
+            message.channel.send(
+              typeof content === "string" ? { content } : content,
+            ),
+        },
+      });
+      await adminCommand.execute(safeMessage, args);
+      return;
+    } catch (error) {
+      console.error(`[ERRO COMANDO ADMIN]`, error);
+      return message.channel.send(
+        `${EMOJI_ERROR} Ocorreu um erro ao executar este comando.`,
+      );
+    }
+  }
+  if (fs.existsSync(adminCommandPath)) {
+    if (message.deletable) {
+      try {
+        await message.delete();
+      } catch (error) {
+        if (error.code !== 10008) console.error("Erro delete:", error);
+      }
+    }
+    try {
+      const adminCommand = require(adminCommandPath);
       await adminCommand.execute(message, args);
       return;
     } catch (error) {
