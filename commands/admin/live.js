@@ -10,7 +10,7 @@ module.exports = {
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
     ) {
-      return message.reply(
+      return message.channel.send(
         `${config.emoji.error} Você precisa ser Administrador para usar este comando.`,
       );
     }
@@ -27,7 +27,7 @@ module.exports = {
         !["twitch", "youtube", "kick", "tiktok"].includes(platform) ||
         !username
       ) {
-        return message.reply(
+        return message.channel.send(
           `${config.emoji.error} Uso correto: \`${PREFIX}live add <twitch/youtube/kick/tiktok> <usuario>\``,
         );
       }
@@ -37,12 +37,14 @@ module.exports = {
 
       try {
         let streamer = await prisma.streamer.findFirst({
-          where: { name: { equals: cleanUsername, mode: "insensitive" } },
+          where: {
+            displayName: { equals: cleanUsername, mode: "insensitive" },
+          },
         });
 
         if (!streamer) {
           streamer = await prisma.streamer.create({
-            data: { name: cleanUsername, enabled: true },
+            data: { displayName: cleanUsername, enabled: true },
           });
         }
 
@@ -66,12 +68,12 @@ module.exports = {
           });
         }
 
-        return message.reply(
+        return message.channel.send(
           `${config.emoji.success} Streamer **${cleanUsername}** da plataforma **${platform}** cadastrado com sucesso! O sistema validará a existência no próximo ciclo de rastreamento.`,
         );
       } catch (error) {
         console.error("[LiveCommand] Erro ao adicionar streamer:", error);
-        return message.reply(
+        return message.channel.send(
           `${config.emoji.error} Erro interno ao tentar cadastrar o streamer no banco de dados.`,
         );
       }
@@ -83,7 +85,7 @@ module.exports = {
       const username = args[2];
 
       if (!platform || !username) {
-        return message.reply(
+        return message.channel.send(
           `${config.emoji.error} Uso correto: \`${PREFIX}live remove <twitch/youtube/kick/tiktok> <usuario>\``,
         );
       }
@@ -100,7 +102,7 @@ module.exports = {
         });
 
         if (!platformRecord) {
-          return message.reply(
+          return message.channel.send(
             `${config.emoji.error} Nenhum cadastro encontrado para **${username}** na plataforma **${platform}**.`,
           );
         }
@@ -109,12 +111,12 @@ module.exports = {
           where: { id: platformRecord.id },
         });
 
-        return message.reply(
-          `${config.emoji.trash} O streamer **${username}** (${platform}) foi removido do sistema de notificações.`,
+        return message.channel.send(
+          `${config.emoji.trash || "🗑️"} O streamer **${username}** (${platform}) foi removido do sistema de notificações.`,
         );
       } catch (error) {
         console.error("[LiveCommand] Erro ao remover streamer:", error);
-        return message.reply(
+        return message.channel.send(
           `${config.emoji.error} Erro interno ao tentar remover o streamer.`,
         );
       }
@@ -128,15 +130,15 @@ module.exports = {
         });
 
         if (platforms.length === 0) {
-          return message.reply(
-            `${config.emoji.warning} Nenhum streamer cadastrado no momento.`,
+          return message.channel.send(
+            `${config.emoji.warning || "📌"} Nenhum streamer cadastrado no momento.`,
           );
         }
 
         const listText = platforms
           .map(
             (p) =>
-              `• **${p.streamer.name}** (${p.platform.toUpperCase()}) — Canal: \`${p.platformUsername}\``,
+              `• **${p.streamer.displayName}** (${p.platform.toUpperCase()}) — Canal: \`${p.platformUsername}\``,
           )
           .join("\n");
 
@@ -149,14 +151,14 @@ module.exports = {
         return message.channel.send({ embeds: [embed] });
       } catch (error) {
         console.error("[LiveCommand] Erro ao listar streamers:", error);
-        return message.reply(
+        return message.channel.send(
           `${config.emoji.error} Erro ao buscar lista de streamers.`,
         );
       }
     }
 
     // Ajuda Padrão do Comando
-    return message.reply(
+    return message.channel.send(
       `📌 **Painel de Controle - Lives**\n` +
         `• \`${PREFIX}live add <twitch/youtube/kick/tiktok> <usuario>\` - Adiciona um streamer\n` +
         `• \`${PREFIX}live remove <plataforma> <usuario>\` - Remove um streamer\n` +
