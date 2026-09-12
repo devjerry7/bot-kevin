@@ -16,6 +16,7 @@ const {
 
 // Importações dos Gerenciadores
 const { checkExpiredVips } = require("./services/vipManager");
+const { startLiveTracker } = require("./modules/lives/jobs/liveTrackerJob");
 
 // Importações dos Eventos Principais
 const handleMessageCreate = require("./events/messageCreate");
@@ -92,6 +93,9 @@ client.once("ready", async () => {
   setInterval(() => {
     checkExpiredVips(client);
   }, 3600 * 1000);
+
+  // Inicializa o sistema de rastreamento de lives a cada 3 minutos
+  startLiveTracker(client);
 
   // Status rotativo
   const activities = [

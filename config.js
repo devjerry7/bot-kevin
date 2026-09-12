@@ -98,6 +98,9 @@ const config = {
     tempCategoryId: "1545529897714319360",
   },
 
+  // --- LIVES ---
+  liveChannelId: "1535759130298421258",
+
   // --- ECONOMIA ---
   economy: {
     currencyName: "Kevins",

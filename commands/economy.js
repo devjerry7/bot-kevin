@@ -24,16 +24,16 @@ module.exports = {
     const PREFIX = process.env.PREFIX || "mc!";
     const CURRENCY = process.env.CURRENCY_NAME || "Kevins";
 
-    // Cores
-    const COLOR_BASE = process.env.COLOR_BASE
-      ? parseInt(process.env.COLOR_BASE, 16)
-      : 0x00e5ff;
-    const COLOR_SUCCESS = process.env.COLOR_SUCCESS
-      ? parseInt(process.env.COLOR_SUCCESS, 16)
-      : 0x00ff00;
-    const COLOR_ERROR = process.env.COLOR_ERROR
-      ? parseInt(process.env.COLOR_ERROR, 16)
-      : 0xff0000;
+    // Cores (Fallback para roxo padrão 0x800080 caso a env venha vazia ou inválida)
+    const parseColor = (envVal, defaultVal) => {
+      if (!envVal) return defaultVal;
+      const parsed = parseInt(envVal, 16);
+      return isNaN(parsed) ? defaultVal : parsed;
+    };
+
+    const COLOR_BASE = parseColor(process.env.COLOR_BASE, 0x800080);
+    const COLOR_SUCCESS = parseColor(process.env.COLOR_SUCCESS, 0x00ff00);
+    const COLOR_ERROR = parseColor(process.env.COLOR_ERROR, 0xff0000);
 
     // Emojis Base
     const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
@@ -54,12 +54,16 @@ module.exports = {
     const userId = message.author.id;
 
     const createEcoEmbed = (title, desc, color = COLOR_BASE) => {
-      return new EmbedBuilder()
+      const embed = new EmbedBuilder()
         .setTitle(title)
         .setDescription(desc)
-        .setColor(color)
-        .setImage(BANNER_URL)
+        .setColor(isNaN(color) ? 0x800080 : color)
         .setTimestamp();
+
+      if (BANNER_URL) {
+        embed.setImage(BANNER_URL);
+      }
+      return embed;
     };
 
     // --- k!atm / k!saldo ---

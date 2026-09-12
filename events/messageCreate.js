@@ -1,5 +1,6 @@
 // events/messageCreate.js
 const { EmbedBuilder } = require("discord.js");
+const config = require("../config");
 
 // --- IMPORTAÇÕES DOS SISTEMAS DE JOGO E ESTADO ---
 const { getGameState } = require("../game/gameState");
@@ -37,8 +38,8 @@ const { handleListMembers } = require("../commands/listMembers");
 const { handleVoice } = require("../commands/voice");
 
 // --- PAINÉIS VISUAIS E EMBEDS ---
-const { handleGameRolesPanel } = require("../commands/gameRoles"); // k!roles
-const { handleNotifyRolesPanel } = require("../commands/notifyRoles"); // 👈 IMPORTAÇÃO DO NOVO PAINEL DE NOTIFICAÇÕES
+const { handleGameRolesPanel } = require("../commands/gameRoles");
+const { handleNotifyRolesPanel } = require("../commands/notifyRoles");
 const { handleEconomy } = require("../commands/economy");
 const { handleGambling } = require("../commands/gambling");
 const { handleCrime } = require("../commands/crime");
@@ -48,9 +49,7 @@ const { handlePostVip } = require("../commands/postarvip");
 
 // Helper Visual Dinâmico
 const createFeedbackEmbed = (title, description, color) => {
-  const COLOR_ERROR = process.env.COLOR_ERROR
-    ? parseInt(process.env.COLOR_ERROR.replace("#", ""), 16)
-    : 0xff0000;
+  const COLOR_ERROR = config.colorError || 0xff0000;
   return new EmbedBuilder()
     .setTitle(title)
     .setDescription(description)
@@ -63,12 +62,12 @@ module.exports = async (message) => {
   // Ignora bots e DMs
   if (message.author.bot || !message.guild) return;
 
-  const PREFIX = process.env.PREFIX || "mc!";
+  const PREFIX = config.prefix || "mc!";
 
-  // --- Lendo emojis globais do .env ---
-  const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
-  const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
-  const EMOJI_STOP = process.env.EMOJI_STOP || "🛑";
+  // --- Lendo emojis globais do config.js ---
+  const EMOJI_ERROR = config.emoji?.error || "❌";
+  const EMOJI_SUCCESS = config.emoji?.success || "✅";
+  const EMOJI_STOP = config.emoji?.stop || "🛑";
 
   // ====================================================
   // 2. CAMADA DE SEGURANÇA (Prioridade Máxima)
@@ -107,9 +106,7 @@ module.exports = async (message) => {
             (ans) => !ans.startsWith(currentLetter),
           );
           if (hasInvalidLetter) {
-            const COLOR_INFO = process.env.COLOR_INFO
-              ? parseInt(process.env.COLOR_INFO.replace("#", ""), 16)
-              : 0x00bfff;
+            const COLOR_INFO = config.colorInfo || 0x00bfff;
             return message.channel
               .send({
                 embeds: [
@@ -142,6 +139,37 @@ module.exports = async (message) => {
   // ====================================================
   // 4. PROCESSAMENTO DE COMANDOS
   // ====================================================
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+  const command = args.shift().toLowerCase();
+
+  // --- ROTEADOR DE COMANDOS ADMIN (ex: mc!live) ---
+  const adminCommandPath = path.join(
+    __dirname,
+    "..",
+    "commands",
+    "admin",
+    `${command}.js`,
+  );
+  if (fs.existsSync(adminCommandPath)) {
+    if (message.deletable) {
+      try {
+        await message.delete();
+      } catch (error) {
+        if (error.code !== 10008) console.error("Erro delete:", error);
+      }
+    }
+    try {
+      const adminCommand = require(adminCommandPath);
+      await adminCommand.execute(message, args);
+      return;
+    } catch (error) {
+      console.error(`[ERRO COMANDO ADMIN]`, error);
+      return message.reply(
+        `${EMOJI_ERROR} Ocorreu um erro ao executar este comando.`,
+      );
+    }
+  }
+
   if (message.deletable) {
     try {
       await message.delete();
@@ -149,9 +177,6 @@ module.exports = async (message) => {
       if (error.code !== 10008) console.error("Erro delete:", error);
     }
   }
-
-  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
 
   // --- INFO & AJUDA ---
   if (["help", "ajuda", "comandos"].includes(command))
@@ -217,7 +242,7 @@ module.exports = async (message) => {
     return handleGameRolesPanel(message);
   }
 
-  // --- PAINEL DE NOTIFICAÇÕES (AUTO-ROLE) --- 👈 COMANDO ADICIONADO AQUI!
+  // --- PAINEL DE NOTIFICAÇÕES (AUTO-ROLE) ---
   if (["notificacoes", "tags", "ping"].includes(command)) {
     return handleNotifyRolesPanel(message);
   }

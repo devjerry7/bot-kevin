@@ -8,9 +8,9 @@ datasource db {
 }
 
 model Vip {
-  userId          String       @id @unique
-  tier            String       @default("default")
-  since           DateTime     @default(now())
+  userId          String      @id @unique
+  tier            String      @default("default")
+  since           DateTime    @default(now())
   expiresAt       DateTime?
   customRoleId    String?
   customChannelId String?
@@ -52,7 +52,7 @@ model BoosterFriend {
 }
 
 model Economy {
-  userId    String    @id @unique // Removido guildId e usando userId como principal
+  userId    String    @id @unique
   wallet    Int       @default(0)
   bank      Int       @default(0)
   lastDaily DateTime?
@@ -61,7 +61,7 @@ model Economy {
 
 model Inventory {
   id       Int    @id @default(autoincrement())
-  userId   String // Removido guildId
+  userId   String
   itemId   String
   quantity Int    @default(1)
 
@@ -72,7 +72,7 @@ model Inventory {
 // 🏢 CONFIGURAÇÃO DO SERVIDOR (SINGLE-SERVER)
 // ==========================================
 model ServerConfig {
-  id        String   @id @default("main") // Apenas uma configuração central
+  id        String   @id @default("main")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -147,4 +147,53 @@ model ServerConfig {
   // --- 🎭 REACTION ROLES (LEGADO) ---
   roleReactionChannelId String?
   roleReactionMessageId String?
+
+  // --- 🔴 SISTEMA DE LIVES ---
+  liveNotificationChannelId String?
+  liveNotificationRoleId    String?
+  liveSystemEnabled         Boolean @default(true)
+}
+
+// ==========================================
+// 🔴 SISTEMA MULTIPLATAFORMA DE LIVES
+// ==========================================
+
+model Streamer {
+  id            String             @id @default(uuid())
+  displayName   String
+  discordUserId String?            // Opcional: linkar com a conta do membro no Discord
+  enabled       Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  platforms     StreamerPlatform[]
+}
+
+model StreamerPlatform {
+  id               String        @id @default(uuid())
+  streamerId       String
+  streamer         Streamer      @relation(fields: [streamerId], references: [id], onDelete: Cascade)
+  platform         String        // "twitch", "tiktok", "kick", "youtube"
+  platformUserId   String        // ID interno da API
+  platformUsername String        // Nome de usuário (ex: @fulano)
+  enabled          Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  sessions         LiveSession[]
+
+  // Trava de segurança: Um streamer só pode ter UMA conta ativa por plataforma
+  @@unique([streamerId, platform]) 
+}
+
+model LiveSession {
+  id               String           @id @default(uuid())
+  platformId       String
+  platform         StreamerPlatform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  externalLiveId   String           // ID único da live gerado pela plataforma
+  isActive         Boolean          @default(true)
+  discordMessageId String?          // ID da notificação enviada no chat
+  startedAt        DateTime         @default(now())
+  endedAt          DateTime?
+
+  // A GRANDE MÁGICA ANTI-DUPLICAÇÃO: 
+  @@unique([platformId, externalLiveId]) 
 }
