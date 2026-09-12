@@ -17,6 +17,7 @@
     "discord.js": "^14.24.2",
     "dotenv": "^17.2.3",
     "libsodium-wrappers": "^0.7.15",
+    "node-cron": "^4.6.0",
     "node-fetch": "^2.7.0",
     "prisma": "5.10.2"
   }
