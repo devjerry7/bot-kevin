@@ -1,5 +1,11 @@
 // events/interactionCreate.js
-const { MessageFlags } = require("discord.js");
+const {
+  MessageFlags,
+  PermissionsBitField,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const config = require("../config");
@@ -24,35 +30,93 @@ module.exports = async (interaction) => {
       return;
     }
 
-    // 2. CAPTURA DO BOTÃO DE INSCRIÇÃO DO CAMPEONATO 2x2 FREE FIRE
-    if (interaction.isButton() && interaction.customId === "ff_register_btn") {
-      const tournament = await prisma.ffTournament.findUnique({
-        where: { id: "main" },
-      });
-
-      if (!tournament || !tournament.isOpen) {
-        return interaction.reply({
-          content: `${config.emoji.error} As inscrições para o campeonato estão encerradas no momento!`,
-          flags: MessageFlags.Ephemeral,
+    // ==========================================
+    // 🏆 SISTEMA DE TORNEIO FREE FIRE (2x2)
+    // ==========================================
+    if (interaction.isButton()) {
+      // 2A. CAPTURA DO BOTÃO DE INSCRIÇÃO
+      if (interaction.customId === "ff_register_btn") {
+        const tournament = await prisma.ffTournament.findUnique({
+          where: { id: "main" },
         });
+
+        if (!tournament || !tournament.isOpen) {
+          return interaction.reply({
+            content: `${config.emoji.error} As inscrições para o campeonato estão encerradas no momento!`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        try {
+          await prisma.ffParticipant.create({
+            data: {
+              userId: interaction.user.id,
+              username: interaction.user.username,
+            },
+          });
+
+          return interaction.reply({
+            content: `${config.emoji.success} Inscrição realizada com sucesso! Fique atento para o sorteio das duplas.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        } catch (error) {
+          return interaction.reply({
+            content: `${config.emoji.warning || "⚠️"} Você já está inscrito neste campeonato!`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
       }
 
-      try {
-        await prisma.ffParticipant.create({
-          data: {
-            userId: interaction.user.id,
-            username: interaction.user.username,
-          },
+      // 2B. CAPTURA DO BOTÃO DE VITÓRIA NO CHAVEAMENTO
+      if (interaction.customId.startsWith("ff_win_")) {
+        // Apenas admins podem definir o vencedor
+        if (
+          !interaction.member.permissions.has(
+            PermissionsBitField.Flags.Administrator,
+          )
+        ) {
+          return interaction.reply({
+            content: `${config.emoji.error || "❌"} Apenas administradores podem definir o vencedor da partida.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        // Extrai os dados do customId (ex: ff_win_MATCHID_TEAMID)
+        const [, , matchId, winnerTeamId] = interaction.customId.split("_");
+
+        // Atualiza a partida no banco de dados
+        await prisma.ffMatch.update({
+          where: { id: matchId },
+          data: { status: "finished", winnerId: winnerTeamId },
         });
 
-        return interaction.reply({
-          content: `${config.emoji.success} Inscrição realizada com sucesso! Fique atento para o sorteio das duplas.`,
-          flags: MessageFlags.Ephemeral,
+        // Busca o nome da equipe vencedora para a mensagem
+        const winningTeam = await prisma.ffTeam.findUnique({
+          where: { id: winnerTeamId },
         });
-      } catch (error) {
-        return interaction.reply({
-          content: `${config.emoji.warning || "⚠️"} Você já está inscrito neste campeonato!`,
-          flags: MessageFlags.Ephemeral,
+
+        // Refaz os botões da mensagem para desativá-los e destacar o vencedor
+        const updatedComponents = interaction.message.components.map((row) => {
+          const newRow = new ActionRowBuilder();
+          row.components.forEach((btn) => {
+            const isWinnerBtn = btn.customId.includes(winnerTeamId);
+            const newBtn = ButtonBuilder.from(btn)
+              .setDisabled(true)
+              // Se for o botão do vencedor, fica verde. Se for do perdedor, continua cinza.
+              .setStyle(
+                isWinnerBtn ? ButtonStyle.Success : ButtonStyle.Secondary,
+              );
+            newRow.addComponents(newBtn);
+          });
+          return newRow;
+        });
+
+        // Atualiza a mensagem original desativando os botões
+        await interaction.update({ components: updatedComponents });
+
+        // Envia um feedback rápido no chat
+        return interaction.followUp({
+          content: `${config.emoji.success || "✅"} **${winningTeam.teamName}** foi declarada vencedora desta chave!`,
         });
       }
     }
