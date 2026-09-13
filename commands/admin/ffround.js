@@ -11,7 +11,8 @@ const config = require("../../config");
 
 module.exports = {
   name: "ffround",
-  description: "Gera a próxima fase do campeonato com os vencedores.",
+  description:
+    "Gera a próxima fase do campeonato com os vencedores ou anuncia o campeão.",
   async execute(message, args) {
     if (
       !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
@@ -21,7 +22,7 @@ module.exports = {
       );
     }
 
-    // 1. Descobre qual é a rodada atual buscando a maior rodada no banco
+    // 1. Descobre a rodada atual
     const allMatches = await prisma.ffMatch.findMany({
       orderBy: { round: "desc" },
     });
@@ -36,7 +37,7 @@ module.exports = {
       (m) => m.round === currentRound,
     );
 
-    // 2. Trava de segurança: Verifica se todas as chaves já têm um vencedor
+    // 2. Trava de Segurança: Alguém ficou sem votar?
     const pending = currentRoundMatches.filter((m) => m.status !== "finished");
     if (pending.length > 0) {
       return message.channel.send(
@@ -44,12 +45,12 @@ module.exports = {
       );
     }
 
-    // 3. Coleta as equipes vencedoras
+    // 3. Coleta os vencedores
     const winnerIds = currentRoundMatches
       .map((m) => m.winnerId)
       .filter(Boolean);
 
-    // 4. Se sobrou só um vencedor, ele é o campeão!
+    // 4. VERIFICA SE TEMOS UM CAMPEÃO (Fim do torneio)
     if (winnerIds.length === 1) {
       const champion = await prisma.ffTeam.findUnique({
         where: { id: winnerIds[0] },
@@ -58,12 +59,15 @@ module.exports = {
       const champEmbed = new EmbedBuilder()
         .setTitle(`👑 TEMOS UM CAMPEÃO! 👑`)
         .setDescription(
-          `A **${champion.teamName}** (<@${champion.player1Id}> & <@${champion.player2Id}>) amassou todo mundo e venceu o campeonato!`,
+          `A equipe **${champion.teamName}** formou a dupla perfeita!\n🏆 <@${champion.player1Id}> & <@${champion.player2Id}> amassaram todos e levaram o torneio!`,
         )
-        .setColor(0xffd700) // Dourado para o campeão
-        .setImage("https://media.giphy.com/media/l0ExhcMymdL6TrZ84/giphy.gif"); // Um gif comemorativo opcional
+        .setColor(0xffd700)
+        .setThumbnail(
+          "https://media.giphy.com/media/l0ExhcMymdL6TrZ84/giphy.gif",
+        ) // Opcional: GIF de troféu
+        .setFooter({ text: "Fim do Campeonato 2x2" });
 
-      // Fecha o campeonato oficialmente no banco
+      // Opcional: Marca o torneio como finalizado para não bugar
       await prisma.ffTournament.update({
         where: { id: "main" },
         data: { isOpen: false },
@@ -78,7 +82,6 @@ module.exports = {
       `${config.emoji.loading || "⏳"} **MONTANDO CHAVEAMENTO - RODADA ${nextRound}...**`,
     );
 
-    // Busca os dados completos das equipes vencedoras
     const teams = await prisma.ffTeam.findMany({
       where: { id: { in: winnerIds } },
     });
@@ -129,9 +132,9 @@ module.exports = {
         });
       } else {
         message.channel.send(
-          `*A **${teams[i].teamName}** avançou por W.O nesta fase.*`,
+          `*A **${teams[i].teamName}** avançou por W.O nesta fase (Chave ímpar).*`,
         );
-        // Aqui já poderíamos criar um Match automático finalizado, mas deixar no aviso simplifica a progressão.
+        // Aqui o ideal seria criar uma match fake finalizada para o time não sumir na próxima checagem, mas para simplificar, ele já está no array de times para o round que vem.
       }
     }
   },

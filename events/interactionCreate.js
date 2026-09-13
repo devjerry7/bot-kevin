@@ -102,7 +102,6 @@ module.exports = async (interaction) => {
             const isWinnerBtn = btn.customId.includes(winnerTeamId);
             const newBtn = ButtonBuilder.from(btn)
               .setDisabled(true)
-              // Se for o botão do vencedor, fica verde. Se for do perdedor, continua cinza.
               .setStyle(
                 isWinnerBtn ? ButtonStyle.Success : ButtonStyle.Secondary,
               );
@@ -114,10 +113,112 @@ module.exports = async (interaction) => {
         // Atualiza a mensagem original desativando os botões
         await interaction.update({ components: updatedComponents });
 
-        // Envia um feedback rápido no chat
-        return interaction.followUp({
+        await interaction.followUp({
           content: `${config.emoji.success || "✅"} **${winningTeam.teamName}** foi declarada vencedora desta chave!`,
         });
+
+        // ==========================================
+        // 🔄 CHECAGEM AUTOMÁTICA DE PROGRESSÃO DE ROUND
+        // ==========================================
+        const matchData = await prisma.ffMatch.findUnique({
+          where: { id: matchId },
+        });
+        const currentRound = matchData.round;
+
+        const roundMatches = await prisma.ffMatch.findMany({
+          where: { round: currentRound },
+        });
+        const pendingInRound = roundMatches.filter(
+          (m) => m.status !== "finished",
+        );
+
+        if (pendingInRound.length === 0) {
+          const winnerIds = roundMatches.map((m) => m.winnerId).filter(Boolean);
+
+          if (winnerIds.length === 1) {
+            const champion = await prisma.ffTeam.findUnique({
+              where: { id: winnerIds[0] },
+            });
+
+            const champEmbed = new EmbedBuilder()
+              .setTitle(`👑 TEMOS UM CAMPEÃO! 👑`)
+              .setDescription(
+                `A equipe **${champion.teamName}** formou a dupla perfeita!\n🏆 <@${champion.player1Id}> & <@${champion.player2Id}> amassaram todos e levaram o torneio!`,
+              )
+              .setColor(0xffd700)
+              .setThumbnail(
+                "https://media.giphy.com/media/l0ExhcMymdL6TrZ84/giphy.gif",
+              )
+              .setFooter({ text: "Fim do Campeonato 2x2" });
+
+            await prisma.ffTournament.update({
+              where: { id: "main" },
+              data: { isOpen: false },
+            });
+            return interaction.channel.send({ embeds: [champEmbed] });
+          }
+
+          const nextRound = currentRound + 1;
+          await interaction.channel.send(
+            `${config.emoji.loading || "⏳"} **Todas as partidas da Rodada ${currentRound} foram finalizadas! Gerando Chaveamento - Rodada ${nextRound}...**`,
+          );
+
+          const teams = await prisma.ffTeam.findMany({
+            where: { id: { in: winnerIds } },
+          });
+
+          for (let i = 0; i < teams.length; i += 2) {
+            if (teams[i + 1]) {
+              const teamA = teams[i];
+              const teamB = teams[i + 1];
+
+              const newMatch = await prisma.ffMatch.create({
+                data: {
+                  round: nextRound,
+                  teamAId: teamA.id,
+                  teamBId: teamB.id,
+                  status: "pending",
+                },
+              });
+
+              const embed = new EmbedBuilder()
+                .setTitle(
+                  `⚔️ FASE ${nextRound}: ${teamA.teamName} vs ${teamB.teamName}`,
+                )
+                .setDescription(
+                  `**${teamA.teamName}**\n<@${teamA.player1Id}> & <@${teamA.player2Id}>\n\n**VS**\n\n**${teamB.teamName}**\n<@${teamB.player1Id}> & <@${teamB.player2Id}>`,
+                )
+                .setColor(config.colorBase || 0x962dc0);
+
+              const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                  .setCustomId(`ff_win_${newMatch.id}_${teamA.id}`)
+                  .setLabel(`Vitória ${teamA.teamName}`)
+                  .setStyle(ButtonStyle.Secondary)
+                  .setEmoji(config.emoji.success || "✅"),
+                new ButtonBuilder()
+                  .setCustomId(`ff_win_${newMatch.id}_${teamB.id}`)
+                  .setLabel(`Vitória ${teamB.teamName}`)
+                  .setStyle(ButtonStyle.Secondary)
+                  .setEmoji(config.emoji.success || "✅"),
+              );
+
+              const msg = await interaction.channel.send({
+                embeds: [embed],
+                components: [row],
+              });
+              await prisma.ffMatch.update({
+                where: { id: newMatch.id },
+                data: { messageId: msg.id },
+              });
+            } else {
+              interaction.channel.send(
+                `*A **${teams[i].teamName}** avançou por W.O nesta fase (Chave ímpar).*`,
+              );
+            }
+          }
+        }
+        return;
       }
     }
 
