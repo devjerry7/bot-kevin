@@ -22,10 +22,11 @@ module.exports = {
       );
     }
 
-    // 1. Trava o campeonato
-    await prisma.ffTournament.update({
+    // 1. Trava o campeonato (Correção do erro P2025 usando upsert)
+    await prisma.ffTournament.upsert({
       where: { id: "main" },
-      data: { isOpen: false },
+      update: { isOpen: false },
+      create: { id: "main", isOpen: false },
     });
 
     // 2. Busca e embaralha participantes
