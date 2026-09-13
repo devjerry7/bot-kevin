@@ -19,7 +19,6 @@ class TikTokProvider extends BaseProvider {
       try {
         const username = streamer.platformUsername.replace("@", "");
 
-        // Consulta pública na web do TikTok para checar o estado atual do criador
         const response = await axios.get(
           `https://www.tiktok.com/@${username}/live`,
           {
@@ -35,19 +34,18 @@ class TikTokProvider extends BaseProvider {
 
         const htmlContent = response.data;
 
-        // O TikTok injeta o estado da live no HTML em formato JSON (geralmente dentro de tags script com __UNIVERSAL_DATA_FOR_REHYDRATION__)
-        // Verificamos de forma segura se há indícios de transmissão ativa na página pública
+        // Validação rigorosa: O TikTok define roomStatus 2 ou status 2 estritamente quando há transmissão ativa real
         const isLiveActive =
           htmlContent.includes('"roomStatus":2') ||
           htmlContent.includes('"status":2') ||
-          htmlContent.includes('"liveRoom":');
+          htmlContent.includes('"isLive":true');
 
         if (isLiveActive) {
           events.push(
             new StandardLiveEvent({
               streamerId: streamer.streamerId,
               platform: "tiktok",
-              platformLiveId: `tiktok_${username}_${Date.now()}`, // ID dinâmico baseado no momento da detecção
+              platformLiveId: `tiktok_${username}_${Date.now()}`,
               username: streamer.platformUsername,
               displayName: streamer.platformUsername,
               isLive: true,
@@ -72,7 +70,6 @@ class TikTokProvider extends BaseProvider {
           );
         }
       } catch (error) {
-        // Se a página retornar 404 ou bloqueio temporário, tratamos como offline para evitar quedas no bot
         events.push(
           new StandardLiveEvent({
             streamerId: streamer.streamerId,
