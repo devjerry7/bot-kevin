@@ -39,6 +39,7 @@ module.exports = {
           `• Estar em call\n` +
           `• Usando a tag do servidor\n` +
           `• Seguir o perfil no [TikTok](https://www.tiktok.com/@__2qn_)\n\n` +
+          `• Telagem responsável: <@1544694287986458628> e <@1490416746128080976>\n` +
           `Clique no botão abaixo para garantir sua inscrição!`,
       )
       .setColor(config.colorBase || 0x962dc0)
