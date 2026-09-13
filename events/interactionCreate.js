@@ -1,5 +1,8 @@
 // events/interactionCreate.js
 const { MessageFlags } = require("discord.js");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+const config = require("../config");
 
 // --- IMPORTAÇÃO DOS HANDLERS ---
 const handleSlashCommand = require("../handlers/slashHandler");
@@ -21,10 +24,42 @@ module.exports = async (interaction) => {
       return;
     }
 
-    // 2. ROTEAMENTO DOS SISTEMAS PRINCIPAIS (Botões, Menus e Modais ativos)
-    // 💡 Dica: A ordem aqui não importa tanto, contanto que todos estejam na lista
+    // 2. CAPTURA DO BOTÃO DE INSCRIÇÃO DO CAMPEONATO 2x2 FREE FIRE
+    if (interaction.isButton() && interaction.customId === "ff_register_btn") {
+      const tournament = await prisma.ffTournament.findUnique({
+        where: { id: "main" },
+      });
+
+      if (!tournament || !tournament.isOpen) {
+        return interaction.reply({
+          content: `${config.emoji.error} As inscrições para o campeonato estão encerradas no momento!`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      try {
+        await prisma.ffParticipant.create({
+          data: {
+            userId: interaction.user.id,
+            username: interaction.user.username,
+          },
+        });
+
+        return interaction.reply({
+          content: `${config.emoji.success} Inscrição realizada com sucesso! Fique atento para o sorteio das duplas.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch (error) {
+        return interaction.reply({
+          content: `${config.emoji.warning || "⚠️"} Você já está inscrito neste campeonato!`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    }
+
+    // 3. ROTEAMENTO DOS SISTEMAS PRINCIPAIS (Botões, Menus e Modais ativos)
     if (await handleGameRoles(interaction)) return;
-    if (await handleNotifyRoles(interaction)) return; // 👈 ROTEADOR ACIONADO AQUI!
+    if (await handleNotifyRoles(interaction)) return;
     if (await handleStopGame(interaction)) return;
     if (await handleVip(interaction)) return;
     if (await handleGamblingInteract(interaction)) return;
