@@ -25,45 +25,43 @@ class LiveNotificationManager {
     const lowerCategory = categoryName.toLowerCase();
 
     if (lowerCategory.includes("free fire") || lowerCategory.includes("ff"))
-      return config.gameRoles.ff;
+      return config.gameRoles?.ff;
     if (lowerCategory.includes("valorant") || lowerCategory.includes("val"))
-      return config.gameRoles.val;
+      return config.gameRoles?.val;
     if (
       lowerCategory.includes("counter-strike") ||
       lowerCategory.includes("cs2") ||
       lowerCategory.includes("cs:go")
     )
-      return config.gameRoles.cs;
+      return config.gameRoles?.cs;
     if (
       lowerCategory.includes("gta") ||
       lowerCategory.includes("grand theft auto")
     )
-      return config.gameRoles.gta;
-    if (lowerCategory.includes("roblox")) return config.gameRoles.roblox;
+      return config.gameRoles?.gta;
+    if (lowerCategory.includes("roblox")) return config.gameRoles?.roblox;
     if (lowerCategory.includes("minecraft") || lowerCategory.includes("mine"))
-      return config.gameRoles.mine;
+      return config.gameRoles?.mine;
     if (
       lowerCategory.includes("league of legends") ||
       lowerCategory.includes("lol")
     )
-      return config.gameRoles.lol;
-    if (lowerCategory.includes("fortnite")) return config.gameRoles.fortnite;
-    if (lowerCategory.includes("among us")) return config.gameRoles.amongus;
-    if (lowerCategory.includes("clash royale")) return config.gameRoles.clash;
-    if (lowerCategory.includes("stumble guys")) return config.gameRoles.stumble;
-    if (lowerCategory.includes("standoff")) return config.gameRoles.standoff;
-    if (lowerCategory.includes("gartic")) return config.gameRoles.gartic;
+      return config.gameRoles?.lol;
+    if (lowerCategory.includes("fortnite")) return config.gameRoles?.fortnite;
+    if (lowerCategory.includes("among us")) return config.gameRoles?.amongus;
+    if (lowerCategory.includes("clash royale")) return config.gameRoles?.clash;
+    if (lowerCategory.includes("stumble guys"))
+      return config.gameRoles?.stumble;
+    if (lowerCategory.includes("standoff")) return config.gameRoles?.standoff;
+    if (lowerCategory.includes("gartic")) return config.gameRoles?.gartic;
     if (lowerCategory.includes("blood strike"))
-      return config.gameRoles.bloodstrike;
+      return config.gameRoles?.bloodstrike;
 
     return null;
   }
 
   async checkAllStreams() {
     try {
-      // Como o bot é focado no seu servidor único, o ID do canal de lives pode ser lido do config ou de uma variável de ambiente dedicada.
-      // Vamos assumir que você definirá liveChannelId no config ou usará uma env.
-      // Caso prefira adicionar no config.js, você pode colocar liveChannelId lá depois.
       const channelId = config.liveChannelId || process.env.LIVE_CHANNEL_ID;
       if (!channelId) return;
 
@@ -72,7 +70,7 @@ class LiveNotificationManager {
         .catch(() => null);
       if (!channel) return;
 
-      // Busca os streamers cadastrados no Prisma
+      // Busca os streamers cadastrados no Prisma junto com o perfil do streamer
       const platformsData = await prisma.streamerPlatform.findMany({
         where: { enabled: true, streamer: { enabled: true } },
         include: { streamer: true },
@@ -127,28 +125,34 @@ class LiveNotificationManager {
               },
             });
 
+            // --- ESTRUTURA VISUAL APRIMORADA ---
             const embed = new EmbedBuilder()
               .setColor(config.colorBase || 0x962dc0)
               .setAuthor({
                 name: `${event.displayName} está ao vivo na ${event.platform.toUpperCase()}!`,
-                iconURL: event.thumbnail || undefined,
+                iconURL: event.avatarUrl || event.thumbnail || undefined, // Exibe o avatar do criador
               })
-              .setTitle(event.title)
+              .setTitle(event.title || `Transmissão de ${event.displayName}`)
               .setURL(event.url)
               .addFields(
                 {
                   name: "🎮 Jogo / Categoria",
-                  value: event.category,
+                  value: event.category || "Não especificado",
                   inline: true,
                 },
                 {
-                  name: "👥 Viewers",
-                  value: String(event.viewerCount),
+                  name: "👥 Visualizadores",
+                  value: `\`${Number(event.viewerCount || 0).toLocaleString("pt-BR")}\``,
                   inline: true,
                 },
               )
-              .setTimestamp(event.startedAt);
+              .setTimestamp(event.startedAt || new Date())
+              .setFooter({
+                text: `Plataforma: ${event.platform.toUpperCase()} • Sistema de Lives`,
+                iconURL: this.client.user?.displayAvatarURL(),
+              });
 
+            // Define a miniatura grande da live se houver
             if (event.thumbnail) {
               embed.setImage(event.thumbnail);
             }
@@ -156,12 +160,12 @@ class LiveNotificationManager {
             // Montagem inteligente das menções de cargos
             const mentions = [];
 
-            // 1. Sempre inclui o cargo geral de lives se configurado
+            // 1. Cargo geral de lives
             if (config.notifyRoles?.live) {
               mentions.push(`<@&${config.notifyRoles.live}>`);
             }
 
-            // 2. Tenta identificar o cargo específico do jogo transmitido
+            // 2. Cargo específico do jogo transmitido
             const gameRoleId = this.resolveGameRole(event.category);
             if (gameRoleId) {
               mentions.push(`<@&${gameRoleId}>`);
@@ -180,7 +184,35 @@ class LiveNotificationManager {
             });
           }
         } else {
+          // Se a live encerrou e havia uma sessão ativa, fechamos e editamos a mensagem
           if (activeSession) {
+            try {
+              if (activeSession.discordMessageId) {
+                const msg = await channel.messages
+                  .fetch(activeSession.discordMessageId)
+                  .catch(() => null);
+                if (msg && msg.embeds[0]) {
+                  const oldEmbed = msg.embeds[0];
+                  const finishedEmbed = EmbedBuilder.from(oldEmbed)
+                    .setColor(0x2f3136)
+                    .setTitle(`[ENCERRADA] ${oldEmbed.title}`)
+                    .setFooter({ text: "🔴 Transmissão Encerrada" });
+
+                  await msg
+                    .edit({
+                      content: `🔴 A transmissão de **${event.displayName}** foi encerrada.`,
+                      embeds: [finishedEmbed],
+                    })
+                    .catch(() => {});
+                }
+              }
+            } catch (err) {
+              console.error(
+                "[LiveManager] Erro ao atualizar mensagem de encerramento:",
+                err,
+              );
+            }
+
             await prisma.liveSession.update({
               where: { id: activeSession.id },
               data: {

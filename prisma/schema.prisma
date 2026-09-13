@@ -184,6 +184,37 @@ model StreamerPlatform {
   @@unique([streamerId, platform]) 
 }
 
+model FfTournament {
+  id          String   @id @default("main")
+  isOpen      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model FfParticipant {
+  userId      String   @id @unique
+  username    String
+  registeredAt DateTime @default(now())
+}
+
+model FfTeam {
+  id          String   @id @default(uuid())
+  teamName    String
+  player1Id   String
+  player2Id   String
+  channelId   String?  // ID da call temporária de voz
+  seed        Int      @default(0)
+}
+
+model FfMatch {
+  id          String   @id @default(uuid())
+  round       Int      // 1 = Quartas/Oitavas, 2 = Semifinal, 3 = Final
+  teamAId     String?
+  teamBId     String?
+  winnerId    String?
+  messageId   String?  // ID da mensagem do painel de votação/vitória
+  status      String   @default("pending") // pending, ongoing, finished
+}
+
 model LiveSession {
   id               String           @id @default(uuid())
   platformId       String
