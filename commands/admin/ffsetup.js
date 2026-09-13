@@ -29,7 +29,8 @@ module.exports = {
     });
 
     const embed = new EmbedBuilder()
-      .setTitle("🔥 CAMPEONATO 2x2 FREE FIRE 🔥")
+      .setTitle("<:emoji_4:1542026409067937824> 2x2 2qn")
+      .setURL("https://www.tiktok.com/@__2qn_")
       .setDescription(
         `• **Horário:** 22:00\n` +
           `• **Formato:** 2x2\n` +
@@ -37,7 +38,7 @@ module.exports = {
           `**Requisitos:**\n` +
           `• Estar em call\n` +
           `• Usando a tag do servidor\n` +
-          `• Seguir o perfil no TikTok\n\n` +
+          `• Seguir o perfil no [TikTok](https://www.tiktok.com/@__2qn_)\n\n` +
           `Clique no botão abaixo para garantir sua inscrição!`,
       )
       .setColor(config.colorBase || 0x962dc0)
@@ -47,7 +48,7 @@ module.exports = {
       new ButtonBuilder()
         .setCustomId("ff_register_btn")
         .setLabel("Inscrever-se")
-        .setStyle(ButtonStyle.Success)
+        .setStyle(ButtonStyle.Secondary)
         .setEmoji(config.emoji.success || "✅"),
     );
 
