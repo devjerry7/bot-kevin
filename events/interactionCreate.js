@@ -1,5 +1,6 @@
 // events/interactionCreate.js
 const {
+  EmbedBuilder,
   MessageFlags,
   PermissionsBitField,
   ActionRowBuilder,
