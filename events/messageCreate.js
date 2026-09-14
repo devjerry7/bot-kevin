@@ -49,6 +49,10 @@ const { handleTicketPanel } = require("../commands/ticketPanel");
 const { handleMassRemove } = require("../commands/massRemove");
 const { handlePostVip } = require("../commands/postarvip");
 
+// --- IMPORTAÇÕES DOS COMANDOS FREE FIRE (NOVOS) ---
+const ffCampeaoCommand = require("../commands/ffcampeao");
+const ffSairCommand = require("../commands/ffsair");
+
 // Helper Visual Dinâmico
 const createFeedbackEmbed = (title, description, color) => {
   const COLOR_ERROR = config.colorError || 0xff0000;
@@ -162,7 +166,6 @@ module.exports = async (message) => {
     }
     try {
       const adminCommand = require(adminCommandPath);
-      // Passamos um wrapper para garantir que o comando use channel.send em vez de reply deletado
       const safeMessage = Object.create(message, {
         reply: {
           value: (content) =>
@@ -180,25 +183,6 @@ module.exports = async (message) => {
       );
     }
   }
-  if (fs.existsSync(adminCommandPath)) {
-    if (message.deletable) {
-      try {
-        await message.delete();
-      } catch (error) {
-        if (error.code !== 10008) console.error("Erro delete:", error);
-      }
-    }
-    try {
-      const adminCommand = require(adminCommandPath);
-      await adminCommand.execute(message, args);
-      return;
-    } catch (error) {
-      console.error(`[ERRO COMANDO ADMIN]`, error);
-      return message.reply(
-        `${EMOJI_ERROR} Ocorreu um erro ao executar este comando.`,
-      );
-    }
-  }
 
   if (message.deletable) {
     try {
@@ -207,6 +191,10 @@ module.exports = async (message) => {
       if (error.code !== 10008) console.error("Erro delete:", error);
     }
   }
+
+  // --- COMANDOS FREE FIRE ---
+  if (command === "ffcampeao") return ffCampeaoCommand.execute(message, args);
+  if (command === "ffsair") return ffSairCommand.execute(message, args);
 
   // --- INFO & AJUDA ---
   if (["help", "ajuda", "comandos"].includes(command))
