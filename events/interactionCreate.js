@@ -213,8 +213,20 @@ module.exports = async (interaction) => {
                 data: { messageId: msg.id },
               });
             } else {
-              interaction.channel.send(
-                `*A **${teams[i].teamName}** avançou por W.O nesta fase (Chave ímpar).*`,
+              // CORREÇÃO W.O: Cria uma partida fantasma concluída para a equipe que sobrou ir direto para a próxima fase
+              const soloTeam = teams[i];
+              await prisma.ffMatch.create({
+                data: {
+                  round: nextRound,
+                  teamAId: soloTeam.id,
+                  teamBId: null,
+                  status: "finished",
+                  winnerId: soloTeam.id,
+                },
+              });
+
+              await interaction.channel.send(
+                `*A **${soloTeam.teamName}** avançou por W.O nesta fase (Chave ímpar) e já está garantida na próxima!*`,
               );
             }
           }

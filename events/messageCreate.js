@@ -28,7 +28,7 @@ const {
   handleJail,
   handleUnjail,
 } = require("../commands/timeMod");
-const { handleHelp } = require("../commands/help");
+const helpCommand = require("../commands/help"); // CORRIGIDO: Importado como objeto para acessar o execute()
 const {
   handleLockdown,
   handleUnlockdown,
@@ -198,7 +198,7 @@ module.exports = async (message) => {
 
   // --- INFO & AJUDA ---
   if (["help", "ajuda", "comandos"].includes(command))
-    return handleHelp(message);
+    return helpCommand.execute(message, args); // CORRIGIDO: Chamando o execute() do objeto
   if (["sistemas", "botinfo"].includes(command)) return handleBotInfo(message);
 
   // --- SISTEMA VIP & PAINÉIS DE POSTAGEM ---
