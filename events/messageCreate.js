@@ -160,6 +160,9 @@ module.exports = async (message) => {
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
+  // 🔍 [DEBUG] Vamos rastrear o comando no terminal
+  console.log(`[DEBUG] Comando capturado: "${command}" | Args:`, args);
+
   // --- ROTEADOR DE COMANDOS ADMIN (ex: mc!live, mc!staff) ---
   const adminCommandPath = path.join(
     __dirname,
@@ -168,6 +171,11 @@ module.exports = async (message) => {
     "admin",
     `${command}.js`,
   );
+
+  console.log(
+    `[DEBUG] Procurando admin script em: ${adminCommandPath} | Existe? ${fs.existsSync(adminCommandPath)}`,
+  );
+
   if (fs.existsSync(adminCommandPath)) {
     if (message.deletable) {
       try {
