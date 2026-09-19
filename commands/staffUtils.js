@@ -1,10 +1,10 @@
 // commands/staffUtils.js
+const { EmbedBuilder } = require("discord.js");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const config = require("../config");
 
 async function handleMeta(message) {
-  // Apaga o comando do usuário para manter o chat limpo
   if (message.deletable) message.delete().catch(() => {});
 
   const staff = await prisma.staffUser.findUnique({
@@ -13,7 +13,7 @@ async function handleMeta(message) {
 
   if (!staff) {
     const msg = await message.channel.send(
-      `${config.emoji?.error || "❌"} Você não faz parte da staff rastreada.`,
+      `${config.emoji?.error || "❌"} Você não faz parte da equipe monitorada.`,
     );
     return setTimeout(() => msg.delete().catch(() => {}), 5000);
   }
@@ -25,40 +25,59 @@ async function handleMeta(message) {
     where: { discordId: message.author.id },
   })) || { msgCount: 0, voiceMinutes: 0 };
 
-  let replyText = "";
-  if (staff.trackType === "CHAT") {
-    const faltam = Math.max(0, staffConfig.metaChatSemanal - tracking.msgCount);
-    const percent = Math.min(
-      100,
-      Math.floor((tracking.msgCount / staffConfig.metaChatSemanal) * 100),
-    );
+  const type = staff.trackType; // CHAT, CALL ou BOTH
+  let descricao = "";
 
-    replyText = `📊 **Seu Progresso (Chat):**\nVocê enviou **${tracking.msgCount}/${staffConfig.metaChatSemanal}** mensagens válidas nesta semana (${percent}%).\n${faltam > 0 ? `Faltam **${faltam}** mensagens.` : "✅ Meta batida!"}\n🔥 Streak atual: **${staff.streakWeeks} semanas**`;
-  } else {
-    const horasAtuais = (tracking.voiceMinutes / 60).toFixed(1);
-    const horasMeta = (staffConfig.metaCallMinutos / 60).toFixed(1);
-    const faltamMinutos = Math.max(
-      0,
-      staffConfig.metaCallMinutos - tracking.voiceMinutes,
-    );
-    const faltamHoras = (faltamMinutos / 60).toFixed(1);
-    const percent = Math.min(
-      100,
-      Math.floor((tracking.voiceMinutes / staffConfig.metaCallMinutos) * 100),
-    );
+  const iconeSucesso = config.emoji?.success || "✅";
+  const iconeProgresso = config.emoji?.loading || "⏳";
+  const iconeFogo = config.emoji?.fire || "🔥";
+  const iconeStats = config.emoji?.stats || "📊";
 
-    replyText = `📊 **Seu Progresso (Call):**\nVocê ficou **${horasAtuais}h / ${horasMeta}h** em call nesta semana (${percent}%).\n${faltamMinutos > 0 ? `Faltam **${faltamHoras}h**.` : "✅ Meta batida!"}\n🔥 Streak atual: **${staff.streakWeeks} semanas**`;
+  if (type === "CHAT" || type === "BOTH") {
+    const metaChat = staffConfig.metaChatSemanal;
+    const atualChat = tracking.msgCount;
+    const faltamChat = Math.max(0, metaChat - atualChat);
+    const pChat = Math.min(100, Math.floor((atualChat / metaChat) * 100));
+    const statusChat = atualChat >= metaChat ? iconeSucesso : iconeProgresso;
+
+    descricao +=
+      `💬 **Atividade no Chat:**\n` +
+      `• Progresso: **${atualChat}** / **${metaChat}** mensagens (${pChat}%)\n` +
+      `${faltamChat > 0 ? `• Faltam **${faltamChat}** mensagens.` : `• ${iconeSucesso} Meta de chat concluída!`}\n\n`;
   }
 
-  // Envia a resposta e deleta após 15 segundos para simular o "efêmero"
+  if (type === "CALL" || type === "BOTH") {
+    const metaCall = staffConfig.metaCallMinutos;
+    const atualCall = tracking.voiceMinutes;
+    const horasAtuais = (atualCall / 60).toFixed(1);
+    const horasMeta = (metaCall / 60).toFixed(1);
+    const faltamMinutos = Math.max(0, metaCall - atualCall);
+    const faltamHoras = (faltamMinutos / 60).toFixed(1);
+    const pCall = Math.min(100, Math.floor((atualCall / metaCall) * 100));
+    const statusCall = atualCall >= metaCall ? iconeSucesso : iconeProgresso;
+
+    descricao +=
+      `🎙️ **Atividade em Call:**\n` +
+      `• Progresso: **${horasAtuais}h** / **${horasMeta}h** (${pCall}%)\n` +
+      `${faltamMinutos > 0 ? `• Faltam **${faltamHoras}h** em call.` : `• ${iconeSucesso} Meta de call concluída!`}\n\n`;
+  }
+
+  descricao += `${iconeFogo} **Sequência:** ${staff.streakWeeks} semanas consecutivas.`;
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${iconeStats} Seu Progresso na Equipe`)
+    .setDescription(descricao)
+    .setColor(config.colorBase || 0x00ffcc)
+    .setTimestamp();
+
   const msg = await message.channel.send({
-    content: `<@${message.author.id}>, \n${replyText}`,
+    content: `<@${message.author.id}>`,
+    embeds: [embed],
   });
   setTimeout(() => msg.delete().catch(() => {}), 15000);
 }
 
 async function handlePausa(message) {
-  // Apaga o comando do usuário
   if (message.deletable) message.delete().catch(() => {});
 
   const staff = await prisma.staffUser.findUnique({
@@ -67,31 +86,30 @@ async function handlePausa(message) {
 
   if (!staff) {
     const msg = await message.channel.send(
-      `${config.emoji?.error || "❌"} Você não faz parte da staff rastreada.`,
+      `${config.emoji?.error || "❌"} Você não faz parte da equipe monitorada.`,
     );
     return setTimeout(() => msg.delete().catch(() => {}), 5000);
   }
 
-  // Toggle: Se já estiver pausado, retoma. Se estiver ativo, pausa.
-  if (staff.status === "PAUSED") {
-    await prisma.staffUser.update({
-      where: { discordId: message.author.id },
-      data: { status: "ACTIVE" },
-    });
-    const msg = await message.channel.send(
-      `${config.emoji?.success || "✅"} <@${message.author.id}>, seu tracking foi **RETOMADO**. Volte ao trabalho!`,
-    );
-    setTimeout(() => msg.delete().catch(() => {}), 10000);
-  } else {
-    await prisma.staffUser.update({
-      where: { discordId: message.author.id },
-      data: { status: "PAUSED" },
-    });
-    const msg = await message.channel.send(
-      `${config.emoji?.success || "✅"} <@${message.author.id}>, seu tracking foi **PAUSADO**. Você não ganhará streaks, mas também não será punido.`,
-    );
-    setTimeout(() => msg.delete().catch(() => {}), 10000);
-  }
+  const novoStatus = staff.status === "PAUSED" ? "ACTIVE" : "PAUSED";
+  await prisma.staffUser.update({
+    where: { discordId: message.author.id },
+    data: { status: novoStatus },
+  });
+
+  const textoAviso =
+    novoStatus === "PAUSED"
+      ? `seu monitoramento foi **pausado**. Você está seguro de punições esta semana, mas não acumulará sequência.`
+      : `seu monitoramento foi **retomado**. Bom trabalho de volta!`;
+
+  const icone =
+    novoStatus === "PAUSED"
+      ? config.emoji?.warning || "⚠️"
+      : config.emoji?.success || "✅";
+  const msg = await message.channel.send(
+    `${icone} <@${message.author.id}>, ${textoAviso}`,
+  );
+  setTimeout(() => msg.delete().catch(() => {}), 10000);
 }
 
 module.exports = { handleMeta, handlePausa };
