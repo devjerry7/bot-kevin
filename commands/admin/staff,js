@@ -1,0 +1,158 @@
+// commands/admin/staff.js
+const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+const config = require("../../config");
+
+module.exports = {
+  name: "staff",
+  description: "Gerencia a equipe de movimentação (Chat/Call).",
+  async execute(message, args) {
+    // 1. Verificação de Segurança: Apenas Administradores
+    if (
+      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
+    ) {
+      return message.reply(
+        `${config.emoji?.error || "❌"} Apenas administradores podem usar este comando.`,
+      );
+    }
+
+    const action = args[0]?.toLowerCase();
+
+    // Comando sem argumentos ou ação inválida mostra um mini-help
+    if (!["add", "remove", "painel", "perdoar"].includes(action)) {
+      return message.reply(
+        `🛠️ **Uso correto do comando:**\n` +
+          `\`mc!staff add @usuario chat/call\` - Adiciona um membro.\n` +
+          `\`mc!staff remove @usuario\` - Remove da staff.\n` +
+          `\`mc!staff painel\` - Mostra o progresso de todos.\n` +
+          `\`mc!staff perdoar @usuario\` - Completa a meta do membro na semana atual.`,
+      );
+    }
+
+    // PAINEL GERAL
+    if (action === "painel") {
+      const staffList = await prisma.staffUser.findMany({
+        include: { tracking: true },
+      });
+      if (staffList.length === 0)
+        return message.reply("⚠️ Nenhum membro na staff atualmente.");
+
+      const staffConfig = (await prisma.staffConfig.findUnique({
+        where: { id: "main" },
+      })) || { metaChatSemanal: 250, metaCallMinutos: 600 };
+
+      const description = staffList
+        .map((s) => {
+          const tr = s.tracking || { msgCount: 0, voiceMinutes: 0 };
+          const isChat = s.trackType === "CHAT";
+          const meta = isChat
+            ? staffConfig.metaChatSemanal
+            : staffConfig.metaCallMinutos;
+          const atual = isChat ? tr.msgCount : tr.voiceMinutes;
+          const progressoTxt = isChat
+            ? `${atual}/${meta} msgs`
+            : `${(atual / 60).toFixed(1)}h/${(meta / 60).toFixed(1)}h`;
+          const percent = Math.min(100, Math.floor((atual / meta) * 100));
+
+          const statusIcon =
+            s.status === "PAUSED" ? "⏸️" : percent >= 100 ? "✅" : "⏳";
+
+          return `${statusIcon} <@${s.discordId}> | **R${s.currentRank}** (${s.trackType})\n└ Progresso: \`${progressoTxt}\` (${percent}%) | 🔥 ${s.streakWeeks}`;
+        })
+        .join("\n\n");
+
+      const embed = new EmbedBuilder()
+        .setTitle("🛠️ Painel mod 2QN")
+        .setDescription(description)
+        .setColor(config.colorBase || 0x00ffcc)
+        .setTimestamp();
+
+      return message.reply({ embeds: [embed] });
+    }
+
+    // Identifica o usuário mencionado para os outros comandos
+    const targetUser =
+      message.mentions.users.first() ||
+      (await message.client.users.fetch(args[1]).catch(() => null));
+    if (!targetUser)
+      return message.reply(
+        `${config.emoji?.error || "❌"} Você precisa mencionar um usuário válido!`,
+      );
+
+    // ADICIONAR
+    if (action === "add") {
+      const trackType = args[2]?.toUpperCase();
+      if (trackType !== "CHAT" && trackType !== "CALL") {
+        return message.reply(
+          "❌ Especifique a trilha: `CHAT` ou `CALL`. Ex: `mc!staff add @user chat`",
+        );
+      }
+
+      await prisma.staffUser.upsert({
+        where: { discordId: targetUser.id },
+        update: { trackType, status: "ACTIVE", currentRank: 1 },
+        create: { discordId: targetUser.id, trackType, currentRank: 1 },
+      });
+
+      // Garante que a tabela de tracking exista para ele
+      await prisma.staffTracking.upsert({
+        where: { discordId: targetUser.id },
+        update: {},
+        create: { discordId: targetUser.id },
+      });
+
+      // Tenta mandar DM de boas-vindas
+      await targetUser
+        .send(
+          `📢 Olá! Você foi escalado para a **Staff de Movimentação (${trackType})** da 2QN.\nSuas metas semanais começaram a ser rastreadas. Digite \`mc!meta\` no servidor para acompanhar seu progresso. Bom trabalho!`,
+        )
+        .catch(() => {});
+
+      return message.reply(
+        `✅ O usuário <@${targetUser.id}> foi adicionado com sucesso na trilha **${trackType}** (Rank 1 - Trainee).`,
+      );
+    }
+
+    // REMOVER
+    if (action === "remove") {
+      await prisma.staffTracking.deleteMany({
+        where: { discordId: targetUser.id },
+      });
+      await prisma.staffUser.deleteMany({
+        where: { discordId: targetUser.id },
+      });
+      return message.reply(
+        `🗑️ <@${targetUser.id}> foi removido da staff e todo o seu histórico foi apagado.`,
+      );
+    }
+
+    // PERDOAR (Setar a meta dele como 100% na força bruta para o fechamento da semana)
+    if (action === "perdoar") {
+      const staff = await prisma.staffUser.findUnique({
+        where: { discordId: targetUser.id },
+      });
+      if (!staff) return message.reply("❌ Este usuário não é da staff.");
+
+      const staffConfig = (await prisma.staffConfig.findUnique({
+        where: { id: "main" },
+      })) || { metaChatSemanal: 250, metaCallMinutos: 600 };
+
+      if (staff.trackType === "CHAT") {
+        await prisma.staffTracking.update({
+          where: { discordId: targetUser.id },
+          data: { msgCount: staffConfig.metaChatSemanal },
+        });
+      } else {
+        await prisma.staffTracking.update({
+          where: { discordId: targetUser.id },
+          data: { voiceMinutes: staffConfig.metaCallMinutos },
+        });
+      }
+
+      return message.reply(
+        `🙏 O usuário <@${targetUser.id}> foi perdoado. O progresso dele foi preenchido em 100% para evitar punições no domingo.`,
+      );
+    }
+  },
+};

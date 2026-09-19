@@ -18,6 +18,9 @@ const {
 const { checkExpiredVips } = require("./services/vipManager");
 const { startLiveTracker } = require("./modules/lives/jobs/liveTrackerJob");
 
+// 🚀 IMPORTAÇÃO DO CRON DA STAFF (NOVO)
+const initStaffCron = require("./jobs/staffCron");
+
 // Importações dos Eventos Principais
 const handleMessageCreate = require("./events/messageCreate");
 const handleInteractionCreate = require("./events/interactionCreate");
@@ -97,21 +100,14 @@ client.once("ready", async () => {
   // Inicializa o sistema de rastreamento de lives a cada 3 minutos
   startLiveTracker(client);
 
-  // Status rotativo
-  const activities = [
-    { name: `🎮 MC KEVIN`, type: ActivityType.Streaming },
-    { name: `🚨 Monitorando Servidor`, type: ActivityType.Streaming },
-    { name: `💎 Sistema V2 Ativo`, type: ActivityType.Streaming },
-  ];
+  // 🚀 INICIALIZAÇÃO DO CÉREBRO DA STAFF (NOVO)
+  initStaffCron(client);
+  console.log("[STAFF CRON] Rotinas semanais da Staff ativadas!");
 
-  let i = 0;
-  setInterval(() => {
-    client.user.setPresence({
-      activities: [{ name: activities[i].name, type: activities[i].type }],
-      status: "online",
-    });
-    i = ++i % activities.length;
-  }, 10000);
+  // Status limpo e estático (apenas online, sem "Transmitindo")
+  client.user.setPresence({
+    status: "online",
+  });
 });
 
 // --- 6. SERVIDOR HTTP (Health Check para Hosts) ---

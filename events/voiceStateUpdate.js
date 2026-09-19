@@ -8,14 +8,30 @@ const {
   EmbedBuilder,
 } = require("discord.js");
 
+// --- IMPORTAÇÃO DA STAFF (NOVO) ---
+const staffVoiceTracker = require("../listeners/staffVoiceTracker");
+
 module.exports = async (oldState, newState, client) => {
   const creatorChannelId = process.env.JOIN_TO_CREATE_ID;
   const categoryId = process.env.TEMP_CATEGORY_ID;
 
-  if (!creatorChannelId) return;
-
   const member = newState.member;
   const guild = newState.guild;
+
+  // ====================================================
+  // [NOVO] TRACKER DE VOZ DA STAFF
+  // Roda em background sem travar o processamento do resto
+  // ====================================================
+  if (member) {
+    staffVoiceTracker(oldState, newState).catch((err) =>
+      console.error("[STAFF VOICE TRACKER ERROR]", err),
+    );
+  }
+
+  // ====================================================
+  // SISTEMA DE CANAIS TEMPORÁRIOS (Join to Create)
+  // ====================================================
+  if (!creatorChannelId) return;
 
   if (newState.channelId === creatorChannelId) {
     try {

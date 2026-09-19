@@ -49,9 +49,13 @@ const { handleTicketPanel } = require("../commands/ticketPanel");
 const { handleMassRemove } = require("../commands/massRemove");
 const { handlePostVip } = require("../commands/postarvip");
 
-// --- IMPORTAÇÕES DOS COMANDOS FREE FIRE (NOVOS) ---
+// --- IMPORTAÇÕES DOS COMANDOS FREE FIRE ---
 const ffCampeaoCommand = require("../commands/ffcampeao");
 const ffSairCommand = require("../commands/ffsair");
+
+// --- IMPORTAÇÕES DA STAFF (NOVOS) ---
+const staffChatTracker = require("../listeners/staffChatTracker");
+const { handleMeta, handlePausa } = require("../commands/staffUtils");
 
 // Helper Visual Dinâmico
 const createFeedbackEmbed = (title, description, color) => {
@@ -80,6 +84,14 @@ module.exports = async (message) => {
   // ====================================================
   if (await handleChatProtection(message)) return;
   if (await handleAntiSpam(message)) return;
+
+  // ====================================================
+  // [NOVO] TRACKER DE CHAT DA STAFF
+  // Roda em background sem travar o processamento do resto
+  // ====================================================
+  staffChatTracker(message).catch((err) =>
+    console.error("[STAFF TRACKER ERROR]", err),
+  );
 
   // ====================================================
   // 3. LÓGICA DE JOGO E MENÇÃO
@@ -148,7 +160,7 @@ module.exports = async (message) => {
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  // --- ROTEADOR DE COMANDOS ADMIN (ex: mc!live) ---
+  // --- ROTEADOR DE COMANDOS ADMIN (ex: mc!live, mc!staff) ---
   const adminCommandPath = path.join(
     __dirname,
     "..",
@@ -200,6 +212,10 @@ module.exports = async (message) => {
   if (["help", "ajuda", "comandos"].includes(command))
     return helpCommand.execute(message, args); // CORRIGIDO: Chamando o execute() do objeto
   if (["sistemas", "botinfo"].includes(command)) return handleBotInfo(message);
+
+  // --- COMANDOS DA STAFF (NOVOS) ---
+  if (command === "meta") return handleMeta(message);
+  if (command === "pausa") return handlePausa(message);
 
   // --- SISTEMA VIP & PAINÉIS DE POSTAGEM ---
   if (command === "postarvip") return handlePostVip(message);

@@ -228,3 +228,49 @@ model LiveSession {
   // A GRANDE MÁGICA ANTI-DUPLICAÇÃO: 
   @@unique([platformId, externalLiveId]) 
 }
+
+// ==========================================
+// 🛡️ SISTEMA DE GESTÃO DE STAFF (2QN)
+// ==========================================
+
+model StaffConfig {
+  id                    String   @id @default("main")
+  metaChatSemanal       Int      @default(250)
+  metaCallMinutos       Int      @default(600) // 10 horas em minutos
+  
+  // Cargos de Trilha e Visuais (IDs do Discord)
+  roleTraineeChat       String?
+  roleOficialChat       String?
+  roleVeteranoChat      String?
+  roleEliteChat         String?
+
+  roleTraineeCall       String?
+  roleOficialCall       String?
+  roleVeteranoCall      String?
+  roleEliteCall         String?
+
+  // Cargos de Permissão [P] Backend
+  rolePermChatLvl2      String?
+  rolePermChatLvl3      String?
+  rolePermCallLvl2      String?
+  rolePermCallLvl3      String?
+}
+
+model StaffUser {
+  discordId    String        @id
+  trackType    String        // 'CHAT' ou 'CALL'
+  currentRank  Int           @default(1) // 1: Trainee, 2: Oficial, 3: Veterano, 4: Elite
+  streakWeeks  Int           @default(0)
+  warnings     Int           @default(0)
+  status       String        @default("ACTIVE") // 'ACTIVE' ou 'PAUSED'
+  createdAt    DateTime      @default(now())
+  tracking     StaffTracking?
+}
+
+model StaffTracking {
+  discordId     String    @id
+  user          StaffUser @relation(fields: [discordId], references: [discordId], onDelete: Cascade)
+  msgCount      Int       @default(0)
+  voiceMinutes  Int       @default(0)
+  lastVoiceJoin DateTime?
+}
