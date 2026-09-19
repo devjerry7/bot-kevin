@@ -257,17 +257,15 @@ model StaffConfig {
 }
 
 model StaffUser {
-  id           String   @id @default(uuid())
-  discordId    String   @unique
-  trackType    String   @default("CHAT") // Aceitará "CHAT", "CALL" ou "BOTH"
-  currentRank  Int      @default(1)
+  discordId    String   @id
+  trackType    String   @default("CHAT") // 'CHAT', 'CALL' ou 'BOTH'
+  currentRank  Int      @default(1)      // 1: Trainee, 2: Oficial, 3: Veterano, 4: Elite
   streakWeeks  Int      @default(0)
   warnings     Int      @default(0)
-  status       String   @default("ACTIVE") // ACTIVE ou PAUSED
+  status       String   @default("ACTIVE") // 'ACTIVE' ou 'PAUSED'
   createdAt    DateTime @default(now())
   tracking     StaffTracking?
 }
-
 
 model StaffTracking {
   discordId     String    @id
