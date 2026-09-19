@@ -2,7 +2,8 @@
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const config = require("../config");
+const config = require("../../config");
+const staffConfigData = require("../../config/staffConfig");
 
 module.exports = {
   name: "staff",
@@ -102,6 +103,25 @@ module.exports = {
         create: { discordId: targetUser.id },
       });
 
+      // Aplica o cargo automaticamente no Discord (Rank 1)
+      const member = await message.guild.members
+        .fetch(targetUser.id)
+        .catch(() => null);
+      if (member) {
+        const rank1Info = staffConfigData.ranks[1];
+        const roleToAssign =
+          trackType === "CHAT" ? rank1Info.chatRole : rank1Info.callRole;
+
+        if (roleToAssign) {
+          await member.roles.add(roleToAssign).catch((err) => {
+            console.error("[ERRO CARGO DISCORD]", err);
+            return message.channel.send(
+              "⚠️ Membro salvo no banco, mas **falhou ao dar o cargo**. Verifique se o cargo do bot está acima na hierarquia do servidor!",
+            );
+          });
+        }
+      }
+
       // Tenta mandar DM de boas-vindas
       await targetUser
         .send(
@@ -110,12 +130,30 @@ module.exports = {
         .catch(() => {});
 
       return message.reply(
-        `✅ O usuário <@${targetUser.id}> foi adicionado com sucesso na trilha **${trackType}** (Rank 1 - Trainee).`,
+        `✅ O usuário <@${targetUser.id}> foi adicionado com sucesso na trilha **${trackType}** (Rank 1 - Trainee) e o cargo foi atribuído!`,
       );
     }
 
     // REMOVER
     if (action === "remove") {
+      // Opcional: Remove os cargos de staff do usuário antes de deletar
+      const member = await message.guild.members
+        .fetch(targetUser.id)
+        .catch(() => null);
+      if (member) {
+        const allRolesToRemove = [];
+        for (const r in staffConfigData.ranks) {
+          allRolesToRemove.push(
+            staffConfigData.ranks[r].chatRole,
+            staffConfigData.ranks[r].callRole,
+            staffConfigData.ranks[r].permRole,
+          );
+        }
+        await member.roles
+          .remove(allRolesToRemove.filter(Boolean))
+          .catch(() => {});
+      }
+
       await prisma.staffTracking.deleteMany({
         where: { discordId: targetUser.id },
       });
@@ -123,7 +161,7 @@ module.exports = {
         where: { discordId: targetUser.id },
       });
       return message.reply(
-        `🗑️ <@${targetUser.id}> foi removido da staff e todo o seu histórico foi apagado.`,
+        `🗑️ <@${targetUser.id}> foi removido da staff, teve os cargos retirados e todo o histórico foi apagado.`,
       );
     }
 
@@ -146,7 +184,10 @@ module.exports = {
       } else {
         await prisma.staffTracking.update({
           where: { discordId: targetUser.id },
-          data: { voiceMinutes: staffConfig.metaCallMinutos },
+          data: {
+            validation: undefined,
+            voiceMinutes: staffConfig.metaCallMinutos,
+          },
         });
       }
 
