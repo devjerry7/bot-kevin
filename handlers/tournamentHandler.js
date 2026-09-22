@@ -7,20 +7,61 @@ const {
   EmbedBuilder,
   ButtonBuilder,
   ButtonStyle,
+  UserSelectMenuBuilder,
+  MessageFlags,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
+const config = require("../config");
 
 module.exports = async function handleTournamentInteractions(interaction) {
   try {
     // ----------------------------------------------------
-    // A) CLIQUE NO BOTÃO "INSCREVER EQUIPE" -> ABRE MODAL
+    // 1. CLIQUE NO BOTÃO "INSCREVER EQUIPE" -> ABRE SELETOR DE MEMBROS
     // ----------------------------------------------------
     if (
       interaction.isButton() &&
-      interaction.customId === "btn_inscrever_equipe"
+      (interaction.customId === "btn_inscrever_equipe" ||
+        interaction.customId === "camp_register_btn")
     ) {
+      const activeCamp = await TournamentService.getOrCreateActiveTournament(
+        interaction.user.id,
+      );
+
+      if (!activeCamp || activeCamp.status !== "OPEN") {
+        return await interaction.reply({
+          content: `<:serv:1545444524241719376> As inscrições para o campeonato estão encerradas ou pausadas no momento.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      // Seletor nativo para selecionar exatamente 3 membros
+      const userSelect = new UserSelectMenuBuilder()
+        .setCustomId("camp_select_members")
+        .setPlaceholder("Selecione os 3 integrantes da sua equipe")
+        .setMinValues(3)
+        .setMaxValues(3);
+
+      const row = new ActionRowBuilder().addComponents(userSelect);
+
+      return await interaction.reply({
+        content: `<:serv:1537237908547965001> **Selecione os 3 membros que jogarão com você no torneio:**`,
+        components: [row],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    // ----------------------------------------------------
+    // 2. SELEÇÃO DOS 3 MEMBROS -> ABRE O MODAL DOS NICKS E EMULADORES
+    // ----------------------------------------------------
+    if (
+      interaction.isUserSelectMenu() &&
+      interaction.customId === "camp_select_members"
+    ) {
+      const selectedUsers = interaction.values; // Array com os 3 IDs selecionados
+
+      // Passa os IDs dos 3 membros via customId do Modal
       const modal = new ModalBuilder()
-        .setCustomId("modal_inscricao_equipe")
+        .setCustomId(`camp_modal_nicks_${selectedUsers.join("_")}`)
         .setTitle("Inscrição de Equipe - Camp 4x4");
 
       const inputTeamName = new TextInputBuilder()
@@ -30,121 +71,110 @@ module.exports = async function handleTournamentInteractions(interaction) {
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
-      const inputPlayers = new TextInputBuilder()
-        .setCustomId("input_players")
-        .setLabel("4 Jogadores (@Discord - Nick no Jogo)")
-        .setPlaceholder(
-          "@Membro1 - Nick1\n" +
-            "@Membro2 - Nick2\n" +
-            "@Membro3 - Nick3\n" +
-            "@Membro4 - Nick4",
-        )
-        .setStyle(TextInputStyle.Paragraph)
+      const inputLeaderNick = new TextInputBuilder()
+        .setCustomId("input_nick_leader")
+        .setLabel("Seu Nick no Jogo (Capitão)")
+        .setPlaceholder("Ex: FLX_Nobru")
+        .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
-      const inputEmulators = new TextInputBuilder()
-        .setCustomId("input_emulators")
-        .setLabel("Quem usa Emulador? (Máx 2)")
-        .setPlaceholder(
-          "Ex: @Membro2, @Membro3 (deixe em branco se forem Mobile)",
-        )
+      const inputNick2 = new TextInputBuilder()
+        .setCustomId("input_nick_p2")
+        .setLabel("Nick do 2º Jogador")
+        .setPlaceholder("Ex: FLX_Bak")
         .setStyle(TextInputStyle.Short)
-        .setRequired(false);
+        .setRequired(true);
+
+      const inputNick3 = new TextInputBuilder()
+        .setCustomId("input_nick_p3")
+        .setLabel("Nick do 3º Jogador")
+        .setPlaceholder("Ex: FLX_Thurzin")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputNick4 = new TextInputBuilder()
+        .setCustomId("input_nick_p4")
+        .setLabel("Nick do 4º Jogador")
+        .setPlaceholder("Ex: FLX_Coringa")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
 
       modal.addComponents(
         new ActionRowBuilder().addComponents(inputTeamName),
-        new ActionRowBuilder().addComponents(inputPlayers),
-        new ActionRowBuilder().addComponents(inputEmulators),
+        new ActionRowBuilder().addComponents(inputLeaderNick),
+        new ActionRowBuilder().addComponents(inputNick2),
+        new ActionRowBuilder().addComponents(inputNick3),
+        new ActionRowBuilder().addComponents(inputNick4),
       );
 
       return await interaction.showModal(modal);
     }
 
     // ----------------------------------------------------
-    // B) SUBMISSÃO DO FORMULÁRIO (MODAL)
+    // 3. SUBMISSÃO DO MODAL DE NICKS -> REGISTRA EQUIPE
     // ----------------------------------------------------
     if (
       interaction.isModalSubmit() &&
-      interaction.customId === "modal_inscricao_equipe"
+      interaction.customId.startsWith("camp_modal_nicks_")
     ) {
-      await interaction.deferReply({ flags: 64 }); // Resposta efêmera (privada)
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      // Recupera os IDs passados no customId
+      const [, , , p2Id, p3Id, p4Id] = interaction.customId.split("_");
+      const captainId = interaction.user.id;
 
       const teamName = interaction.fields
         .getTextInputValue("input_team_name")
         .trim();
-      const rawPlayers = interaction.fields.getTextInputValue("input_players");
-      const rawEmulators =
-        interaction.fields.getTextInputValue("input_emulators") || "";
+      const leaderNick = interaction.fields
+        .getTextInputValue("input_nick_leader")
+        .trim();
+      const p2Nick = interaction.fields
+        .getTextInputValue("input_nick_p2")
+        .trim();
+      const p3Nick = interaction.fields
+        .getTextInputValue("input_nick_p3")
+        .trim();
+      const p4Nick = interaction.fields
+        .getTextInputValue("input_nick_p4")
+        .trim();
 
-      // Helper para extrair IDs do Discord de um texto
-      const extractIds = (text) => {
-        const matches = text.match(/\d{17,19}/g);
-        return matches ? [...new Set(matches)] : [];
-      };
-
-      const emulatorIds = extractIds(rawEmulators);
-
-      // Separa o texto por linhas e remove linhas vazias
-      const lines = rawPlayers
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-
-      if (lines.length !== 4) {
-        return await interaction.editReply({
-          content: `<:serv:1545444524241719376> **Formato Inválido:** Você precisa enviar exatamente 4 linhas (uma para cada jogador).\n\n**Exemplo correto:**\n@Membro1 - NickNoJogo1\n@Membro2 - NickNoJogo2\n@Membro3 - NickNoJogo3\n@Membro4 - NickNoJogo4`,
-        });
-      }
-
-      const playersData = [];
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const discordMatch = line.match(/\d{17,19}/);
-
-        if (!discordMatch) {
-          return await interaction.editReply({
-            content: `<:serv:1545444524241719376> **Erro na Linha ${i + 1}:** Não foi encontrada uma menção (@usuario) ou ID válido do Discord no trecho: \`${line}\`.`,
-          });
-        }
-
-        const discordId = discordMatch[0];
-
-        // Remove a menção/ID do Discord e caracteres de separação para obter o Nick do jogo limpo
-        let gameNick = line
-          .replace(/<@!?\d+>|\d{17,19}/g, "")
-          .replace(/^[\s\-:|]+|[\s\-:|]+$/g, "")
-          .trim();
-
-        if (!gameNick) {
-          gameNick = `Jogador_${i + 1}`;
-        }
-
-        playersData.push({
-          discordId,
-          gameNick,
-          device: emulatorIds.includes(discordId) ? "EMULATOR" : "MOBILE",
-        });
-      }
-
-      // Validação: Capitão (quem enviou) deve estar entre os 4
-      const captainInList = playersData.some(
-        (p) => p.discordId === interaction.user.id,
-      );
-      if (!captainInList) {
-        return await interaction.editReply({
-          content: `<:serv:1545444524241719376> **Atenção Capitão:** Você (<@${interaction.user.id}>) precisa se incluir na lista de 4 jogadores!`,
-        });
-      }
+      const playersData = [
+        {
+          discordId: captainId,
+          gameNick: leaderNick,
+          isLeader: true,
+          device: "MOBILE",
+        },
+        {
+          discordId: p2Id,
+          gameNick: p2Nick,
+          isLeader: false,
+          device: "MOBILE",
+        },
+        {
+          discordId: p3Id,
+          gameNick: p3Nick,
+          isLeader: false,
+          device: "MOBILE",
+        },
+        {
+          discordId: p4Id,
+          gameNick: p4Nick,
+          isLeader: false,
+          device: "MOBILE",
+        },
+      ];
 
       const tournament = await TournamentService.getOrCreateActiveTournament(
         interaction.user.id,
       );
 
-      // Chama o serviço do campeonato
+      // Registra a equipe no banco de dados
       const team = await TournamentService.registerTeam({
         tournamentId: tournament.id,
         teamName,
-        captainId: interaction.user.id,
+        captainId,
         playersData,
       });
 
@@ -154,12 +184,9 @@ module.exports = async function handleTournamentInteractions(interaction) {
         });
       }
 
-      // Lista formatada com os dados vinculados
+      // Monta a lista formatada com os dados da equipe
       const playersFormattedList = team.players
-        .map(
-          (p) =>
-            `• <@${p.discordId}> | **Nick no Jogo:** \`${p.gameNick}\` (${p.device === "EMULATOR" ? "💻 Emulador" : "📱 Mobile"})`,
-        )
+        .map((p) => `• <@${p.discordId}> | **Nick no Jogo:** \`${p.gameNick}\``)
         .join("\n");
 
       const embedSucesso = new EmbedBuilder()
@@ -171,7 +198,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
             `**Capitão:** <@${team.captainId}>\n\n` +
             `<:serv:1537237908547965001> **Jogadores Escalados:**\n${playersFormattedList}\n\n` +
             `<:serv:1545458280145354863> **Passo Final para Confirmar a Vaga:**\n` +
-            `Realize o pagamento da taxa de **R$ ${tournament.registrationFee.toFixed(2)}** via PIX e envie o comprovante pelo botão abaixo.\n\n` +
+            `Realize o pagamento da taxa de **R$ ${(tournament.registrationFee || 0).toFixed(2)}** via PIX e envie o comprovante pelo botão abaixo.\n\n` +
             `<:serv:1542026399953457172> **Chave PIX:** \`pix@2qn.com.br\`\n` +
             `<:serv:1542026405481684994> **Titular:** 2QN Torneios`,
         )
@@ -181,7 +208,8 @@ module.exports = async function handleTournamentInteractions(interaction) {
       const rowPayment = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`btn_enviar_comprovante_${team.id}`)
-          .setLabel("<:serv:1545488990168158350> ENVIAR COMPROVANTE")
+          .setLabel("ENVIAR COMPROVANTE")
+          .setEmoji("<:serv:1545488990168158350>")
           .setStyle(ButtonStyle.Primary),
       );
 
@@ -190,6 +218,8 @@ module.exports = async function handleTournamentInteractions(interaction) {
         components: [rowPayment],
       });
     }
+
+    return false;
   } catch (err) {
     console.error("[ERRO TOURNAMENT INTERACTION]", err);
     if (interaction.deferred || interaction.replied) {
