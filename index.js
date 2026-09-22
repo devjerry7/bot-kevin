@@ -1,5 +1,13 @@
 // index.js
-
+// --- FORÇA A ATUALIZAÇÃO DO PRISMA CLIENT NA SQUARE CLOUD ---
+const { execSync } = require("child_process");
+try {
+  console.log("[PRISMA] Gerando Prisma Client...");
+  execSync("npx prisma generate", { stdio: "inherit" });
+} catch (err) {
+  console.error("[PRISMA ERROR] Falha ao gerar Prisma Client:", err);
+}
+// -------------------------------------------------------------
 // --- 1. IMPORTAÇÕES ---
 require("./config.js");
 require("dotenv").config();
