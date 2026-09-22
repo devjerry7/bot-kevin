@@ -23,6 +23,9 @@ const handleTempVoicePanel = require("../handlers/tempVoicePanelHandler");
 // 🔔 IMPORTANDO O NOSSO NOVO SISTEMA DE NOTIFICAÇÕES
 const handleNotifyRoles = require("../handlers/notifyRoleHandler");
 
+// 🏆 IMPORTANDO O HANDLER DO CAMPEONATO 4X4 (2QN)
+const handleTournamentInteractions = require("../handlers/tournamentHandler");
+
 module.exports = async (interaction) => {
   try {
     // 1. Tenta tratar Slash Commands (/config, /ping)
@@ -32,7 +35,7 @@ module.exports = async (interaction) => {
     }
 
     // ==========================================
-    // 🏆 SISTEMA DE TORNEIO FREE FIRE (2x2)
+    // 🏆 SISTEMA DE TORNEIO FREE FIRE (2x2 LEGADO)
     // ==========================================
     if (interaction.isButton()) {
       // 2A. CAPTURA DO BOTÃO DE INSCRIÇÃO
@@ -236,6 +239,7 @@ module.exports = async (interaction) => {
     }
 
     // 3. ROTEAMENTO DOS SISTEMAS PRINCIPAIS (Botões, Menus e Modais ativos)
+    if (await handleTournamentInteractions(interaction)) return;
     if (await handleGameRoles(interaction)) return;
     if (await handleNotifyRoles(interaction)) return;
     if (await handleStopGame(interaction)) return;
