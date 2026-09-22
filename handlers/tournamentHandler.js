@@ -34,11 +34,10 @@ module.exports = async function handleTournamentInteractions(interaction) {
         .setCustomId("input_players")
         .setLabel("4 Jogadores (@Discord - Nick no Jogo)")
         .setPlaceholder(
-          "Exemplo (1 por linha):\n" +
-            "@Membro1 - FLX_Nobru\n" +
-            "@Membro2 - FLX_Bak\n" +
-            "@Membro3 - FLX_Thurzin\n" +
-            "@Membro4 - FLX_Coringa",
+          "@Membro1 - Nick1\n" +
+            "@Membro2 - Nick2\n" +
+            "@Membro3 - Nick3\n" +
+            "@Membro4 - Nick4",
         )
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true);
