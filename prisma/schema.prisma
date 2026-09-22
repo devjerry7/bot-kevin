@@ -274,3 +274,246 @@ model StaffTracking {
   voiceMinutes  Int       @default(0)
   lastVoiceJoin DateTime?
 }
+
+// ==========================================
+// 🏆 SISTEMA DE CAMPEONATOS 4X4 (2QN)
+// ==========================================
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_FULL
+  REGISTRATION_CLOSED
+  BRACKET_GENERATED
+  IN_PROGRESS
+  FINAL
+  FINISHED
+  CANCELLED
+}
+
+enum TeamStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAYMENT_REVIEW
+  CONFIRMED
+  WAITLIST
+  CANCELLED
+  ELIMINATED
+  ACTIVE
+  CHAMPION
+  RUNNER_UP
+}
+
+enum PaymentStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+enum MatchStatus {
+  PENDING
+  READY
+  ROOM_RELEASED
+  ACTIVE
+  WAITING_RESULT
+  UNDER_REVIEW
+  FINISHED
+  DISPUTED
+  WALKOVER
+  CANCELLED
+}
+
+enum DeviceType {
+  MOBILE
+  EMULATOR
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportCategory {
+  CHEAT
+  EMULATOR_EXCEEDED
+  UNREGISTERED_PLAYER
+  ACCOUNT_MISMATCH
+  SCREEN_SHARE
+  CONDUCT
+  OTHER
+}
+
+model Tournament {
+  id                    String           @id @default(uuid())
+  name                  String
+  maxTeams              Int              @default(32)
+  playersPerTeam        Int              @default(4)
+  maxEmulatorsPerTeam   Int              @default(2)
+  registrationFee       Float            @default(10.0)
+  status                TournamentStatus @default(DRAFT)
+  createdBy             String           // Discord User ID do criador
+  
+  // IDs da infraestrutura Discord
+  categoryId            String?          // Categoria principal do campeonato
+  announcementChannelId String?          // Canal de anúncios do camp
+  staffChannelId        String?          // Canal interno da Staff
+
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  teams                 Team[]
+  rounds                Round[]
+  matches               Match[]
+  payments              Payment[]
+  reports               Report[]
+  auditLogs             AuditLog[]
+}
+
+model Team {
+  id            String      @id @default(uuid())
+  tournamentId  String
+  tournament    Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  
+  name          String
+  captainId     String      // Discord User ID do capitão
+  status        TeamStatus  @default(DRAFT)
+  waitlistOrder Int?        // Posição na lista de espera (se aplicável)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  players       Player[]
+  payments      Payment[]
+
+  matchesAsA    Match[]     @relation("MatchTeamA")
+  matchesAsB    Match[]     @relation("MatchTeamB")
+  matchesWon    Match[]     @relation("MatchWinner")
+  matchesLost   Match[]     @relation("MatchLoser")
+  reports       Report[]    @relation("ReportedTeam")
+
+  @@unique([tournamentId, name])
+}
+
+model Player {
+  id        String     @id @default(uuid())
+  teamId    String
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  discordId String     // ID do Discord (para cargo, call e permissão)
+  gameNick  String     // Nick/ID no jogo (para validação na sala)
+  device    DeviceType @default(MOBILE)
+  isCaptain Boolean    @default(false)
+
+  createdAt DateTime   @default(now())
+
+  @@unique([teamId, discordId])
+}
+
+model Payment {
+  id           String        @id @default(uuid())
+  tournamentId String
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  amount       Float
+  status       PaymentStatus @default(PENDING)
+  proofUrl     String?       // Link ou ID do comprovante anexado
+  
+  submittedBy  String        // Discord User ID
+  submittedAt  DateTime      @default(now())
+  reviewedBy   String?       // Discord User ID da Staff
+  reviewedAt   DateTime?
+}
+
+model Round {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  
+  roundNumber  Int        // 1 = R32, 2 = R16, 3 = Quartas, 4 = Semifinal, 5 = Final
+  name         String     // "32avos", "Oitavas", "Quartas", "Semifinal", "Grande Final"
+  matchType    String     @default("BO1") // "BO1" ou "BO3"
+
+  matches      Match[]
+}
+
+model Match {
+  id                String      @id @default(uuid())
+  tournamentId      String
+  tournament        Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  roundId           String
+  round             Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  
+  matchNumber       Int         // Número do confronto na chave (ex: 1 a 16 no R32)
+  
+  teamAId           String?
+  teamA             Team?       @relation("MatchTeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamBId           String?
+  teamB             Team?       @relation("MatchTeamB", fields: [teamBId], references: [id], onDelete: SetNull)
+  
+  status            MatchStatus @default(PENDING)
+  scoreTeamA        Int         @default(0)
+  scoreTeamB        Int         @default(0)
+  
+  winnerTeamId      String?
+  winnerTeam        Team?       @relation("MatchWinner", fields: [winnerTeamId], references: [id], onDelete: SetNull)
+  loserTeamId       String?
+  loserTeam         Team?       @relation("MatchLoser", fields: [loserTeamId], references: [id], onDelete: SetNull)
+  
+  roomId            String?     // ID da Sala Personalizada
+  roomPassword      String?     // Senha da Sala Personalizada
+  
+  // Canais Discord gerados para o confronto
+  categoryDiscordId String?
+  textChannelId     String?
+  voiceChannelId    String?
+
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+
+  reports           Report[]
+}
+
+model Report {
+  id                   String         @id @default(uuid())
+  tournamentId         String
+  tournament           Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matchId              String
+  match                Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  
+  reporterDiscordId    String
+  reportedTeamId       String?
+  reportedTeam         Team?          @relation("ReportedTeam", fields: [reportedTeamId], references: [id], onDelete: SetNull)
+  reportedPlayerDiscordId String?
+  
+  category             ReportCategory
+  description          String
+  evidenceUrl          String?
+  status               ReportStatus   @default(OPEN)
+  assignedAnalystId    String?        // Discord User ID do analista atribuído
+
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model AuditLog {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  
+  userId       String     // Discord User ID de quem fez a ação
+  action       String     // Ex: "PAYMENT_APPROVED", "RESULT_SUBMITTED"
+  targetType   String     // Ex: "TEAM", "MATCH", "PAYMENT"
+  targetId     String
+  previousState String?   // Estado anterior em string/JSON
+  newState     String?    // Novo estado em string/JSON
+  reason       String?
+  metadata     String?    // Informações adicionais em string/JSON
+
+  timestamp    DateTime   @default(now())
+}

@@ -17,7 +17,7 @@ module.exports = {
       chatRole: "1162904985084891156",
       callRole: "1162904985084891156",
       permRole: null,
-      metaChat: 150, // Meta de mensagens para Trainee
+      metaChat: 10, // Meta de mensagens para Trainee
       metaCall: 300, // Meta de minutos em call para Trainee (ex: 5h)
       metaStreakRequired: 3,
     },
