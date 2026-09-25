@@ -361,6 +361,8 @@ model Tournament {
   categoryId            String?          // Categoria principal do campeonato
   announcementChannelId String?          // Canal de anúncios do camp
   staffChannelId        String?          // Canal interno da Staff
+  panelChannelId        String?          // Canal onde o painel foi postado
+  panelMessageId        String?          // ID da mensagem do painel (para editar as vagas)
 
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt

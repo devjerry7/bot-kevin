@@ -37,7 +37,7 @@ module.exports = {
 
         tournament = await prisma.tournament.update({
           where: { id: tournament.id },
-          data: { status: "OPEN" },
+          data: { status: "REGISTRATION_OPEN" },
           include: { teams: true },
         });
 
