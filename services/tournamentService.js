@@ -10,9 +10,7 @@ class TournamentService {
   static async getActiveTournament() {
     return await prisma.tournament.findFirst({
       where: {
-        status: {
-          in: ["OPEN", "REGISTRATION_OPEN"],
-        },
+        status: "REGISTRATION_OPEN", // Corrigido aqui
       },
       include: {
         teams: {
@@ -188,7 +186,8 @@ class TournamentService {
       include: { players: true },
     });
 
-    if (isFull && ["OPEN", "REGISTRATION_OPEN"].includes(tournament.status)) {
+    if (isFull && tournament.status === "REGISTRATION_OPEN") {
+      // Corrigido aqui
       await prisma.tournament.update({
         where: { id: tournamentId },
         data: { status: "REGISTRATION_FULL" },
