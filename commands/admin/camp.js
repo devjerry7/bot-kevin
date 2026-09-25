@@ -60,7 +60,7 @@ module.exports = {
         );
 
         const embedPainel = new EmbedBuilder()
-          .setTitle("<:emoji_aqui:ID> INSCRIÇÕES ABERTAS - 4X4")
+          .setTitle("<:serv:1545459134089138256> INSCRIÇÕES ABERTAS - 4X4")
           .setColor(hexPurple)
           .setImage(bannerUrl)
           .setDescription(
