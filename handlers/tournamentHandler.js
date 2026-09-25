@@ -306,7 +306,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       await ticketChannel.send(
         `<@${interaction.user.id}>, envie a **FOTO DO SEU COMPROVANTE PIX** aqui neste chat.\n\n` +
-          `Nossa Staff irá analisar a imagem e validar a vaga da sua equipe. **Pode colar/anexar a imagem do comprovante aqui.**`,
+          `Nossa equipe irá analisar a imagem e validar a vaga da sua equipe. **Pode colar/anexar a imagem do comprovante aqui.**`,
       );
 
       return await interaction.reply({
