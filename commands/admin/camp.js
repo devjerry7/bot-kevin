@@ -52,7 +52,7 @@ module.exports = {
           .setImage(bannerUrl)
           .setDescription(
             `Chegou a hora! Registre seu squad abaixo.\n\n` +
-              `🟢 **Status:** Inscrições Abertas\n` +
+              `<a:verif:1535775597014548601> **Status:** Inscrições Abertas\n` +
               `<:serv:1537237908547965001> **Vagas Restantes:** ${vagasRestantes}/${tournament.maxTeams}\n` +
               `<:dinheiro:1535775870168469624> **Taxa:** R$ ${tournament.registrationFee.toFixed(2)}\n\n` +
               `O capitão deve clicar no botão abaixo para iniciar o registro da equipe.`,
@@ -62,7 +62,7 @@ module.exports = {
           new ButtonBuilder()
             .setCustomId("btn_inscrever_equipe")
             .setLabel("INSCREVER EQUIPE")
-            .setEmoji("<:serv:1545459134089138256>")
+            .setEmoji("<:serv:1545488990168158350>")
             .setStyle(ButtonStyle.Secondary),
         );
 
