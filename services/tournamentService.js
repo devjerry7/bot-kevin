@@ -4,7 +4,28 @@ const prisma = new PrismaClient();
 
 class TournamentService {
   /**
-   * Busca o campeonato ativo atual ou cria o DRAFT padrão se não existir.
+   * Busca apenas o campeonato que está com inscrições abertas.
+   * Usado principalmente no fluxo de botões/modais acessados pelos jogadores.
+   */
+  static async getActiveTournament() {
+    return await prisma.tournament.findFirst({
+      where: {
+        status: {
+          in: ["OPEN", "REGISTRATION_OPEN"],
+        },
+      },
+      include: {
+        teams: {
+          include: { players: true, payments: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
+   * Busca o campeonato ativo atual ou cria um padrão se não existir.
+   * Promove de DRAFT para REGISTRATION_OPEN automaticamente.
    */
   static async getOrCreateActiveTournament(creatorDiscordId) {
     let tournament = await prisma.tournament.findFirst({
@@ -18,8 +39,23 @@ class TournamentService {
           include: { players: true, payments: true },
         },
       },
+      orderBy: { createdAt: "desc" },
     });
 
+    // Se o campeonato encontrado estiver em DRAFT, atualiza para REGISTRATION_OPEN
+    if (tournament && tournament.status === "DRAFT") {
+      tournament = await prisma.tournament.update({
+        where: { id: tournament.id },
+        data: { status: "REGISTRATION_OPEN" },
+        include: {
+          teams: {
+            include: { players: true, payments: true },
+          },
+        },
+      });
+    }
+
+    // Se não existir, cria
     if (!tournament) {
       tournament = await prisma.tournament.create({
         data: {
@@ -28,7 +64,7 @@ class TournamentService {
           playersPerTeam: 4,
           maxEmulatorsPerTeam: 2,
           registrationFee: 10.0,
-          status: "DRAFT",
+          status: "REGISTRATION_OPEN",
           createdBy: creatorDiscordId || "SYSTEM",
         },
         include: {
@@ -38,7 +74,7 @@ class TournamentService {
         },
       });
 
-      // Cria os Rounds padrão (R32, R16, Quartas, Semifinal, Final)
+      // Cria os Rounds padrão
       const roundsData = [
         { roundNumber: 1, name: "32avos (R32)", matchType: "BO1" },
         { roundNumber: 2, name: "Oitavas (R16)", matchType: "BO1" },
@@ -69,18 +105,15 @@ class TournamentService {
     captainId,
     playersData,
   }) {
-    // 1. Validação de quantidade exata de jogadores
     if (!playersData || playersData.length !== 4) {
       throw new Error("A equipe deve ter exatamente 4 jogadores.");
     }
 
-    // 2. Validação do Capitão fazer parte da lista
     const captainInList = playersData.some((p) => p.discordId === captainId);
     if (!captainInList) {
       throw new Error("O capitão precisa estar listado entre os 4 jogadores.");
     }
 
-    // 3. Validação de limite de Emuladores (máximo 2)
     const emulatorsCount = playersData.filter(
       (p) => p.device === "EMULATOR",
     ).length;
@@ -90,7 +123,6 @@ class TournamentService {
       );
     }
 
-    // 4. Validação de duplicidade de jogadores no campeonato ativo
     const allRegisteredPlayers = await prisma.player.findMany({
       where: {
         team: {
@@ -111,11 +143,14 @@ class TournamentService {
       }
     }
 
-    // 5. Verificar vagas e determinar se vai para PENDING_PAYMENT ou WAITLIST
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: { teams: true },
     });
+
+    if (!tournament) {
+      throw new Error("Campeonato não encontrado no banco de dados.");
+    }
 
     const activeTeams = tournament.teams.filter((t) =>
       ["CONFIRMED", "PENDING_PAYMENT", "PAYMENT_REVIEW", "ACTIVE"].includes(
@@ -134,7 +169,6 @@ class TournamentService {
       waitlistOrder = currentWaitlist.length + 1;
     }
 
-    // 6. Criar Equipe e Jogadores no Banco de Dados
     const createdTeam = await prisma.team.create({
       data: {
         tournamentId,
@@ -146,7 +180,7 @@ class TournamentService {
           create: playersData.map((p) => ({
             discordId: p.discordId,
             gameNick: p.gameNick,
-            device: p.device,
+            device: p.device || "MOBILE",
             isCaptain: p.discordId === captainId,
           })),
         },
@@ -154,8 +188,7 @@ class TournamentService {
       include: { players: true },
     });
 
-    // Se lotou com essa inscrição, atualiza status do campeonato
-    if (isFull && tournament.status === "REGISTRATION_OPEN") {
+    if (isFull && ["OPEN", "REGISTRATION_OPEN"].includes(tournament.status)) {
       await prisma.tournament.update({
         where: { id: tournamentId },
         data: { status: "REGISTRATION_FULL" },
