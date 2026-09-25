@@ -52,7 +52,7 @@ module.exports = {
           .setImage(bannerUrl)
           .setDescription(
             `Chegou a hora! Registre seu squad abaixo.\n\n` +
-              `<a:verif:1535775597014548601> **Status:** Inscrições Abertas\n` +
+              `<a:2qn:1553155625738051604> **Status:** Inscrições Abertas\n` +
               `<:an_membro:1553155856168652800> **Vagas Restantes:** ${vagasRestantes}/${tournament.maxTeams}\n` +
               `<:cifrao2qn:1553154980108828742> **Taxa:** R$ ${tournament.registrationFee.toFixed(2)}\n\n` +
               `O capitão deve clicar no botão abaixo para iniciar o registro da equipe.`,
