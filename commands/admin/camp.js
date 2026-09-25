@@ -29,17 +29,17 @@ module.exports = {
     // ==========================================
     if (subCommand === "info") {
       const embedInfo = new EmbedBuilder()
-        .setTitle("<:emoji_aqui:ID> INFORMAÇÕES - CAMPEONATO 4X4")
+        .setTitle("<:serv:1545459134089138256> INFORMAÇÕES - CAMPEONATO 4X4")
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
           "**Formato e Regras:**\n" +
-            "• **Fases:** Mata-mata (R32 até Semifinal: MD1 | Final: MD3)\n" +
+            "• **Fases:** Mata-mata até Semifinal: MD1 | Final: MD3)\n" +
             "• **Formação:** 4 Jogadores por equipe\n" +
             "• **Plataforma:** Máximo de 2 Emuladores por time\n" +
             "• **Inscrição:** R$ 10,00 por equipe\n\n" +
             "**Como se inscrever:**\n" +
-            "1. Vá ao canal de inscrições.\n" +
+            "1. Vá ao canal <#1551951245059555460>\n" +
             "2. O capitão clica no botão e seleciona os 3 membros da equipe.\n" +
             "3. Preencha os nicks do jogo no formulário.\n" +
             "4. Realize o pagamento via PIX e envie o comprovante no painel.",
@@ -74,8 +74,8 @@ module.exports = {
           new ButtonBuilder()
             .setCustomId("btn_inscrever_equipe")
             .setLabel("INSCREVER EQUIPE")
-            .setEmoji("<:emoji_aqui:ID>") // Coloque o ID do seu emoji customizado aqui
-            .setStyle(ButtonStyle.Primary),
+            .setEmoji("<:serv:1545459134089138256>") // Coloque o ID do seu emoji customizado aqui
+            .setStyle(ButtonStyle.Secondary),
         );
 
         await message.delete().catch(() => {});
