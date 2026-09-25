@@ -76,15 +76,15 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       const inputTeamName = new TextInputBuilder()
         .setCustomId("input_team_name")
-        .setLabel("Nome da Equipe")
-        .setPlaceholder("Ex: Fluxo, Loud, OsCria...")
+        .setLabel("Nome do time")
+        .setPlaceholder("")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       const inputLeaderNick = new TextInputBuilder()
         .setCustomId("input_nick_leader")
         .setLabel("Seu Nick no Jogo (Capitão)")
-        .setPlaceholder("Ex: FLX_Nobru")
+        .setPlaceholder("")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
@@ -272,6 +272,9 @@ module.exports = async function handleTournamentInteractions(interaction) {
     // ----------------------------------------------------
     // 4. CRIAR TICKET PIX PARA ENVIO DE COMPROVANTE
     // ----------------------------------------------------
+    // ----------------------------------------------------
+    // 4. CRIAR TÓPICO PRIVADO (TICKET) PARA O COMPROVANTE
+    // ----------------------------------------------------
     if (
       interaction.isButton() &&
       interaction.customId.startsWith("btn_enviar_comprovante_")
@@ -280,41 +283,29 @@ module.exports = async function handleTournamentInteractions(interaction) {
         "btn_enviar_comprovante_",
         "",
       );
-      const guild = interaction.guild;
+      const channel = interaction.channel;
 
-      // Cria o canal privado (Ticket)
-      const ticketChannel = await guild.channels.create({
-        name: `pix-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        topic: `TEAM_ID:${teamId}`, // Esconde o ID da Equipe no tópico
-        permissionOverwrites: [
-          {
-            id: guild.id,
-            deny: ["ViewChannel"], // Esconde de todos do servidor
-          },
-          {
-            id: interaction.user.id,
-            allow: [
-              "ViewChannel",
-              "SendMessages",
-              "AttachFiles",
-              "ReadMessageHistory",
-            ], // Libera pro Capitão
-          },
-        ],
+      // Cria um tópico privado exclusivo no canal atual
+      const thread = await channel.threads.create({
+        name: `pix-${teamId}-${interaction.user.username}`.substring(0, 100),
+        type: ChannelType.PrivateThread,
+        reason: `Comprovante de pagamento da equipe`,
+        invitable: false,
       });
 
-      await ticketChannel.send(
-        `<@${interaction.user.id}>, envie a **FOTO DO SEU COMPROVANTE PIX** aqui neste chat.\n\n` +
-          `Nossa equipe irá analisar a imagem e validar a vaga da sua equipe. **Pode colar/anexar a imagem do comprovante aqui.**`,
+      // Adiciona o usuário ao tópico
+      await thread.members.add(interaction.user.id);
+
+      await thread.send(
+        `<@${interaction.user.id}>, envie a **FOTO DO SEU COMPROVANTE PIX** aqui.\n\n` +
+          `Nossa equipe irá analisar e validar a vaga. Pode colar a imagem abaixo.`,
       );
 
       return await interaction.reply({
-        content: `<:serv:1545501461427785798> Canal de envio criado com sucesso! Acesse: <#${ticketChannel.id}>`,
+        content: `<:serv:1545501461427785798> Tópico privado criado com sucesso: <#${thread.id}>`,
         flags: MessageFlags.Ephemeral,
       });
     }
-
     return false;
   } catch (err) {
     console.error("[ERRO TOURNAMENT INTERACTION]", err);

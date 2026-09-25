@@ -1,5 +1,10 @@
 // events/messageCreate.js
-const { EmbedBuilder } = require("discord.js");
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 const config = require("../config");
 const path = require("path");
 const fs = require("fs");
@@ -28,7 +33,7 @@ const {
   handleJail,
   handleUnjail,
 } = require("../commands/timeMod");
-const helpCommand = require("../commands/help"); // CORRIGIDO: Importado como objeto para acessar o execute()
+const helpCommand = require("../commands/help");
 const {
   handleLockdown,
   handleUnlockdown,
@@ -53,7 +58,7 @@ const { handlePostVip } = require("../commands/postarvip");
 const ffCampeaoCommand = require("../commands/ffcampeao");
 const ffSairCommand = require("../commands/ffsair");
 
-// --- IMPORTAÇÕES DA STAFF (NOVOS) ---
+// --- IMPORTAÇÕES DA EQUIPE ---
 const staffChatTracker = require("../listeners/staffChatTracker");
 const { handleMeta, handlePausa } = require("../commands/staffUtils");
 
@@ -69,26 +74,73 @@ const createFeedbackEmbed = (title, description, color) => {
 
 // --- INÍCIO DO MÓDULO ---
 module.exports = async (message) => {
-  // Ignora bots e DMs
   if (message.author.bot || !message.guild) return;
 
-  const PREFIX = config.prefix || "mc!";
+  // ====================================================
+  // [NOVO] ESCUTAR COMPROVANTES NOS TÓPICOS PIX
+  // ====================================================
+  if (message.channel.name && message.channel.name.startsWith("pix-")) {
+    if (message.attachments.size === 0) {
+      return message.reply("⚠️ Envie a **FOTO/IMAGEM** do comprovante.");
+    }
 
-  // --- Lendo emojis globais do config.js ---
+    const attachment = message.attachments.first();
+    const parts = message.channel.name.split("-");
+    const teamId = parts[1]; // Extrai o ID da equipe do nome do tópico
+
+    if (
+      attachment.contentType &&
+      attachment.contentType.startsWith("image/") &&
+      teamId
+    ) {
+      const staffChannel = message.client.channels.cache.get(
+        "1553170817553006622",
+      );
+
+      if (staffChannel) {
+        const embedStaff = new EmbedBuilder()
+          .setTitle("<:serv:1545491203292663808> NOVO COMPROVANTE RECEBIDO")
+          .setDescription(
+            `**Enviado por:** ${message.author} (\`${message.author.id}\`)\n**Tópico:** <#${message.channel.id}>\n\nRevise a imagem abaixo.`,
+          )
+          .setColor(0x9b59b6)
+          .setImage(attachment.url);
+
+        const rowStaff = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`staff_approve_${teamId}`)
+            .setLabel("APROVAR")
+            .setEmoji("<a:verif:1535775598822301781>")
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId(`staff_reject_${teamId}`)
+            .setLabel("RECUSAR")
+            .setEmoji("<:serv:1545444524241719376>")
+            .setStyle(ButtonStyle.Secondary),
+        );
+
+        await staffChannel.send({
+          embeds: [embedStaff],
+          components: [rowStaff],
+        });
+        return message.reply(
+          "<:serv:1545501461427785798> **Comprovante enviado para a equipe!** Aguarde a validação.",
+        );
+      }
+    }
+  }
+
+  const PREFIX = config.prefix || "mc!";
   const EMOJI_ERROR = config.emoji?.error || "❌";
   const EMOJI_SUCCESS = config.emoji?.success || "✅";
   const EMOJI_STOP = config.emoji?.stop || "🛑";
 
   // ====================================================
-  // 2. CAMADA DE SEGURANÇA (Prioridade Máxima)
+  // 2. CAMADA DE SEGURANÇA
   // ====================================================
   if (await handleChatProtection(message)) return;
   if (await handleAntiSpam(message)) return;
 
-  // ====================================================
-  // [NOVO] TRACKER DE CHAT DA STAFF
-  // Roda em background sem travar o processamento do resto
-  // ====================================================
   staffChatTracker(message).catch((err) =>
     console.error("[STAFF TRACKER ERROR]", err),
   );
@@ -160,20 +212,12 @@ module.exports = async (message) => {
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  // 🔍 [DEBUG] Vamos rastrear o comando no terminal
-  console.log(`[DEBUG] Comando capturado: "${command}" | Args:`, args);
-
-  // --- ROTEADOR DE COMANDOS ADMIN (ex: mc!live, mc!staff) ---
   const adminCommandPath = path.join(
     __dirname,
     "..",
     "commands",
     "admin",
     `${command}.js`,
-  );
-
-  console.log(
-    `[DEBUG] Procurando admin script em: ${adminCommandPath} | Existe? ${fs.existsSync(adminCommandPath)}`,
   );
 
   if (fs.existsSync(adminCommandPath)) {
@@ -212,20 +256,16 @@ module.exports = async (message) => {
     }
   }
 
-  // --- COMANDOS FREE FIRE ---
   if (command === "ffcampeao") return ffCampeaoCommand.execute(message, args);
   if (command === "ffsair") return ffSairCommand.execute(message, args);
 
-  // --- INFO & AJUDA ---
   if (["help", "ajuda", "comandos"].includes(command))
-    return helpCommand.execute(message, args); // CORRIGIDO: Chamando o execute() do objeto
+    return helpCommand.execute(message, args);
   if (["sistemas", "botinfo"].includes(command)) return handleBotInfo(message);
 
-  // --- COMANDOS DA STAFF (NOVOS) ---
   if (command === "meta") return handleMeta(message);
   if (command === "pausa") return handlePausa(message);
 
-  // --- SISTEMA VIP & PAINÉIS DE POSTAGEM ---
   if (command === "postarvip") return handlePostVip(message);
 
   if (
@@ -241,13 +281,11 @@ module.exports = async (message) => {
   )
     return handleVipCommands(message, command, args);
 
-  // --- SISTEMA DE PROTEÇÃO ---
   if (["panela", "blacklist"].includes(command))
     return handleProtection(message, command, args);
   if (["pd", "setpd", "removepd"].includes(command))
     return handlePDCommand(message, command, args);
 
-  // --- MODERAÇÃO MANUAL & TIME ---
   if (command === "ban") return handleBan(message, args);
   if (command === "unban") return handleUnban(message, args);
   if (command === "kick") return handleKick(message, args);
@@ -257,7 +295,6 @@ module.exports = async (message) => {
   if (command === "prender") return handleJail(message, args);
   if (command === "soltar") return handleUnjail(message, args);
 
-  // --- LOCKDOWN ---
   if (["lock", "trancar"].includes(command)) return handleLockdown(message);
   if (["lockall", "trancartudo"].includes(command))
     return handleLockdownAll(message);
@@ -266,11 +303,9 @@ module.exports = async (message) => {
   if (["unlockall", "destrancartudo"].includes(command))
     return handleUnlockdownAll(message);
 
-  // --- SISTEMA DE VOZ ---
   if (["join", "entrar", "leave", "sair"].includes(command))
     return handleVoice(message, args, command);
 
-  // --- UTIL ---
   if (command === "av") return handleAvatar(message, args);
   if (command === "repeat") return handleRepeat(message, args);
   if (["membros", "listmembers", "list"].includes(command))
@@ -279,22 +314,18 @@ module.exports = async (message) => {
     return handleMassRemove(message, args);
   }
 
-  // --- PAINEL DE JOGOS (AUTO-ROLE) ---
   if (["roles", "cargos", "jogos"].includes(command)) {
     return handleGameRolesPanel(message);
   }
 
-  // --- PAINEL DE NOTIFICAÇÕES (AUTO-ROLE) ---
   if (["notificacoes", "tags", "ping"].includes(command)) {
     return handleNotifyRolesPanel(message);
   }
 
-  // --- SUPORTE ---
   if (["ticket", "suporte", "atendimento"].includes(command)) {
     return handleTicketPanel(message);
   }
 
-  // --- ECONOMIA ---
   if (
     [
       "atm",
@@ -318,12 +349,10 @@ module.exports = async (message) => {
     return handleGambling(message, command, args);
   }
 
-  // --- CRIME & LOJA ---
   if (["loja", "comprar", "roubar", "rob"].includes(command)) {
     return handleCrime(message, command, args);
   }
 
-  // --- JOGO STOP ---
   if (command === "stop") {
     if (state.isActive)
       return message.channel.send({
