@@ -53,8 +53,8 @@ module.exports = {
           .setDescription(
             `Chegou a hora! Registre seu squad abaixo.\n\n` +
               `<a:verif:1535775597014548601> **Status:** Inscrições Abertas\n` +
-              `<:serv:1537237908547965001> **Vagas Restantes:** ${vagasRestantes}/${tournament.maxTeams}\n` +
-              `<:dinheiro:1535775870168469624> **Taxa:** R$ ${tournament.registrationFee.toFixed(2)}\n\n` +
+              `<:an_membro:1553155856168652800> **Vagas Restantes:** ${vagasRestantes}/${tournament.maxTeams}\n` +
+              `<:cifrao2qn:1553154980108828742> **Taxa:** R$ ${tournament.registrationFee.toFixed(2)}\n\n` +
               `O capitão deve clicar no botão abaixo para iniciar o registro da equipe.`,
           );
 
