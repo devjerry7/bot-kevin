@@ -23,11 +23,14 @@ module.exports = async function handleTournamentInteractions(interaction) {
       (interaction.customId === "btn_inscrever_equipe" ||
         interaction.customId === "camp_register_btn")
     ) {
-      const activeCamp = await TournamentService.getOrCreateActiveTournament(
-        interaction.user.id,
-      );
+      // Usa a busca que apenas LÊ o torneio ativo (sem tentar criar um novo)
+      const activeCamp = await TournamentService.getActiveTournament();
 
-      if (!activeCamp || activeCamp.status !== "OPEN") {
+      // Checagem flexível para permitir OPEN ou REGISTRATION_OPEN
+      if (
+        !activeCamp ||
+        !["OPEN", "REGISTRATION_OPEN"].includes(activeCamp.status)
+      ) {
         return await interaction.reply({
           content: `<:serv:1545444524241719376> As inscrições para o campeonato estão encerradas ou pausadas no momento.`,
           flags: MessageFlags.Ephemeral,
@@ -111,7 +114,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
     }
 
     // ----------------------------------------------------
-    // 3. SUBMISSÃO DO MODAL DE NICKS -> REGISTRA EQUIPE
+    // 3. SUBMISSÃO DO MODAL DE NICKS -> REGISTRA EQUIPE E ATUALIZA PAINEL
     // ----------------------------------------------------
     if (
       interaction.isModalSubmit() &&
@@ -166,9 +169,14 @@ module.exports = async function handleTournamentInteractions(interaction) {
         },
       ];
 
-      const tournament = await TournamentService.getOrCreateActiveTournament(
-        interaction.user.id,
-      );
+      // Busca o torneio (somente leitura, não cria)
+      const tournament = await TournamentService.getActiveTournament();
+
+      if (!tournament) {
+        return await interaction.editReply({
+          content: `<:serv:1545444524241719376> O campeonato foi encerrado ou pausado durante o preenchimento.`,
+        });
+      }
 
       // Registra a equipe no banco de dados
       const team = await TournamentService.registerTeam({
@@ -178,6 +186,47 @@ module.exports = async function handleTournamentInteractions(interaction) {
         playersData,
       });
 
+      // ----------------------------------------------------
+      // ATUALIZAÇÃO EM TEMPO REAL DAS VAGAS NO PAINEL
+      // ----------------------------------------------------
+      if (tournament.panelChannelId && tournament.panelMessageId) {
+        try {
+          const channel = await interaction.client.channels.fetch(
+            tournament.panelChannelId,
+          );
+          const msg = await channel.messages.fetch(tournament.panelMessageId);
+
+          // Busca o torneio atualizado com a nova equipe para contar as vagas corretamente
+          const updatedTournament =
+            await TournamentService.getActiveTournament();
+          if (updatedTournament) {
+            const activeTeams = updatedTournament.teams.filter(
+              (t) => !["CANCELLED"].includes(t.status),
+            ).length;
+            const vagasRestantes = updatedTournament.maxTeams - activeTeams;
+
+            const oldEmbed = msg.embeds[0];
+            const newEmbed = EmbedBuilder.from(oldEmbed).setDescription(
+              `Chegou a hora! Registre seu squad abaixo.\n\n` +
+                `🟢 **Status:** Inscrições Abertas\n` +
+                `<:serv:1537237908547965001> **Vagas Restantes:** ${Math.max(0, vagasRestantes)}/${updatedTournament.maxTeams}\n` +
+                `<:dinheiro2:1536498069380538499> **Taxa:** R$ ${updatedTournament.registrationFee.toFixed(2)}\n\n` +
+                `O capitão deve clicar no botão abaixo para iniciar o registro da equipe.`,
+            );
+
+            await msg.edit({ embeds: [newEmbed] });
+          }
+        } catch (e) {
+          console.error(
+            "[PAINEL UPDATE ERROR] Não foi possível atualizar o número de vagas:",
+            e,
+          );
+        }
+      }
+
+      // ----------------------------------------------------
+      // RESPOSTA AO USUÁRIO (LISTA DE ESPERA OU SUCESSO)
+      // ----------------------------------------------------
       if (team.status === "WAITLIST") {
         return await interaction.editReply({
           content: `<:serv:1545494059081142403> **Vagas Principais Esgotadas!**\nA equipe **${team.name}** foi registrada na **Lista de Espera** (Posição #${team.waitlistOrder}). Se surgir uma vaga, vocês serão notificados!`,
@@ -210,7 +259,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
           .setCustomId(`btn_enviar_comprovante_${team.id}`)
           .setLabel("ENVIAR COMPROVANTE")
           .setEmoji("<:serv:1545488990168158350>")
-          .setStyle(ButtonStyle.Primary),
+          .setStyle(ButtonStyle.Secondary),
       );
 
       return await interaction.editReply({

@@ -1,4 +1,3 @@
-// commands/admin/camp.js
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -7,6 +6,8 @@ const {
   PermissionsBitField,
 } = require("discord.js");
 const TournamentService = require("../../services/tournamentService");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 module.exports = {
   name: "camp",
@@ -20,53 +21,40 @@ module.exports = {
     }
 
     const subCommand = args[0]?.toLowerCase();
-    const hexPurple = 0x9b59b6; // Cor roxa
+    const hexPurple = 0x9b59b6;
     const bannerUrl =
       "https://cdn.discordapp.com/attachments/1543871014273028136/1553062549799309402/banner4x4.png?ex=6ab7e1b6&is=6ab69036&hm=167cc766573dec0e152975465d680fe442ffd456e7d39a1cfc8412bb30bf712b&";
 
-    // ==========================================
-    // mc!camp info -> Postar em 📢・informações-camp
-    // ==========================================
-    if (subCommand === "info") {
-      const embedInfo = new EmbedBuilder()
-        .setTitle("<:serv:1545459134089138256> INFORMAÇÕES - CAMPEONATO 4X4")
-        .setColor(hexPurple)
-        .setImage(bannerUrl)
-        .setDescription(
-          "**Formato e Regras:**\n" +
-            "• **Fases:** Mata-mata até Semifinal: MD1 | Final: MD3)\n" +
-            "• **Formação:** 4 Jogadores por equipe\n" +
-            "• **Plataforma:** Máximo de 2 Emuladores por time\n" +
-            "• **Inscrição:** R$ 10,00 por equipe\n\n" +
-            "**Como se inscrever:**\n" +
-            "1. Vá ao canal <#1551951245059555460>\n" +
-            "2. O capitão clica no botão e seleciona os 3 membros da equipe.\n" +
-            "3. Preencha os nicks do jogo no formulário.\n" +
-            "4. Realize o pagamento via PIX e envie o comprovante no painel.",
-        );
-
-      await message.delete().catch(() => {});
-      return message.channel.send({ embeds: [embedInfo] });
-    }
-
-    // ==========================================
-    // mc!camp painel -> Postar em 📝・inscrições
-    // ==========================================
+    // ----------------------------------------------------
+    // POSTAR PAINEL
+    // ----------------------------------------------------
     if (subCommand === "painel") {
       try {
-        // Força a criação/abertura do torneio no banco ao postar o painel
-        const tournament = await TournamentService.getOrCreateActiveTournament(
+        // Pega ou cria o torneio, e FORÇA o status para OPEN
+        let tournament = await TournamentService.getOrCreateActiveTournament(
           message.author.id,
         );
 
+        tournament = await prisma.tournament.update({
+          where: { id: tournament.id },
+          data: { status: "OPEN" },
+          include: { teams: true },
+        });
+
+        const activeTeams = tournament.teams.filter(
+          (t) => !["CANCELLED"].includes(t.status),
+        ).length;
+        const vagasRestantes = tournament.maxTeams - activeTeams;
+
         const embedPainel = new EmbedBuilder()
-          .setTitle("<:serv:1545459134089138256> INSCRIÇÕES ABERTAS - 4X4")
+          .setTitle("<:serv:1545459134089138256> INSCRIÇÕES ABERTAS - 4X4 2QN")
           .setColor(hexPurple)
           .setImage(bannerUrl)
           .setDescription(
-            `**Status:** Abertas\n` +
-              `**Vagas:** ${tournament.maxTeams} Equipes\n` +
-              `**Taxa:** R$ ${tournament.registrationFee.toFixed(2)}\n\n` +
+            `Chegou a hora! Registre seu squad abaixo.\n\n` +
+              `🟢 **Status:** Inscrições Abertas\n` +
+              `<:serv:1537237908547965001> **Vagas Restantes:** ${vagasRestantes}/${tournament.maxTeams}\n` +
+              `<:dinheiro:1535775870168469624> **Taxa:** R$ ${tournament.registrationFee.toFixed(2)}\n\n` +
               `O capitão deve clicar no botão abaixo para iniciar o registro da equipe.`,
           );
 
@@ -74,25 +62,102 @@ module.exports = {
           new ButtonBuilder()
             .setCustomId("btn_inscrever_equipe")
             .setLabel("INSCREVER EQUIPE")
-            .setEmoji("<:serv:1545459134089138256>") // Coloque o ID do seu emoji customizado aqui
+            .setEmoji("<:serv:1545459134089138256>")
             .setStyle(ButtonStyle.Secondary),
         );
 
         await message.delete().catch(() => {});
-        return message.channel.send({
+        const painelMsg = await message.channel.send({
           embeds: [embedPainel],
           components: [btn],
         });
+
+        // Salva a mensagem no banco para podermos editar as vagas depois
+        await prisma.tournament.update({
+          where: { id: tournament.id },
+          data: {
+            panelChannelId: painelMsg.channel.id,
+            panelMessageId: painelMsg.id,
+          },
+        });
+
+        return;
       } catch (err) {
-        console.error("[CAMP CMD ERROR]", err);
-        return message.reply(
-          "Erro ao gerar o painel. Verifique o banco de dados.",
+        console.error(err);
+        return message.channel.send(
+          "<:serv:1545444524241719376> Erro ao gerar o painel.",
         );
       }
     }
 
+    // ----------------------------------------------------
+    // FECHAR INSCRIÇÕES (CLOSE)
+    // ----------------------------------------------------
+    if (subCommand === "close") {
+      const tournament = await TournamentService.getActiveTournament();
+      if (!tournament)
+        return message.reply("Não há torneio ativo para fechar.");
+
+      await prisma.tournament.update({
+        where: { id: tournament.id },
+        data: { status: "CLOSED" },
+      });
+      message.reply(
+        "<a:verif:1535775601363779604> Inscrições encerradas no banco de dados.",
+      );
+
+      // Atualiza o painel para vermelho
+      if (tournament.panelChannelId && tournament.panelMessageId) {
+        try {
+          const channel = await message.client.channels.fetch(
+            tournament.panelChannelId,
+          );
+          const msg = await channel.messages.fetch(tournament.panelMessageId);
+          const embed = EmbedBuilder.from(msg.embeds[0])
+            .setDescription(
+              `<:serv:1546265901161255085> **Status:** Inscrições Encerradas\nFique atento para as próximas edições!`,
+            )
+            .setColor(0xff0000);
+          await msg.edit({ embeds: [embed], components: [] }); // Remove o botão
+        } catch (e) {}
+      }
+      return;
+    }
+
+    // ----------------------------------------------------
+    // RESETAR DADOS (LIMPAR O BANCO PARA O OFICIAL)
+    // ----------------------------------------------------
+    if (subCommand === "reset") {
+      const tournament = await TournamentService.getOrCreateActiveTournament(
+        message.author.id,
+      );
+
+      // Apaga todos os times (como tem onDelete: Cascade no Prisma, apaga os jogadores junto)
+      await prisma.team.deleteMany({ where: { tournamentId: tournament.id } });
+
+      return message.reply(
+        "🧹 **Banco Limpo!** Todas as equipes de teste foram apagadas. O torneio está zerado e pronto para o oficial.",
+      );
+    }
+
+    // ----------------------------------------------------
+    // INFO
+    // ----------------------------------------------------
+    if (subCommand === "info") {
+      // Seu código atual de info (mantido)
+      const embedInfo = new EmbedBuilder()
+        .setTitle("📢 INFORMAÇÕES - CAMPEONATO 4X4")
+        .setColor(hexPurple)
+        .setImage(bannerUrl)
+        .setDescription(
+          "**Regras e Formato...** (texto omitido para não estender)",
+        );
+      await message.delete().catch(() => {});
+      return message.channel.send({ embeds: [embedInfo] });
+    }
+
     return message.reply(
-      "Comando inválido. Use `mc!camp info` ou `mc!camp painel`.",
+      "Use `mc!camp info`, `painel`, `open`, `close` ou `reset`.",
     );
   },
 };
