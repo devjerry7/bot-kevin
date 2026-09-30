@@ -151,15 +151,15 @@ module.exports = {
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
-          `<:serv:1545459134089138256> **Formato e Estrutura:**\n` +
+          `<:serv:1545488990168158350> **Formato e Estrutura:**\n` +
             `• Disputa no formato **4x4**.\n` +
             `• Capacidade máxima de **${maxTeams} Equipes**.\n\n` +
-            `<:cifrao2qn:1553154980108828742> **Taxa de Inscrição e Pagamento:**\n` +
+            `<a:dinheiro7:1535775867094044693> **Taxa de Inscrição e Pagamento:**\n` +
             `• Valor: **R$ ${fee}** por equipe.\n\n` +
             `<:serv:1545468689405583370> **Como Participar:**\n` +
             `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>\n` +
             `2. Selecione os 3 membros do seu squad.\n` +
-            `3. Preencha o formulário informando o nome do time e os nicks corretos.\n` +
+            `3. Preencha o formulário.\n` +
             `4. Realize o PIX, abra o tópico criado pelo bot e envie o comprovante para validação da equipe.`,
         );
 
