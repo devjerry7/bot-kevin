@@ -81,7 +81,9 @@ module.exports = async (message) => {
   // ====================================================
   if (message.channel.name && message.channel.name.startsWith("pix-")) {
     if (message.attachments.size === 0) {
-      return message.reply("⚠️ Envie a **FOTO/IMAGEM** do comprovante.");
+      return message.reply(
+        "<:serv:1545494059081142403> Envie a **FOTO/IMAGEM** do comprovante.",
+      );
     }
 
     const attachment = message.attachments.first();
@@ -93,6 +95,19 @@ module.exports = async (message) => {
       attachment.contentType.startsWith("image/") &&
       teamId
     ) {
+      // VALIDAÇÃO DE SEGURANÇA: Verifica se o time existe no banco atual
+      const teamExists = await prisma.team
+        .findUnique({
+          where: { id: teamId },
+        })
+        .catch(() => null);
+
+      if (!teamExists) {
+        return message.reply(
+          `<:serv:1545444524241719376> **Erro:** Este tópico pertence a um campeonato anterior que foi resetado. Por favor, faça uma nova inscrição pelo painel principal para gerar um novo tópico válido.`,
+        );
+      }
+
       const staffChannel = message.client.channels.cache.get(
         "1553170817553006622",
       );
@@ -109,7 +124,7 @@ module.exports = async (message) => {
         const rowStaff = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`staff_approve_${teamId}`)
-            .setLabel("APROVAR")
+            .setLabel("APROVADO")
             .setEmoji("<a:verif:1535775598822301781>")
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()

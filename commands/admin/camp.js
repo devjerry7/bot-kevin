@@ -1,3 +1,4 @@
+// commands/camp.js
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -122,17 +123,28 @@ module.exports = {
     }
 
     // ----------------------------------------------------
-    // RESETAR DADOS (LIMPAR O BANCO PARA O OFICIAL)
+    // RESETAR DADOS (LIMPAR O BANCO E TÓPICOS)
     // ----------------------------------------------------
     if (subCommand === "reset") {
       const tournament = await TournamentService.getOrCreateActiveTournament(
         message.author.id,
       );
 
+      // Deleta os tópicos antigos de PIX para evitar conflitos de IDs órfãos
+      try {
+        const fetchedThreads =
+          await message.guild.channels.fetchActiveThreads();
+        for (const thread of fetchedThreads.threads.values()) {
+          if (thread.name.startsWith("pix-")) {
+            await thread.delete().catch(() => {});
+          }
+        }
+      } catch (e) {}
+
       await prisma.team.deleteMany({ where: { tournamentId: tournament.id } });
 
       return message.reply(
-        "🧹 **Banco Limpo!** Todas as equipes de teste foram apagadas. O torneio está zerado e pronto para o oficial.",
+        "🧹 **Banco e Tópicos Limpos!** Equipes e tópicos antigos apagados. Torneio zerado e pronto para o oficial.",
       );
     }
 
@@ -151,16 +163,16 @@ module.exports = {
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
-          `\n\n<:serv:1545488990168158350> **Formato e Estrutura:**\n` +
-            `• Disputa no formato **4x4**.\n` +
+          `\n\n<:serv:1545488990168158350> **Formato e Regras:**\n` +
+            `• Disputa no formato **4x4** (4 jogadores por time).\n` +
+            `• **Máximo de 2 emuladores** por equipe.\n` +
             `• Capacidade máxima de **${maxTeams} Equipes**.\n\n` +
             `<:serv:1553154980108828742> **Taxa de Inscrição:**\n` +
             `• Valor: **R$ ${fee}** por equipe.\n\n` +
             `<:serv:1545468689405583370> **Como Participar:**\n` +
-            `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>\n` +
-            `2. Selecione os 3 membros do seu squad.\n` +
-            `3. Preencha o formulário.\n` +
-            `4. Realize o PIX, abra o tópico criado pelo bot e envie o comprovante para validação da equipe.`,
+            `1. Clique no botão **INSCREVER EQUIPE** no painel.\n` +
+            `2. Preencha os dados dos 4 jogadores e seus dispositivos.\n` +
+            `3. Realize o PIX, entre no tópico gerado e envie o comprovante.`,
         );
 
       await message.delete().catch(() => {});
