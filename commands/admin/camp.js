@@ -154,7 +154,7 @@ module.exports = {
           `\n\n<:serv:1545488990168158350> **Formato e Estrutura:**\n` +
             `• Disputa no formato **4x4**.\n` +
             `• Capacidade máxima de **${maxTeams} Equipes**.\n\n` +
-            `<a:dinheiro7:1535775867094044693> **Taxa de Inscrição:**\n` +
+            `<:serv:1553154980108828742> **Taxa de Inscrição:**\n` +
             `• Valor: **R$ ${fee}** por equipe.\n\n` +
             `<:serv:1545468689405583370> **Como Participar:**\n` +
             `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>\n` +
