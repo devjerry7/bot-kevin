@@ -12,8 +12,6 @@ const {
   ChannelType,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
 
 module.exports = async function handleTournamentInteractions(interaction) {
   try {
@@ -330,12 +328,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
         "",
       );
 
-      // LOG DE TESTE OBRIGATÓRIO PARA VERIFICAR O ID QUE ESTÁ CHEGANDO
-      console.log("==========================================");
-      console.log("[DEBUG APPROVE] customId clicado:", interaction.customId);
-      console.log("[DEBUG APPROVE] teamId extraído:", teamId);
-      console.log("==========================================");
-
       const guild = interaction.guild;
       let ticketThread = null;
       try {
@@ -353,22 +345,23 @@ module.exports = async function handleTournamentInteractions(interaction) {
       }
 
       if (isApprove) {
-        // 1. Atualiza status no banco para CONFIRMED com tratamento seguro para P2025
+        // 1. Atualiza status via TournamentService unificado
         let updatedTeam;
         try {
-          updatedTeam = await prisma.team.update({
-            where: { id: teamId },
-            data: { status: "CONFIRMED" },
-            include: { players: true, tournament: true },
-          });
-        } catch (dbErr) {
-          console.error("[PRISMA ERROR CATCH]:", dbErr);
-          if (dbErr.code === "P2025") {
+          updatedTeam = await TournamentService.updateTeamStatus(
+            teamId,
+            "CONFIRMED",
+          );
+          if (!updatedTeam) {
             return await interaction.editReply({
-              content: `<:serv:1545444524241719376> **Erro:** Esta equipe não foi encontrada no banco de dados (o campeonato pode ter sido resetado).`,
+              content: `<:serv:1545444524241719376> **Erro:** Esta equipe não foi encontrada no banco de dados.`,
             });
           }
-          throw dbErr;
+        } catch (dbErr) {
+          console.error("[UPDATE TEAM ERROR]:", dbErr);
+          return await interaction.editReply({
+            content: `<:serv:1545444524241719376> **Erro ao atualizar equipe:** ${dbErr.message}`,
+          });
         }
 
         // 2. Envia a embed oficial no canal de times confirmados (ID: 1551951372734169169)
@@ -405,7 +398,11 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
         // 3. Atualiza o painel principal de inscrições
         const tournament = updatedTeam.tournament;
-        if (tournament.panelChannelId && tournament.panelMessageId) {
+        if (
+          tournament &&
+          tournament.panelChannelId &&
+          tournament.panelMessageId
+        ) {
           try {
             const panelChannel = await guild.channels.fetch(
               tournament.panelChannelId,
