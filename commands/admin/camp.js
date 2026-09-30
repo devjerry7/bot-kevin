@@ -151,7 +151,7 @@ module.exports = {
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
-          `\n<:serv:1545488990168158350> **Formato e Estrutura:**\n` +
+          `\n\n<:serv:1545488990168158350> **Formato e Estrutura:**\n` +
             `• Disputa no formato **4x4**.\n` +
             `• Capacidade máxima de **${maxTeams} Equipes**.\n\n` +
             `<a:dinheiro7:1535775867094044693> **Taxa de Inscrição:**\n` +
