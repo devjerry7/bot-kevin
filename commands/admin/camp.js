@@ -158,7 +158,7 @@ module.exports = {
             `<:cifrao2qn:1553154980108828742> **Taxa de Inscrição e Pagamento:**\n` +
             `• Valor: **R$ ${fee}** por equipe.\n` +
             `• O envio do comprovante deve ser feito através do tópico privado gerado pelo bot após o pré-registro.\n\n` +
-            `📌 **Como Participar:**\n` +
+            `<:serv:1545468689405583370> **Como Participar:**\n` +
             `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>\n` +
             `2. Selecione os 3 membros do seu squad.\n` +
             `3. Preencha o formulário informando o nome do time e os nicks corretos.\n` +
