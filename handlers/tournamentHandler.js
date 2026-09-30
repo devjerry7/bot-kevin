@@ -61,7 +61,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
     ) {
       const selectedUsers = interaction.values;
 
-      // Validação: Impedir que o capitão selecione a si mesmo
       if (selectedUsers.includes(interaction.user.id)) {
         return await interaction.reply({
           content: `<:serv:1545444524241719376> Você não pode se selecionar como membro, pois você já é o capitão da equipe! Selecione outros 3 membros.`,
@@ -69,7 +68,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
         });
       }
 
-      // Validação: Garantir estritamente 3 membros
       if (selectedUsers.length !== 3) {
         return await interaction.reply({
           content: `<:serv:1545444524241719376> Você deve selecionar exatamente 3 integrantes para a sua equipe.`,
@@ -332,6 +330,12 @@ module.exports = async function handleTournamentInteractions(interaction) {
         "",
       );
 
+      // LOG DE TESTE OBRIGATÓRIO PARA VERIFICAR O ID QUE ESTÁ CHEGANDO
+      console.log("==========================================");
+      console.log("[DEBUG APPROVE] customId clicado:", interaction.customId);
+      console.log("[DEBUG APPROVE] teamId extraído:", teamId);
+      console.log("==========================================");
+
       const guild = interaction.guild;
       let ticketThread = null;
       try {
@@ -358,6 +362,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
             include: { players: true, tournament: true },
           });
         } catch (dbErr) {
+          console.error("[PRISMA ERROR CATCH]:", dbErr);
           if (dbErr.code === "P2025") {
             return await interaction.editReply({
               content: `<:serv:1545444524241719376> **Erro:** Esta equipe não foi encontrada no banco de dados (o campeonato pode ter sido resetado).`,
