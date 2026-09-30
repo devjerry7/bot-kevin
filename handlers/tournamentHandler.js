@@ -12,6 +12,8 @@ const {
   ChannelType,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 module.exports = async function handleTournamentInteractions(interaction) {
   try {
@@ -59,7 +61,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
     ) {
       const selectedUsers = interaction.values;
 
-      // Busca os nomes reais dos usuários selecionados no servidor (com fallback de segurança)
       const member2 = await interaction.guild.members
         .fetch(selectedUsers[0])
         .catch(() => ({ displayName: "Jogador 2" }));
@@ -90,7 +91,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       const inputNick2 = new TextInputBuilder()
         .setCustomId("input_nick_p2")
-        .setLabel(`Nick de ${member2.displayName}`) // Nome dinâmico aqui
+        .setLabel(`Nick de ${member2.displayName}`)
         .setPlaceholder(
           `Ex: FLX_${member2.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
         )
@@ -222,16 +223,13 @@ module.exports = async function handleTournamentInteractions(interaction) {
             await msg.edit({ embeds: [newEmbed] });
           }
         } catch (e) {
-          console.error(
-            "[PAINEL UPDATE ERROR] Não foi possível atualizar o número de vagas:",
-            e,
-          );
+          console.error("[PAINEL UPDATE ERROR]:", e);
         }
       }
 
       if (team.status === "WAITLIST") {
         return await interaction.editReply({
-          content: `<:serv:1545494059081142403> **Vagas Principais Esgotadas!**\nA equipe **${team.name}** foi registrada na **Lista de Espera** (Posição #${team.waitlistOrder}). Se surgir uma vaga, vocês serão notificados!`,
+          content: `<:serv:1545494059081142403> **Vagas Principais Esgotadas!**\nA equipe **${team.name}** foi registrada na **Lista de Espera** (Posição #${team.waitlistOrder}).`,
         });
       }
 
@@ -270,9 +268,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
     }
 
     // ----------------------------------------------------
-    // 4. CRIAR TICKET PIX PARA ENVIO DE COMPROVANTE
-    // ----------------------------------------------------
-    // ----------------------------------------------------
     // 4. CRIAR TÓPICO PRIVADO (TICKET) PARA O COMPROVANTE
     // ----------------------------------------------------
     if (
@@ -285,15 +280,13 @@ module.exports = async function handleTournamentInteractions(interaction) {
       );
       const channel = interaction.channel;
 
-      // Cria um tópico privado exclusivo no canal atual
       const thread = await channel.threads.create({
-        name: `pix-${teamId}-${interaction.user.username}`.substring(0, 100),
+        name: `pix-${interaction.user.username}`.substring(0, 100),
         type: ChannelType.PrivateThread,
         reason: `Comprovante de pagamento da equipe`,
         invitable: false,
       });
 
-      // Adiciona o usuário ao tópico
       await thread.members.add(interaction.user.id);
 
       await thread.send(
@@ -306,6 +299,82 @@ module.exports = async function handleTournamentInteractions(interaction) {
         flags: MessageFlags.Ephemeral,
       });
     }
+
+    // ----------------------------------------------------
+    // 5. AÇÃO DA EQUIPE: APROVAR OU RECUSAR COMPROVANTE
+    // ----------------------------------------------------
+    if (
+      interaction.isButton() &&
+      (interaction.customId.startsWith("staff_approve_") ||
+        interaction.customId.startsWith("staff_reject_"))
+    ) {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const isApprove = interaction.customId.startsWith("staff_approve_");
+      const teamId = interaction.customId.replace(
+        isApprove ? "staff_approve_" : "staff_reject_",
+        "",
+      );
+
+      const guild = interaction.guild;
+      await guild.channels.fetchActiveThreads().catch(() => {});
+      const ticketThread = guild.threads.cache.find(
+        (t) => t.name && t.name.startsWith(`pix-${teamId}`),
+      );
+
+      if (isApprove) {
+        await prisma.team.update({
+          where: { id: teamId },
+          data: { status: "CONFIRMED" },
+        });
+
+        if (ticketThread) {
+          await ticketThread
+            .send(
+              `<a:verif:1535775598822301781> **Pagamento Aprovado!** Vaga confirmada no campeonato.`,
+            )
+            .catch(() => {});
+          setTimeout(() => ticketThread.delete().catch(() => {}), 5000);
+        }
+
+        const disabledRow = new ActionRowBuilder().addComponents(
+          ButtonBuilder.from(interaction.message.components[0].components[0])
+            .setDisabled(true)
+            .setLabel("APROVADO"),
+          ButtonBuilder.from(
+            interaction.message.components[0].components[1],
+          ).setDisabled(true),
+        );
+
+        await interaction.message.edit({ components: [disabledRow] });
+        return await interaction.editReply({
+          content: `<a:verif:1535775598822301781> Equipe aprovada com sucesso!`,
+        });
+      } else {
+        if (ticketThread) {
+          await ticketThread
+            .send(
+              `<:serv:1545444524241719376> **Comprovante Recusado.** Por favor, envie um comprovante válido neste chat.`,
+            )
+            .catch(() => {});
+        }
+
+        const disabledRow = new ActionRowBuilder().addComponents(
+          ButtonBuilder.from(
+            interaction.message.components[0].components[0],
+          ).setDisabled(true),
+          ButtonBuilder.from(interaction.message.components[0].components[1])
+            .setDisabled(true)
+            .setLabel("RECUSADO"),
+        );
+
+        await interaction.message.edit({ components: [disabledRow] });
+        return await interaction.editReply({
+          content: `<:serv:1545444524241719376> Comprovante recusado.`,
+        });
+      }
+    }
+
     return false;
   } catch (err) {
     console.error("[ERRO TOURNAMENT INTERACTION]", err);

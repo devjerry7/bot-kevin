@@ -23,14 +23,13 @@ module.exports = {
     const subCommand = args[0]?.toLowerCase();
     const hexPurple = 0x9b59b6;
     const bannerUrl =
-      "https://cdn.discordapp.com/attachments/1543871014273028136/1553062549799309402/banner4x4.png?ex=6ab7e1b6&is=6ab69036&hm=167cc766573dec0e152975465d680fe442ffd456e7d39a1cfc8412bb30bf712b&";
+      "https://cdn.discordapp.com/attachments/1553534170179833951/1554904332820811907/banner-4x4.png?backend=b2&ex=6abe9501&is=6abd4381&hm=b001ceec28465e6503027ed906c4db45ee9ed4faac57f84c17924b3d3af399a6&";
 
     // ----------------------------------------------------
     // POSTAR PAINEL
     // ----------------------------------------------------
     if (subCommand === "painel") {
       try {
-        // Pega ou cria o torneio, e FORÇA o status para OPEN
         let tournament = await TournamentService.getOrCreateActiveTournament(
           message.author.id,
         );
@@ -72,7 +71,6 @@ module.exports = {
           components: [btn],
         });
 
-        // Salva a mensagem no banco para podermos editar as vagas depois
         await prisma.tournament.update({
           where: { id: tournament.id },
           data: {
@@ -106,7 +104,6 @@ module.exports = {
         "<a:verif:1535775601363779604> Inscrições encerradas no banco de dados.",
       );
 
-      // Atualiza o painel para vermelho
       if (tournament.panelChannelId && tournament.panelMessageId) {
         try {
           const channel = await message.client.channels.fetch(
@@ -118,7 +115,7 @@ module.exports = {
               `<:serv:1546265901161255085> **Status:** Inscrições Encerradas\nFique atento para as próximas edições!`,
             )
             .setColor(0xff0000);
-          await msg.edit({ embeds: [embed], components: [] }); // Remove o botão
+          await msg.edit({ embeds: [embed], components: [] });
         } catch (e) {}
       }
       return;
@@ -132,7 +129,6 @@ module.exports = {
         message.author.id,
       );
 
-      // Apaga todos os times (como tem onDelete: Cascade no Prisma, apaga os jogadores junto)
       await prisma.team.deleteMany({ where: { tournamentId: tournament.id } });
 
       return message.reply(
@@ -144,20 +140,35 @@ module.exports = {
     // INFO
     // ----------------------------------------------------
     if (subCommand === "info") {
-      // Seu código atual de info (mantido)
+      const tournament = await TournamentService.getActiveTournament();
+      const fee = tournament ? tournament.registrationFee.toFixed(2) : "10.00";
+      const maxTeams = tournament ? tournament.maxTeams : 32;
+
       const embedInfo = new EmbedBuilder()
-        .setTitle("📢 INFORMAÇÕES - CAMPEONATO 4X4")
+        .setTitle(
+          "<:serv:1545459134089138256> INFORMAÇÕES - CAMPEONATO 4X4 2QN",
+        )
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
-          "**Regras e Formato...** (texto omitido para não estender)",
+          `Bem-vindo ao nosso Campeonato Oficial 4x4!\n\n` +
+            `<:serv:1545459134089138256> **Formato e Estrutura:**\n` +
+            `• Disputa no formato **4x4**.\n` +
+            `• Capacidade máxima de **${maxTeams} Equipes**.\n` +
+            `<:cifrao2qn:1553154980108828742> **Taxa de Inscrição e Pagamento:**\n` +
+            `• Valor: **R$ ${fee}** por equipe.\n` +
+            `• O envio do comprovante deve ser feito através do tópico privado gerado pelo bot após o pré-registro.\n\n` +
+            `📌 **Como Participar:**\n` +
+            `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>\n` +
+            `2. Selecione os 3 membros do seu squad.\n` +
+            `3. Preencha o formulário informando o nome do time e os nicks corretos.\n` +
+            `4. Realize o PIX, abra o tópico criado pelo bot e envie o comprovante para validação da equipe.`,
         );
+
       await message.delete().catch(() => {});
       return message.channel.send({ embeds: [embedInfo] });
     }
 
-    return message.reply(
-      "Use `mc!camp info`, `painel`, `open`, `close` ou `reset`.",
-    );
+    return message.reply("Use `mc!camp info`, `painel`, `close` ou `reset`.");
   },
 };
