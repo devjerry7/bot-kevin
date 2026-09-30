@@ -281,7 +281,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
       const channel = interaction.channel;
 
       const thread = await channel.threads.create({
-        name: `pix-${interaction.user.username}`.substring(0, 100),
+        name: `pix-${teamId}-${interaction.user.username}`.substring(0, 100),
         type: ChannelType.PrivateThread,
         reason: `Comprovante de pagamento da equipe`,
         invitable: false,
@@ -317,10 +317,15 @@ module.exports = async function handleTournamentInteractions(interaction) {
       );
 
       const guild = interaction.guild;
-      await guild.channels.fetchActiveThreads().catch(() => {});
-      const ticketThread = guild.threads.cache.find(
-        (t) => t.name && t.name.startsWith(`pix-${teamId}`),
-      );
+      let ticketThread = null;
+      try {
+        const activeThreads = await guild.channels.fetchActiveThreads();
+        ticketThread = activeThreads.threads.find(
+          (t) => t.name && t.name.startsWith(`pix-${teamId}`),
+        );
+      } catch (e) {
+        console.error("[FETCH THREADS ERROR]:", e);
+      }
 
       if (isApprove) {
         await prisma.team.update({
