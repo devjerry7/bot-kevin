@@ -93,7 +93,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
         .setCustomId("input_nick_p2")
         .setLabel(`Nick de ${member2.displayName}`)
         .setPlaceholder(
-          `Ex: FLX_${member2.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
+          `Ex: ${member2.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
         )
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
@@ -102,7 +102,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
         .setCustomId("input_nick_p3")
         .setLabel(`Nick de ${member3.displayName}`)
         .setPlaceholder(
-          `Ex: FLX_${member3.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
+          `Ex: ${member3.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
         )
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
@@ -111,7 +111,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
         .setCustomId("input_nick_p4")
         .setLabel(`Nick de ${member4.displayName}`)
         .setPlaceholder(
-          `Ex: FLX_${member4.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
+          `Ex: ${member4.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
         )
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
@@ -245,19 +245,19 @@ module.exports = async function handleTournamentInteractions(interaction) {
           `**Equipe:** ${team.name}\n` +
             `**Capitão:** <@${team.captainId}>\n\n` +
             `<:an_membro:1553155856168652800> **Jogadores Escalados:**\n${playersFormattedList}\n\n` +
-            `<:serv:1545458280145354863> **Passo Final para Confirmar a Vaga:**\n` +
+            `<:serv:1553154980108828742> **Passo Final para Confirmar a Vaga:**\n` +
             `Realize o pagamento da taxa de **R$ ${(tournament.registrationFee || 0).toFixed(2)}** via PIX e envie o comprovante pelo botão abaixo.\n\n` +
             `\`pix@2qn.com.br\`\n` +
             `*(Clique no e-mail acima para copiar a chave)*`,
         )
-        .setColor(0x00ffcc)
+        .setColor(0x9b59b6)
         .setFooter({ text: "Aguardando envio de comprovante" });
 
       const rowPayment = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`btn_enviar_comprovante_${team.id}`)
           .setLabel("ENVIAR COMPROVANTE")
-          .setEmoji("<:serv:1545488990168158350>")
+          .setEmoji("<a:2qn:1553155625738051604>")
           .setStyle(ButtonStyle.Secondary),
       );
 
