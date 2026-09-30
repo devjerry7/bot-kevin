@@ -8,6 +8,8 @@ const {
 const config = require("../config");
 const path = require("path");
 const fs = require("fs");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 // --- IMPORTAÇÕES DOS SISTEMAS DE JOGO E ESTADO ---
 const { getGameState } = require("../game/gameState");
@@ -77,13 +79,11 @@ module.exports = async (message) => {
   if (message.author.bot || !message.guild) return;
 
   // ====================================================
-  // [NOVO] ESCUTAR COMPROVANTES NOS TÓPICOS PIX
+  // ESCUTAR COMPROVANTES NOS TÓPICOS PIX
   // ====================================================
   if (message.channel.name && message.channel.name.startsWith("pix-")) {
     if (message.attachments.size === 0) {
-      return message.reply(
-        "<:serv:1545494059081142403> Envie a **FOTO/IMAGEM** do comprovante.",
-      );
+      return message.reply("⚠️ Envie a **FOTO/IMAGEM** do comprovante.");
     }
 
     const attachment = message.attachments.first();
@@ -104,7 +104,7 @@ module.exports = async (message) => {
 
       if (!teamExists) {
         return message.reply(
-          `<:serv:1545444524241719376> **Erro:** Este tópico pertence a um campeonato anterior que foi resetado. Por favor, faça uma nova inscrição pelo painel principal para gerar um novo tópico válido.`,
+          `<:serv:1545444524241719376> **Erro:** Este tópico pertence a um campeonato anterior que foi resetado. Faça uma nova inscrição.`,
         );
       }
 
@@ -124,7 +124,7 @@ module.exports = async (message) => {
         const rowStaff = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`staff_approve_${teamId}`)
-            .setLabel("APROVADO")
+            .setLabel("APROVAR")
             .setEmoji("<a:verif:1535775598822301781>")
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
