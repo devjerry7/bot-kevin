@@ -10,7 +10,7 @@ class TournamentService {
   static async getActiveTournament() {
     return await prisma.tournament.findFirst({
       where: {
-        status: "REGISTRATION_OPEN", // Corrigido aqui
+        status: "REGISTRATION_OPEN",
       },
       include: {
         teams: {
@@ -187,7 +187,6 @@ class TournamentService {
     });
 
     if (isFull && tournament.status === "REGISTRATION_OPEN") {
-      // Corrigido aqui
       await prisma.tournament.update({
         where: { id: tournamentId },
         data: { status: "REGISTRATION_FULL" },
@@ -195,6 +194,20 @@ class TournamentService {
     }
 
     return createdTeam;
+  }
+
+  /**
+   * Atualiza o status de uma equipe e retorna a equipe com jogadores e torneio incluídos.
+   */
+  static async updateTeamStatus(teamId, status) {
+    return await prisma.team.update({
+      where: { id: teamId },
+      data: { status },
+      include: {
+        players: true,
+        tournament: true,
+      },
+    });
   }
 }
 

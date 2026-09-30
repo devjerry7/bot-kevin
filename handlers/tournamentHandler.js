@@ -383,8 +383,8 @@ module.exports = async function handleTournamentInteractions(interaction) {
               )
               .setColor(0x2ecc71)
               .setDescription(
-                `🏆 **Equipe:** **${updatedTeam.name}**\n` +
-                  `👑 **Capitão:** <@${updatedTeam.captainId}>\n\n` +
+                `<:serv:1545459134089138256> **Equipe:** **${updatedTeam.name}**\n` +
+                  `<:coroa:1535775618615087154> **Capitão:** <@${updatedTeam.captainId}>\n\n` +
                   `<:an_membro:1553155856168652800> **Line-up Oficial:**\n${playersFormatted}\n\n` +
                   `<a:verif:1535775601363779604> **Status:** Inscrição Validada & Vaga Garantida`,
               )
