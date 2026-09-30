@@ -87,24 +87,40 @@ module.exports = async (message) => {
     }
 
     const attachment = message.attachments.first();
-    const parts = message.channel.name.split("-");
-    const teamId = parts[1]; // Extrai o ID da equipe do nome do tópico
 
-    if (
-      attachment.contentType &&
-      attachment.contentType.startsWith("image/") &&
-      teamId
-    ) {
-      // VALIDAÇÃO DE SEGURANÇA: Verifica se o time existe no banco atual
-      const teamExists = await prisma.team
-        .findUnique({
-          where: { id: teamId },
-        })
-        .catch(() => null);
+    if (attachment.contentType && attachment.contentType.startsWith("image/")) {
+      let teamId = null;
+      let team = null;
 
-      if (!teamExists) {
+      // 1. Tenta achar pelo ID extraído do nome do canal
+      const parts = message.channel.name.split("-");
+      if (parts[1]) {
+        teamId = parts[1];
+        team = await prisma.team
+          .findUnique({
+            where: { id: teamId },
+          })
+          .catch(() => null);
+      }
+
+      // 2. Se não achou pelo canal (ID desatualizado/errado), acha pelo usuário no banco
+      if (!team) {
+        const playerRecord = await prisma.player
+          .findFirst({
+            where: { discordId: message.author.id },
+            include: { team: true },
+          })
+          .catch(() => null);
+
+        if (playerRecord && playerRecord.team) {
+          team = playerRecord.team;
+          teamId = team.id;
+        }
+      }
+
+      if (!team) {
         return message.reply(
-          `<:serv:1545444524241719376> **Erro:** Este tópico pertence a um campeonato anterior que foi resetado. Faça uma nova inscrição.`,
+          `<:serv:1545444524241719376> **Erro:** Não encontramos nenhuma equipe vinculada a você ou a este tópico. Faça uma nova inscrição.`,
         );
       }
 
@@ -116,7 +132,7 @@ module.exports = async (message) => {
         const embedStaff = new EmbedBuilder()
           .setTitle("<:serv:1545491203292663808> NOVO COMPROVANTE RECEBIDO")
           .setDescription(
-            `**Enviado por:** ${message.author} (\`${message.author.id}\`)\n**Tópico:** <#${message.channel.id}>\n\nRevise a imagem abaixo.`,
+            `**Equipe:** ${team.name}\n**Enviado por:** ${message.author} (\`${message.author.id}\`)\n**Tópico:** <#${message.channel.id}>\n\nRevise a imagem abaixo.`,
           )
           .setColor(0x9b59b6)
           .setImage(attachment.url);
