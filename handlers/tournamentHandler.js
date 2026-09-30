@@ -319,24 +319,106 @@ module.exports = async function handleTournamentInteractions(interaction) {
       const guild = interaction.guild;
       let ticketThread = null;
       try {
-        const activeThreads = await guild.channels.fetchActiveThreads();
-        ticketThread = activeThreads.threads.find(
-          (t) => t.name && t.name.startsWith(`pix-${teamId}`),
+        const fetchedThreads = await guild.channels.fetchActiveThreads();
+        ticketThread = fetchedThreads.threads.find(
+          (t) => t.name && t.name.includes(teamId),
         );
+        if (!ticketThread) {
+          ticketThread = guild.channels.cache.find(
+            (c) => c.isThread() && c.name && c.name.includes(teamId),
+          );
+        }
       } catch (e) {
         console.error("[FETCH THREADS ERROR]:", e);
       }
 
       if (isApprove) {
-        await prisma.team.update({
-          where: { id: teamId },
-          data: { status: "CONFIRMED" },
-        });
+        // 1. Atualiza status no banco para CONFIRMED com tratamento seguro para P2025
+        let updatedTeam;
+        try {
+          updatedTeam = await prisma.team.update({
+            where: { id: teamId },
+            data: { status: "CONFIRMED" },
+            include: { players: true, tournament: true },
+          });
+        } catch (dbErr) {
+          if (dbErr.code === "P2025") {
+            return await interaction.editReply({
+              content: `<:serv:1545444524241719376> **Erro:** Esta equipe não foi encontrada no banco de dados (o campeonato pode ter sido resetado).`,
+            });
+          }
+          throw dbErr;
+        }
 
+        // 2. Envia a embed oficial no canal de times confirmados (ID: 1551951372734169169)
+        try {
+          const confirmedChannelId = "1551951372734169169";
+          const confirmedChannel =
+            await guild.channels.fetch(confirmedChannelId);
+          if (confirmedChannel) {
+            const playersFormatted = updatedTeam.players
+              .map(
+                (p) =>
+                  `• <@${p.discordId}> | \`${p.gameNick}\` *(${p.device || "MOBILE"})*`,
+              )
+              .join("\n");
+
+            const embedConfirmed = new EmbedBuilder()
+              .setTitle(
+                "<:serv:1545459134089138256> NOVA EQUIPE CONFIRMADA - 4X4",
+              )
+              .setColor(0x2ecc71)
+              .setDescription(
+                `🏆 **Equipe:** **${updatedTeam.name}**\n` +
+                  `👑 **Capitão:** <@${updatedTeam.captainId}>\n\n` +
+                  `<:an_membro:1553155856168652800> **Line-up Oficial:**\n${playersFormatted}\n\n` +
+                  `<a:verif:1535775601363779604> **Status:** Inscrição Validada & Vaga Garantida`,
+              )
+              .setTimestamp();
+
+            await confirmedChannel.send({ embeds: [embedConfirmed] });
+          }
+        } catch (err) {
+          console.error("[ERROR SENDING CONFIRMED TEAM]:", err);
+        }
+
+        // 3. Atualiza o painel principal de inscrições
+        const tournament = updatedTeam.tournament;
+        if (tournament.panelChannelId && tournament.panelMessageId) {
+          try {
+            const panelChannel = await guild.channels.fetch(
+              tournament.panelChannelId,
+            );
+            const panelMsg = await panelChannel.messages.fetch(
+              tournament.panelMessageId,
+            );
+            const freshTournament =
+              await TournamentService.getActiveTournament();
+            if (freshTournament) {
+              const activeTeams = freshTournament.teams.filter(
+                (t) => !["CANCELLED"].includes(t.status),
+              ).length;
+              const vagasRestantes = freshTournament.maxTeams - activeTeams;
+              const oldEmbed = panelMsg.embeds[0];
+              const newEmbed = EmbedBuilder.from(oldEmbed).setDescription(
+                `Chegou a hora! Registre seu squad abaixo.\n\n` +
+                  `<a:2qn:1553155625738051604> **Status:** Inscrições Abertas\n` +
+                  `<:an_membro:1553155856168652800> **Vagas Restantes:** ${Math.max(0, vagasRestantes)}/${freshTournament.maxTeams}\n` +
+                  `<:cifrao2qn:1553154980108828742> **Taxa:** R$ ${freshTournament.registrationFee.toFixed(2)}\n\n` +
+                  `O capitão deve clicar no botão abaixo para iniciar o registro da equipe.`,
+              );
+              await panelMsg.edit({ embeds: [newEmbed] });
+            }
+          } catch (e) {
+            console.error("[PAINEL UPDATE ERROR ON APPROVE]:", e);
+          }
+        }
+
+        // 4. Avisa e fecha o tópico privado
         if (ticketThread) {
           await ticketThread
             .send(
-              `<a:verif:1535775598822301781> **Pagamento Aprovado!** Vaga confirmada no campeonato.`,
+              `<a:verif:1535775598822301781> **Pagamento Aprovado!** Vaga confirmada no campeonato e divulgada em <#1551951372734169169>. Este tópico será arquivado em breve.`,
             )
             .catch(() => {});
           setTimeout(() => ticketThread.delete().catch(() => {}), 5000);
@@ -353,7 +435,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
         await interaction.message.edit({ components: [disabledRow] });
         return await interaction.editReply({
-          content: `<a:verif:1535775598822301781> Equipe aprovada com sucesso!`,
+          content: `<a:verif:1535775598822301781> Equipe aprovada com sucesso! Vaga confirmada e divulgada.`,
         });
       } else {
         if (ticketThread) {
