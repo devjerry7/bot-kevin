@@ -151,13 +151,11 @@ module.exports = {
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
-          `Bem-vindo ao nosso Campeonato Oficial 4x4!\n\n` +
-            `<:serv:1545459134089138256> **Formato e Estrutura:**\n` +
+          `<:serv:1545459134089138256> **Formato e Estrutura:**\n` +
             `• Disputa no formato **4x4**.\n` +
-            `• Capacidade máxima de **${maxTeams} Equipes**.\n` +
+            `• Capacidade máxima de **${maxTeams} Equipes**.\n\n` +
             `<:cifrao2qn:1553154980108828742> **Taxa de Inscrição e Pagamento:**\n` +
-            `• Valor: **R$ ${fee}** por equipe.\n` +
-            `• O envio do comprovante deve ser feito através do tópico privado gerado pelo bot após o pré-registro.\n\n` +
+            `• Valor: **R$ ${fee}** por equipe.\n\n` +
             `<:serv:1545468689405583370> **Como Participar:**\n` +
             `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>\n` +
             `2. Selecione os 3 membros do seu squad.\n` +
