@@ -61,6 +61,22 @@ module.exports = async function handleTournamentInteractions(interaction) {
     ) {
       const selectedUsers = interaction.values;
 
+      // Validação: Impedir que o capitão selecione a si mesmo
+      if (selectedUsers.includes(interaction.user.id)) {
+        return await interaction.reply({
+          content: `<:serv:1545444524241719376> Você não pode se selecionar como membro, pois você já é o capitão da equipe! Selecione outros 3 membros.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      // Validação: Garantir estritamente 3 membros
+      if (selectedUsers.length !== 3) {
+        return await interaction.reply({
+          content: `<:serv:1545444524241719376> Você deve selecionar exatamente 3 integrantes para a sua equipe.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
       const member2 = await interaction.guild.members
         .fetch(selectedUsers[0])
         .catch(() => ({ displayName: "Jogador 2" }));
