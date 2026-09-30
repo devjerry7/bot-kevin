@@ -61,7 +61,7 @@ module.exports = {
           new ButtonBuilder()
             .setCustomId("btn_inscrever_equipe")
             .setLabel("INSCREVER EQUIPE")
-            .setEmoji("<:smsemoji:1554915661606551592>")
+            .setEmoji("<:2qn:1542026409067937824>")
             .setStyle(ButtonStyle.Secondary),
         );
 
