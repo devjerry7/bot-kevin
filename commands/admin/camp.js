@@ -6,7 +6,7 @@ const {
   ButtonStyle,
   PermissionsBitField,
 } = require("discord.js");
-const TournamentService = require("../services/tournamentService");
+const TournamentService = require("../../services/tournamentService");
 const DiscordMatchService = require("../services/discordMatchService");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
