@@ -300,7 +300,7 @@ module.exports = {
             `<:serv:1553154980108828742> **Taxa de Inscrição:**\n` +
             `• Valor: **R$ ${fee}** por equipe.\n\n` +
             `<:serv:1545468689405583370> **Como Participar:**\n` +
-            `1. Clique no botão **INSCREVER EQUIPE** no painel.\n` +
+            `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>.\n` +
             `2. Preencha os dados dos 4 jogadores e seus dispositivos.\n` +
             `3. Realize o PIX, entre no tópico gerado e envie o comprovante.`,
         );
