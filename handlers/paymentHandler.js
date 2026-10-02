@@ -27,6 +27,9 @@ module.exports = async function handlePaymentInteractions(interaction) {
       interaction.isButton() &&
       interaction.customId.startsWith("btn_enviar_comprovante_")
     ) {
+      // Adicionado deferReply imediato para evitar o erro de "não respondeu a tempo" (limite de 3s do Discord)
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       const teamId = interaction.customId.replace(
         "btn_enviar_comprovante_",
         "",
@@ -47,9 +50,8 @@ module.exports = async function handlePaymentInteractions(interaction) {
           `Nossa equipe irá analisar e validar a vaga. Pode colar a imagem abaixo.`,
       );
 
-      await interaction.reply({
+      await interaction.editReply({
         content: `<:serv:1545501461427785798> Tópico privado criado com sucesso: <#${thread.id}>`,
-        flags: MessageFlags.Ephemeral,
       });
       return true;
     }
