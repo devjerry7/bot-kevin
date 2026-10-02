@@ -94,41 +94,35 @@ module.exports = async function handleTournamentInteractions(interaction) {
       const inputTeamName = new TextInputBuilder()
         .setCustomId("input_team_name")
         .setLabel("Nome do time")
-        .setPlaceholder("")
+        .setPlaceholder("Digite o nome da equipe")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       const inputLeaderNick = new TextInputBuilder()
         .setCustomId("input_nick_leader")
         .setLabel("Seu Nick no Jogo (Capitão)")
-        .setPlaceholder("")
+        .setPlaceholder("Seu nick exato")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       const inputNick2 = new TextInputBuilder()
         .setCustomId("input_nick_p2")
         .setLabel(`Nick de ${member2.displayName}`.substring(0, 45))
-        .setPlaceholder(
-          `Ex: ${member2.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
-        )
+        .setPlaceholder("Nick exato do jogador 2")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       const inputNick3 = new TextInputBuilder()
         .setCustomId("input_nick_p3")
         .setLabel(`Nick de ${member3.displayName}`.substring(0, 45))
-        .setPlaceholder(
-          `Ex: ${member3.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
-        )
+        .setPlaceholder("Nick exato do jogador 3")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       const inputNick4 = new TextInputBuilder()
         .setCustomId("input_nick_p4")
         .setLabel(`Nick de ${member4.displayName}`.substring(0, 45))
-        .setPlaceholder(
-          `Ex: ${member4.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
-        )
+        .setPlaceholder("Nick exato do jogador 4")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
@@ -346,6 +340,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
         playersData: pending.playersData,
       });
 
+      // Atualiza painel principal do campeonato
       if (tournament.panelChannelId && tournament.panelMessageId) {
         try {
           const channel = await interaction.client.channels.fetch(
@@ -389,6 +384,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
         )
         .join("\n");
 
+      // Embed com instruções de pagamento que aciona o paymentHandler.js
       const embedSucesso = new EmbedBuilder()
         .setTitle(
           "<:serv:1545501461427785798> Inscrição Pré-Registrada com Sucesso!",
@@ -398,8 +394,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
             `**Capitão:** <@${team.captainId}>\n\n` +
             `<:an_membro:1553155856168652800> **Jogadores Escalados:**\n${playersFormattedList}\n\n` +
             `<:serv:1553154980108828742> **Passo Final para Confirmar a Vaga:**\n` +
-            `Realize o pagamento da taxa de **R$ ${(tournament.registrationFee || 0).toFixed(2)}** via PIX e envie o comprovante pelo botão abaixo.\n\n` +
-            `**Chave PIX:** \`discord.gg2qn@gmail.com\``,
+            `Realize o pagamento da taxa de **R$ ${(tournament.registrationFee || 0).toFixed(2)}** via PIX e envie o comprovante utilizando os botões abaixo.`,
         )
         .setColor(0x9b59b6)
         .setFooter({ text: "Aguardando envio de comprovante" });
@@ -424,71 +419,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
       });
     }
 
-    // ----------------------------------------------------
-    // 6. BOTÃO DE COPIAR PIX
-    // ----------------------------------------------------
-    if (interaction.isButton() && interaction.customId === "btn_copiar_pix") {
-      return await interaction.reply({
-        content: `discord.gg2qn@gmail.com`,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    // ----------------------------------------------------
-    // 7. BOTÃO DE ENVIAR COMPROVANTE -> ABRE MODAL DE COMPROVANTE
-    // ----------------------------------------------------
-    if (
-      interaction.isButton() &&
-      interaction.customId.startsWith("btn_enviar_comprovante_")
-    ) {
-      const teamId = interaction.customId.replace(
-        "btn_enviar_comprovante_",
-        "",
-      );
-
-      const modal = new ModalBuilder()
-        .setCustomId(`camp_modal_comprovante_${teamId}`)
-        .setTitle("Enviar Comprovante de Pagamento");
-
-      const inputUrl = new TextInputBuilder()
-        .setCustomId("input_comprovante_url")
-        .setLabel("Link da Imagem do Comprovante (Print)")
-        .setPlaceholder("Cole o link do print (Imgur, Discord, etc)")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      modal.addComponents(new ActionRowBuilder().addComponents(inputUrl));
-      return await interaction.showModal(modal);
-    }
-
-    // ----------------------------------------------------
-    // 8. SUBMISSÃO DO MODAL DE COMPROVANTE
-    // ----------------------------------------------------
-    if (
-      interaction.isModalSubmit() &&
-      interaction.customId.startsWith("camp_modal_comprovante_")
-    ) {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const teamId = interaction.customId.replace(
-        "camp_modal_comprovante_",
-        "",
-      );
-      const comprovanteUrl = interaction.fields
-        .getTextInputValue("input_comprovante_url")
-        .trim();
-
-      // Atualiza o status da equipe para PAYMENT_REVIEW ou salva o comprovante
-      const updatedTeam = await TournamentService.updateTeamStatus(
-        teamId,
-        "PAYMENT_REVIEW",
-      );
-
-      return await interaction.editReply({
-        content: `<a:ver_verifcado2qn:1535775624864473169> **Comprovante enviado com sucesso!** A moderação irá analisar o pagamento em breve para confirmar a sua vaga da equipe **${updatedTeam.name}**.`,
-      });
-    }
-
     return false;
   } catch (err) {
     console.error("[ERRO TOURNAMENT INTERACTION]", err);
@@ -497,5 +427,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
         content: `<:serv:1545444524241719376> Erro: ${err.message}`,
       });
     }
+    return false;
   }
 };
