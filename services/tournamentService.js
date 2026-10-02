@@ -29,7 +29,12 @@ class TournamentService {
     let tournament = await prisma.tournament.findFirst({
       where: {
         status: {
-          notIn: ["FINISHED", "CANCELLED", "COMPLETED"],
+          in: [
+            "DRAFT",
+            "REGISTRATION_OPEN",
+            "REGISTRATION_CLOSED",
+            "IN_PROGRESS",
+          ],
         },
       },
       include: {
