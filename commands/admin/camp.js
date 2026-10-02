@@ -6,7 +6,8 @@ const {
   ButtonStyle,
   PermissionsBitField,
 } = require("discord.js");
-const TournamentService = require("../../services/tournamentService");
+const TournamentService = require("../services/tournamentService");
+const DiscordMatchService = require("../services/discordMatchService");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
@@ -90,6 +91,136 @@ module.exports = {
     }
 
     // ----------------------------------------------------
+    // STATUS / RELATÓRIO DE INTEGRIDADE
+    // ----------------------------------------------------
+    if (subCommand === "status") {
+      try {
+        const tournament =
+          (await TournamentService.getActiveTournament()) ||
+          (await TournamentService.getOrCreateActiveTournament(
+            message.author.id,
+          ));
+        const report = await TournamentService.getTournamentAuditReport(
+          tournament.id,
+        );
+
+        const embedStatus = new EmbedBuilder()
+          .setTitle(
+            `<:serv:1545459134089138256> RELATÓRIO DE INTEGRIDADE - ${report.tournamentName}`,
+          )
+          .setColor(hexPurple)
+          .setDescription(
+            `<:rx_2qn:1542026409067937824> **Status do Torneio:** \`${report.status}\`\n` +
+              `<:rx_pessoinhas2qn:1553155856168652800> **Total Inscritos:** ${report.totalRegistered} / ${report.maxTeams}\n` +
+              `<a:rx_verfi2qn:1553155625738051604> **Confirmados:** ${report.confirmedCount}\n` +
+              `<:marr_tempo2qn:1545445362255400960> **Pagamento Pendente/Revisão:** ${report.pendingPaymentCount}\n` +
+              `<:verd_notas2qn:1545488990168158350> **Lista de Espera:** ${report.waitlistCount}\n\n` +
+              (report.emulatorOverflows.length > 0
+                ? `<:ama_cuidado2qn:1545494059081142403> **Alerta de Emuladores (>2):**\n` +
+                  report.emulatorOverflows
+                    .map((t) => `• ${t.name} (${t.emulatorsCount} emuladores)`)
+                    .join("\n") +
+                  `\n\n`
+                : `<:azu_serv2qn:1542177571750551592> Nenhum alerta de emuladores.\n\n`) +
+              (report.incompleteTeams.length > 0
+                ? `<:ama_cuidado2qn:1545494059081142403> **Equipes Incompletas (<4 jogadores):**\n` +
+                  report.incompleteTeams.map((t) => `• ${t.name}`).join("\n")
+                : `<:azu_serv2qn:1542177571750551592> Todas as equipes estão completas.`),
+          );
+
+        return message.reply({ embeds: [embedStatus] });
+      } catch (err) {
+        console.error(err);
+        return message.reply("Erro ao gerar o relatório de status do torneio.");
+      }
+    }
+
+    // ----------------------------------------------------
+    // PAINEL DE CONTROLE DOS CONFRONTOS (ROUND 1)
+    // ----------------------------------------------------
+    if (subCommand === "confrontos") {
+      try {
+        const tournament = await prisma.tournament.findFirst({
+          where: { status: "IN_PROGRESS" },
+          include: {
+            rounds: {
+              where: { roundNumber: 1 },
+              include: {
+                matches: {
+                  include: {
+                    team1: { include: { players: true } },
+                    team2: { include: { players: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!tournament || !tournament.rounds[0]?.matches.length) {
+          return message.reply(
+            "<:ama_cuidado2qn:1545494059081142403> Nenhuma partida encontrada. O torneio ainda não foi iniciado ou o sorteio não ocorreu.",
+          );
+        }
+
+        const matches = tournament.rounds[0].matches;
+        const adminChannel = await message.client.channels
+          .fetch(DiscordMatchService.CHANNELS.ADMIN_LOGS)
+          .catch(() => null);
+
+        const targetChannel = adminChannel || message.channel;
+
+        const embedConfrontos = new EmbedBuilder()
+          .setTitle(
+            "<:jg_game2qn:1546273610971218000> PAINEL DE CONTROLE - RODADA 1 (MATA-MATA)",
+          )
+          .setColor(hexPurple)
+          .setDescription(
+            `Abaixo estão listados os confrontos gerados pelo sorteio.\n` +
+              `Clique no botão correspondente para **iniciar o confronto.** `,
+          );
+
+        const components = [];
+        let currentRow = new ActionRowBuilder();
+
+        for (let i = 0; i < matches.length; i++) {
+          const match = matches[i];
+          const matchNum = i + 1;
+
+          if (!match.team2) continue; // BYE
+
+          if (currentRow.components.length >= 4) {
+            components.push(currentRow);
+            currentRow = new ActionRowBuilder();
+          }
+
+          currentRow.addComponents(
+            new ButtonBuilder()
+              .setCustomId(`start_match_${match.id}`)
+              .setLabel(`Jogo #${matchNum}`)
+              .setStyle(ButtonStyle.Secondary),
+          );
+        }
+
+        if (currentRow.components.length > 0) {
+          components.push(currentRow);
+        }
+
+        await targetChannel.send({
+          embeds: [embedConfrontos],
+          components: components.length > 0 ? components : [],
+        });
+
+        return message.reply(
+          `<a:rx_verfi2qn:1553155625738051604> Painel de controle de confrontos enviado com sucesso no canal de administração!`,
+        );
+      } catch (err) {
+        console.error(err);
+        return message.reply("Erro ao gerar o painel de confrontos.");
+      }
+    }
+
+    // ----------------------------------------------------
     // FECHAR INSCRIÇÕES (CLOSE)
     // ----------------------------------------------------
     if (subCommand === "close") {
@@ -130,7 +261,6 @@ module.exports = {
         message.author.id,
       );
 
-      // Deleta os tópicos antigos de PIX para evitar conflitos de IDs órfãos
       try {
         const fetchedThreads =
           await message.guild.channels.fetchActiveThreads();
@@ -179,6 +309,8 @@ module.exports = {
       return message.channel.send({ embeds: [embedInfo] });
     }
 
-    return message.reply("Use `mc!camp info`, `painel`, `close` ou `reset`.");
+    return message.reply(
+      "Use `mc!camp info`, `painel`, `status`, `confrontos`, `close` ou `reset`.",
+    );
   },
 };

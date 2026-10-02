@@ -32,7 +32,7 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setTitle(`${EMOJI_SECURITY} CANAL TRANCADO`)
-        .setDescription("Este canal foi bloqueado pela administração.")
+        .setDescription("Este canal foi bloqueado")
         .setColor(COLOR_ERROR);
 
       message.channel.send({ embeds: [embed] });
@@ -55,9 +55,11 @@ module.exports = {
       );
     }
 
-    // Filtra apenas canais de texto
+    // Filtra canais de texto padrão e anúncios/notícias que aceitam permissão de envio
     const channels = message.guild.channels.cache.filter(
-      (c) => c.type === ChannelType.GuildText,
+      (c) =>
+        c.type === ChannelType.GuildText ||
+        c.type === ChannelType.GuildAnnouncement,
     );
 
     await message.channel.send(
@@ -68,7 +70,6 @@ module.exports = {
     // Loop seguro para evitar Rate Limit
     for (const [id, channel] of channels) {
       try {
-        // Atualiza a permissão
         await channel.permissionOverwrites.edit(message.guild.roles.everyone, {
           SendMessages: false,
         });
@@ -126,7 +127,9 @@ module.exports = {
       return;
 
     const channels = message.guild.channels.cache.filter(
-      (c) => c.type === ChannelType.GuildText,
+      (c) =>
+        c.type === ChannelType.GuildText ||
+        c.type === ChannelType.GuildAnnouncement,
     );
 
     await message.channel.send(
@@ -136,7 +139,6 @@ module.exports = {
     let count = 0;
     for (const [id, channel] of channels) {
       try {
-        // Reseta a permissão para o padrão (null remove o bloqueio específico)
         await channel.permissionOverwrites.edit(message.guild.roles.everyone, {
           SendMessages: null,
         });

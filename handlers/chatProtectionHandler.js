@@ -19,9 +19,16 @@ module.exports = async (message) => {
   // --- ANTI-INVITE ---
   const inviteRegex = /(discord\.(gg|io|me|li)|discord(app)?\.com\/invite)/i;
 
+  // --- ANTI-PHISHING / LINKS MALICIOSOS COMUNS EM RAIDS ---
+  const maliciousLinkRegex =
+    /(steamcommunity\..*?\..*|discordgift\..*|discor\.me|discord-nitro\..*|nitrofree\..*|steam-nitro\..*|free-nitro\..*|steamgifts\..*giveaway.*)/i;
+
   if (!violationType && inviteRegex.test(contentLower)) {
     violationType = "INVITE_LINK";
     warningMessage = `🚫 **${message.author}, Tá fazendo div? Está com nós ou tá com os cara?**`;
+  } else if (!violationType && maliciousLinkRegex.test(contentLower)) {
+    violationType = "MALICIOUS_LINK";
+    warningMessage = `🛡️ **${message.author}, Tá na maldade! Mensagem bloqueada para segurança.**`;
   }
 
   // --- AÇÃO PUNITIVA ---

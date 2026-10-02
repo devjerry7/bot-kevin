@@ -8,10 +8,14 @@ const {
   ButtonBuilder,
   ButtonStyle,
   UserSelectMenuBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
   MessageFlags,
-  ChannelType,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
+
+// Armazenamento temporário em memória para o fluxo de seleção de emuladores antes de salvar no banco
+const pendingRegistrations = new Map();
 
 module.exports = async function handleTournamentInteractions(interaction) {
   try {
@@ -103,7 +107,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       const inputNick2 = new TextInputBuilder()
         .setCustomId("input_nick_p2")
-        .setLabel(`Nick de ${member2.displayName}`)
+        .setLabel(`Nick de ${member2.displayName}`.substring(0, 45))
         .setPlaceholder(
           `Ex: ${member2.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
         )
@@ -112,7 +116,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       const inputNick3 = new TextInputBuilder()
         .setCustomId("input_nick_p3")
-        .setLabel(`Nick de ${member3.displayName}`)
+        .setLabel(`Nick de ${member3.displayName}`.substring(0, 45))
         .setPlaceholder(
           `Ex: ${member3.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
         )
@@ -121,7 +125,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       const inputNick4 = new TextInputBuilder()
         .setCustomId("input_nick_p4")
-        .setLabel(`Nick de ${member4.displayName}`)
+        .setLabel(`Nick de ${member4.displayName}`.substring(0, 45))
         .setPlaceholder(
           `Ex: ${member4.displayName.replace(/[^a-zA-Z0-9]/g, "")}`,
         )
@@ -140,7 +144,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
     }
 
     // ----------------------------------------------------
-    // 3. SUBMISSÃO DO MODAL DE NICKS -> REGISTRA EQUIPE
+    // 3. SUBMISSÃO DO MODAL DE NICKS -> PASSO DE SELEÇÃO DE EMULADOR
     // ----------------------------------------------------
     if (
       interaction.isModalSubmit() &&
@@ -166,6 +170,13 @@ module.exports = async function handleTournamentInteractions(interaction) {
       const p4Nick = interaction.fields
         .getTextInputValue("input_nick_p4")
         .trim();
+
+      const tournament = await TournamentService.getActiveTournament();
+      if (!tournament) {
+        return await interaction.editReply({
+          content: `<:serv:1545444524241719376> O campeonato foi encerrado ou pausado durante o preenchimento.`,
+        });
+      }
 
       const playersData = [
         {
@@ -194,22 +205,147 @@ module.exports = async function handleTournamentInteractions(interaction) {
         },
       ];
 
-      const tournament = await TournamentService.getActiveTournament();
-
-      if (!tournament) {
-        return await interaction.editReply({
-          content: `<:serv:1545444524241719376> O campeonato foi encerrado ou pausado durante o preenchimento.`,
-        });
-      }
-
-      const team = await TournamentService.registerTeam({
+      pendingRegistrations.set(captainId, {
         tournamentId: tournament.id,
         teamName,
         captainId,
         playersData,
       });
 
-      // Atualização de Vagas no Painel
+      const emulatorSelect = new StringSelectMenuBuilder()
+        .setCustomId(`camp_select_emulator_${captainId}`)
+        .setPlaceholder("Selecione quem joga de EMULADOR (máx 2)")
+        .setMinValues(0)
+        .setMaxValues(2)
+        .addOptions([
+          new StringSelectMenuOptionBuilder()
+            .setLabel(`Capitão: ${leaderNick}`.substring(0, 100))
+            .setDescription("Usar Emulador")
+            .setValue(captainId),
+          new StringSelectMenuOptionBuilder()
+            .setLabel(`Jogador 2: ${p2Nick}`.substring(0, 100))
+            .setDescription("Usar Emulador")
+            .setValue(p2Id),
+          new StringSelectMenuOptionBuilder()
+            .setLabel(`Jogador 3: ${p3Nick}`.substring(0, 100))
+            .setDescription("Usar Emulador")
+            .setValue(p3Id),
+          new StringSelectMenuOptionBuilder()
+            .setLabel(`Jogador 4: ${p4Nick}`.substring(0, 100))
+            .setDescription("Usar Emulador")
+            .setValue(p4Id),
+        ]);
+
+      const rowSelect = new ActionRowBuilder().addComponents(emulatorSelect);
+      const rowButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`camp_confirm_reg_${captainId}`)
+          .setLabel("CONFIRMAR INSCRIÇÃO")
+          .setStyle(ButtonStyle.Success)
+          .setEmoji("<a:verif:1535775598822301781>"),
+      );
+
+      return await interaction.editReply({
+        content: `<:serv:1553154980108828742> **Seleção de Dispositivos (Emulador):**\nO campeonato permite no máximo **2 emuladores** por equipe. Caso algum dos jogadores utilize emulador, selecione-os no menu abaixo e clique em confirmar. Se todos forem mobile, clique diretamente no botão verde abaixo.`,
+        components: [rowSelect, rowButton],
+      });
+    }
+
+    // ----------------------------------------------------
+    // 4. SELEÇÃO DE QUEM USA EMULADOR (STRING SELECT MENU)
+    // ----------------------------------------------------
+    if (
+      interaction.isStringSelectMenu() &&
+      interaction.customId.startsWith("camp_select_emulator_")
+    ) {
+      const captainId = interaction.customId.replace(
+        "camp_select_emulator_",
+        "",
+      );
+      if (interaction.user.id !== captainId) {
+        return await interaction.reply({
+          content: `<:serv:1545444524241719376> Apenas o capitão que iniciou a inscrição pode configurar os dispositivos.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const pending = pendingRegistrations.get(captainId);
+      if (!pending) {
+        return await interaction.reply({
+          content: `<:serv:1545444524241719376> Sessão de inscrição expirada ou não encontrada. Inicie novamente.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const emulatorIds = interaction.values;
+
+      pending.playersData.forEach((p) => {
+        if (emulatorIds.includes(p.discordId)) {
+          p.device = "EMULATOR";
+        } else {
+          p.device = "MOBILE";
+        }
+      });
+
+      pendingRegistrations.set(captainId, pending);
+
+      return await interaction.update({
+        content: `<:serv:1545501461427785798> Dispositivos atualizados! Emuladores selecionados: **${emulatorIds.length}/2**. Clique em **CONFIRMAR INSCRIÇÃO** abaixo para finalizar.`,
+      });
+    }
+
+    // ----------------------------------------------------
+    // 5. BOTÃO DE CONFIRMAÇÃO FINAL DA INSCRIÇÃO
+    // ----------------------------------------------------
+    if (
+      interaction.isButton() &&
+      interaction.customId.startsWith("camp_confirm_reg_")
+    ) {
+      await interaction.deferUpdate();
+
+      const captainId = interaction.customId.replace("camp_confirm_reg_", "");
+      if (interaction.user.id !== captainId) {
+        return await interaction.followUp({
+          content: `<:serv:1545444524241719376> Apenas o capitão pode confirmar esta inscrição.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const pending = pendingRegistrations.get(captainId);
+      if (!pending) {
+        return await interaction.followUp({
+          content: `<:serv:1545444524241719376> Sessão expirada. Inicie uma nova inscrição.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      pendingRegistrations.delete(captainId);
+
+      const tournament = await TournamentService.getActiveTournament();
+      if (!tournament) {
+        return await interaction.editReply({
+          content: `<:serv:1545444524241719376> O campeonato foi encerrado ou pausado.`,
+          components: [],
+        });
+      }
+
+      const emulatorCount = pending.playersData.filter(
+        (p) => p.device === "EMULATOR",
+      ).length;
+      if (emulatorCount > 2) {
+        return await interaction.editReply({
+          content: `<:serv:1545444524241719376> **Erro:** O limite máximo é de 2 emuladores por equipe. Sua equipe selecionou ${emulatorCount}. Inicie novamente.`,
+          components: [],
+        });
+      }
+
+      const team = await TournamentService.registerTeam({
+        tournamentId: pending.tournamentId,
+        teamName: pending.teamName,
+        captainId: pending.captainId,
+        playersData: pending.playersData,
+      });
+
       if (tournament.panelChannelId && tournament.panelMessageId) {
         try {
           const channel = await interaction.client.channels.fetch(
@@ -242,11 +378,15 @@ module.exports = async function handleTournamentInteractions(interaction) {
       if (team.status === "WAITLIST") {
         return await interaction.editReply({
           content: `<:serv:1545494059081142403> **Vagas Principais Esgotadas!**\nA equipe **${team.name}** foi registrada na **Lista de Espera** (Posição #${team.waitlistOrder}).`,
+          components: [],
         });
       }
 
       const playersFormattedList = team.players
-        .map((p) => `• <@${p.discordId}> | **Nick no Jogo:** \`${p.gameNick}\``)
+        .map(
+          (p) =>
+            `• <@${p.discordId}> | **Nick:** \`${p.gameNick}\` *(${p.device})*`,
+        )
         .join("\n");
 
       const embedSucesso = new EmbedBuilder()
@@ -259,13 +399,17 @@ module.exports = async function handleTournamentInteractions(interaction) {
             `<:an_membro:1553155856168652800> **Jogadores Escalados:**\n${playersFormattedList}\n\n` +
             `<:serv:1553154980108828742> **Passo Final para Confirmar a Vaga:**\n` +
             `Realize o pagamento da taxa de **R$ ${(tournament.registrationFee || 0).toFixed(2)}** via PIX e envie o comprovante pelo botão abaixo.\n\n` +
-            `\`pix@2qn.com.br\`\n` +
-            `*(Clique no e-mail acima para copiar a chave)*`,
+            `**Chave PIX:** \`pix@2qn.com.br\``,
         )
         .setColor(0x9b59b6)
         .setFooter({ text: "Aguardando envio de comprovante" });
 
       const rowPayment = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("btn_copiar_pix")
+          .setLabel("COPIAR PIX")
+          .setEmoji("<:serv:1545488990168158350>")
+          .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`btn_enviar_comprovante_${team.id}`)
           .setLabel("ENVIAR COMPROVANTE")
@@ -274,210 +418,10 @@ module.exports = async function handleTournamentInteractions(interaction) {
       );
 
       return await interaction.editReply({
+        content: null,
         embeds: [embedSucesso],
         components: [rowPayment],
       });
-    }
-
-    // ----------------------------------------------------
-    // 4. CRIAR TÓPICO PRIVADO (TICKET) PARA O COMPROVANTE
-    // ----------------------------------------------------
-    if (
-      interaction.isButton() &&
-      interaction.customId.startsWith("btn_enviar_comprovante_")
-    ) {
-      const teamId = interaction.customId.replace(
-        "btn_enviar_comprovante_",
-        "",
-      );
-      const channel = interaction.channel;
-
-      const thread = await channel.threads.create({
-        name: `pix-${teamId}-${interaction.user.username}`.substring(0, 100),
-        type: ChannelType.PrivateThread,
-        reason: `Comprovante de pagamento da equipe`,
-        invitable: false,
-      });
-
-      await thread.members.add(interaction.user.id);
-
-      await thread.send(
-        `<@${interaction.user.id}>, envie a **FOTO DO SEU COMPROVANTE PIX** aqui.\n\n` +
-          `Nossa equipe irá analisar e validar a vaga. Pode colar a imagem abaixo.`,
-      );
-
-      return await interaction.reply({
-        content: `<:serv:1545501461427785798> Tópico privado criado com sucesso: <#${thread.id}>`,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    // ----------------------------------------------------
-    // 5. AÇÃO DA EQUIPE: APROVAR OU RECUSAR COMPROVANTE
-    // ----------------------------------------------------
-    if (
-      interaction.isButton() &&
-      (interaction.customId.startsWith("staff_approve_") ||
-        interaction.customId.startsWith("staff_reject_"))
-    ) {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const isApprove = interaction.customId.startsWith("staff_approve_");
-      const teamId = interaction.customId.replace(
-        isApprove ? "staff_approve_" : "staff_reject_",
-        "",
-      );
-
-      const guild = interaction.guild;
-      let ticketThread = null;
-      try {
-        const fetchedThreads = await guild.channels.fetchActiveThreads();
-        ticketThread = fetchedThreads.threads.find(
-          (t) => t.name && t.name.includes(teamId),
-        );
-        if (!ticketThread) {
-          ticketThread = guild.channels.cache.find(
-            (c) => c.isThread() && c.name && c.name.includes(teamId),
-          );
-        }
-      } catch (e) {
-        console.error("[FETCH THREADS ERROR]:", e);
-      }
-
-      if (isApprove) {
-        // 1. Atualiza status via TournamentService unificado
-        let updatedTeam;
-        try {
-          updatedTeam = await TournamentService.updateTeamStatus(
-            teamId,
-            "CONFIRMED",
-          );
-          if (!updatedTeam) {
-            return await interaction.editReply({
-              content: `<:serv:1545444524241719376> **Erro:** Esta equipe não foi encontrada no banco de dados.`,
-            });
-          }
-        } catch (dbErr) {
-          console.error("[UPDATE TEAM ERROR]:", dbErr);
-          return await interaction.editReply({
-            content: `<:serv:1545444524241719376> **Erro ao atualizar equipe:** ${dbErr.message}`,
-          });
-        }
-
-        // 2. Envia a embed oficial no canal de times confirmados (ID: 1551951372734169169)
-        try {
-          const confirmedChannelId = "1551951372734169169";
-          const confirmedChannel =
-            await guild.channels.fetch(confirmedChannelId);
-          if (confirmedChannel) {
-            const playersFormatted = updatedTeam.players
-              .map(
-                (p) =>
-                  `• <@${p.discordId}> | \`${p.gameNick}\` *(${p.device || "MOBILE"})*`,
-              )
-              .join("\n");
-
-            const embedConfirmed = new EmbedBuilder()
-              .setTitle(
-                "<:serv:1545459134089138256> NOVA EQUIPE CONFIRMADA - 4X4",
-              )
-              .setColor(0x2ecc71)
-              .setDescription(
-                `<:serv:1545459134089138256> **Equipe:** **${updatedTeam.name}**\n` +
-                  `<:coroa:1535775618615087154> **Capitão:** <@${updatedTeam.captainId}>\n\n` +
-                  `<:an_membro:1553155856168652800> **Line-up Oficial:**\n${playersFormatted}\n\n` +
-                  `<a:verif:1535775601363779604> **Status:** Inscrição Validada & Vaga Garantida`,
-              )
-              .setTimestamp();
-
-            await confirmedChannel.send({ embeds: [embedConfirmed] });
-          }
-        } catch (err) {
-          console.error("[ERROR SENDING CONFIRMED TEAM]:", err);
-        }
-
-        // 3. Atualiza o painel principal de inscrições
-        const tournament = updatedTeam.tournament;
-        if (
-          tournament &&
-          tournament.panelChannelId &&
-          tournament.panelMessageId
-        ) {
-          try {
-            const panelChannel = await guild.channels.fetch(
-              tournament.panelChannelId,
-            );
-            const panelMsg = await panelChannel.messages.fetch(
-              tournament.panelMessageId,
-            );
-            const freshTournament =
-              await TournamentService.getActiveTournament();
-            if (freshTournament) {
-              const activeTeams = freshTournament.teams.filter(
-                (t) => !["CANCELLED"].includes(t.status),
-              ).length;
-              const vagasRestantes = freshTournament.maxTeams - activeTeams;
-              const oldEmbed = panelMsg.embeds[0];
-              const newEmbed = EmbedBuilder.from(oldEmbed).setDescription(
-                `Chegou a hora! Registre seu squad abaixo.\n\n` +
-                  `<a:2qn:1553155625738051604> **Status:** Inscrições Abertas\n` +
-                  `<:an_membro:1553155856168652800> **Vagas Restantes:** ${Math.max(0, vagasRestantes)}/${freshTournament.maxTeams}\n` +
-                  `<:cifrao2qn:1553154980108828742> **Taxa:** R$ ${freshTournament.registrationFee.toFixed(2)}\n\n` +
-                  `O capitão deve clicar no botão abaixo para iniciar o registro da equipe.`,
-              );
-              await panelMsg.edit({ embeds: [newEmbed] });
-            }
-          } catch (e) {
-            console.error("[PAINEL UPDATE ERROR ON APPROVE]:", e);
-          }
-        }
-
-        // 4. Avisa e fecha o tópico privado
-        if (ticketThread) {
-          await ticketThread
-            .send(
-              `<a:verif:1535775598822301781> **Pagamento Aprovado!** Vaga confirmada no campeonato e divulgada em <#1551951372734169169>. Este tópico será arquivado em breve.`,
-            )
-            .catch(() => {});
-          setTimeout(() => ticketThread.delete().catch(() => {}), 5000);
-        }
-
-        const disabledRow = new ActionRowBuilder().addComponents(
-          ButtonBuilder.from(interaction.message.components[0].components[0])
-            .setDisabled(true)
-            .setLabel("APROVADO"),
-          ButtonBuilder.from(
-            interaction.message.components[0].components[1],
-          ).setDisabled(true),
-        );
-
-        await interaction.message.edit({ components: [disabledRow] });
-        return await interaction.editReply({
-          content: `<a:verif:1535775598822301781> Equipe aprovada com sucesso! Vaga confirmada e divulgada.`,
-        });
-      } else {
-        if (ticketThread) {
-          await ticketThread
-            .send(
-              `<:serv:1545444524241719376> **Comprovante Recusado.** Por favor, envie um comprovante válido neste chat.`,
-            )
-            .catch(() => {});
-        }
-
-        const disabledRow = new ActionRowBuilder().addComponents(
-          ButtonBuilder.from(
-            interaction.message.components[0].components[0],
-          ).setDisabled(true),
-          ButtonBuilder.from(interaction.message.components[0].components[1])
-            .setDisabled(true)
-            .setLabel("RECUSADO"),
-        );
-
-        await interaction.message.edit({ components: [disabledRow] });
-        return await interaction.editReply({
-          content: `<:serv:1545444524241719376> Comprovante recusado.`,
-        });
-      }
     }
 
     return false;

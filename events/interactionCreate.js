@@ -26,6 +26,12 @@ const handleNotifyRoles = require("../handlers/notifyRoleHandler");
 // 🏆 IMPORTANDO O HANDLER DO CAMPEONATO 4X4 (2QN)
 const handleTournamentInteractions = require("../handlers/tournamentHandler");
 
+// ⚔️ SERVIÇO DE INFRAESTRUTURA DE CONFRONTOS NO DISCORD
+const DiscordMatchService = require("../services/discordMatchService");
+
+// 📊 SERVIÇO DO TORNEIO (Para salvar o vencedor da partida 4x4)
+const TournamentService = require("../services/tournamentService");
+
 module.exports = async (interaction) => {
   try {
     // 1. Tenta tratar Slash Commands (/config, /ping)
@@ -35,10 +41,208 @@ module.exports = async (interaction) => {
     }
 
     // ==========================================
-    // 🏆 SISTEMA DE TORNEIO FREE FIRE (2x2 LEGADO)
+    // 🏆 SISTEMA DE TORNEIO FREE FIRE (LEGADO & 4X4)
     // ==========================================
     if (interaction.isButton()) {
-      // 2A. CAPTURA DO BOTÃO DE INSCRIÇÃO
+      // 2C. CAPTURA DO BOTÃO DE INICIAR CONFRONTO (4X4 - PAINEL DA ADMINISTRAÇÃO)
+      if (interaction.customId.startsWith("start_match_")) {
+        if (
+          !interaction.member.permissions.has(
+            PermissionsBitField.Flags.Administrator,
+          )
+        ) {
+          return interaction.reply({
+            content: `${config.emoji.error || "<:verm_x2qn:1545444524241719376>"} Apenas administradores podem iniciar os confrontos.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const matchId = interaction.customId.replace("start_match_", "");
+
+        try {
+          const match = await prisma.match.findUnique({
+            where: { id: matchId },
+            include: {
+              team1: { include: { players: true } },
+              team2: { include: { players: true } },
+            },
+          });
+
+          if (!match) {
+            return interaction.editReply(
+              "<:verm_x2qn:1545444524241719376> Partida não encontrada no banco de dados.",
+            );
+          }
+
+          const infra = await DiscordMatchService.setupMatchInfrastructure(
+            interaction.guild,
+            match,
+            "Rodada 1",
+          );
+
+          if (!infra) {
+            return interaction.editReply(
+              "<:ama_cuidado2qn:1545494059081142403> Esta partida é um BYE e não possui infraestrutura de Discord.",
+            );
+          }
+
+          await interaction.editReply(
+            `<a:ver_verifcado2qn:1535775624864473169> Infraestrutura criada com sucesso! Categoria, calls e canal de texto gerados para **${match.team1.name} x ${match.team2.name}**.`,
+          );
+
+          const adminLogChannel = await interaction.client.channels
+            .fetch(DiscordMatchService.CHANNELS.ADMIN_LOGS)
+            .catch(() => null);
+
+          if (adminLogChannel) {
+            await adminLogChannel.send(
+              `📢 **Confronto Iniciado:** Jogo #${match.id.slice(-4)} (${match.team1.name} vs ${match.team2.name}) liberado por <@${interaction.user.id}>.`,
+            );
+          }
+        } catch (err) {
+          console.error(err);
+          await interaction.editReply(
+            "<:verm_x2qn:1545444524241719376> Erro ao criar a infraestrutura do confronto no Discord. Verifique os logs do console.",
+          );
+        }
+        return;
+      }
+
+      // 2D. CAPTURA DO BOTÃO DE DECLARAÇÃO DE VITÓRIA (4X4 - NOVO SISTEMA)
+      if (interaction.customId.startsWith("match_win_")) {
+        if (
+          !interaction.member.permissions.has(
+            PermissionsBitField.Flags.Administrator,
+          )
+        ) {
+          return interaction.reply({
+            content: `${config.emoji.error || "<:verm_x2qn:1545444524241719376>"} Apenas administradores podem declarar o vencedor da partida.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        // Formato do ID: match_win_MATCHID_WINNERTEAMID
+        const parts = interaction.customId.split("_");
+        const matchId = parts[2];
+        const winnerTeamId = parts[3];
+
+        try {
+          // Processa a vitória no TournamentService e avança a chave se necessário
+          const result = await TournamentService.recordMatchWinner(
+            matchId,
+            winnerTeamId,
+          );
+
+          const winningTeamName = result.updatedMatch.winner
+            ? result.updatedMatch.winner.name
+            : "Equipe Vencedora";
+
+          // Desativa os botões da mensagem do canal do confronto
+          try {
+            const disabledComponents = interaction.message.components.map(
+              (row) => {
+                const newRow = new ActionRowBuilder();
+                row.components.forEach((btn) => {
+                  const isWinner = btn.customId.includes(winnerTeamId);
+                  const newBtn = ButtonBuilder.from(btn)
+                    .setDisabled(true)
+                    .setStyle(
+                      isWinner ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    );
+                  newRow.addComponents(newBtn);
+                });
+                return newRow;
+              },
+            );
+
+            await interaction.message.edit({ components: disabledComponents });
+          } catch (e) {
+            // Caso a mensagem já tenha sido apagada ou haja erro de edição, segue o fluxo
+          }
+
+          await interaction.editReply(
+            `<a:ver_verifcado2qn:1535775624864473169> Vitória registrada para **${winningTeamName}** com sucesso!`,
+          );
+
+          // Envia log nos resultados públicos
+          const resultadosChannel = await interaction.client.channels
+            .fetch(DiscordMatchService.CHANNELS.RESULTADOS)
+            .catch(() => null);
+
+          if (resultadosChannel) {
+            await resultadosChannel.send(
+              `🏆 **RESULTADO DO CONFRONTO (Jogo #${matchId.slice(-4)})**\n` +
+                `A equipe **${winningTeamName}** venceu a partida e avançou na competição!`,
+            );
+          }
+
+          // Se tivermos um CAMPEÃO DO TORNEIO
+          if (result.champion) {
+            const champ = result.champion;
+            const champEmbed = new EmbedBuilder()
+              .setTitle(
+                `<:ama_coroa2qn:1535775618615087154> TEMOS OS CAMPEÕES DO CAMPEONATO 4X4! <:ama_coroa2qn:1535775618615087154>`,
+              )
+              .setDescription(
+                `A equipe **${champ.name}** dominou o campeonato inteiro e levou o caneco!\n\n` +
+                  `<:ama_trofeu2qn:1545459134089138256> **Line Campeã:**\n` +
+                  champ.players
+                    .map((p) => `• <@${p.discordId}> (${p.gameNick})`)
+                    .join("\n"),
+              )
+              .setColor(0xffd700)
+              .setTimestamp();
+
+            if (resultadosChannel) {
+              await resultadosChannel.send({ embeds: [champEmbed] });
+            }
+          }
+
+          // Se a rodada acabou e gerou o próximo round, avisa no canal de logs/resultados
+          if (result.nextRoundInfo) {
+            if (resultadosChannel) {
+              await resultadosChannel.send(
+                `🔄 **Todas as partidas da rodada foram concluídas!** A **${result.nextRoundInfo.round.name}** foi gerada automaticamente.`,
+              );
+            }
+          }
+
+          // Limpeza opcional da categoria e canais do Discord após 10 segundos
+          const channel = interaction.channel;
+          if (channel && channel.parent) {
+            const category = channel.parent;
+            await interaction.followUp({
+              content: `🧹 Este canal e a categoria de voz serão deletados em 10 segundos...`,
+              flags: MessageFlags.Ephemeral,
+            });
+
+            setTimeout(async () => {
+              try {
+                // Deleta todos os canais filhos da categoria (texto e vozes)
+                for (const [, childChannel] of category.children.cache) {
+                  await childChannel.delete().catch(() => {});
+                }
+                // Deleta a categoria
+                await category.delete().catch(() => {});
+              } catch (delErr) {
+                console.error("Erro ao limpar canais do Discord:", delErr);
+              }
+            }, 10000);
+          }
+        } catch (err) {
+          console.error(err);
+          await interaction.editReply(
+            `<:verm_x2qn:1545444524241719376> Erro ao registrar o vencedor: ${err.message}`,
+          );
+        }
+        return;
+      }
+
+      // 2A. CAPTURA DO BOTÃO DE INSCRIÇÃO (Legado)
       if (interaction.customId === "ff_register_btn") {
         const tournament = await prisma.ffTournament.findUnique({
           where: { id: "main" },
@@ -65,13 +269,13 @@ module.exports = async (interaction) => {
           });
         } catch (error) {
           return interaction.reply({
-            content: `${config.emoji.warning || "⚠️"} Você já está inscrito neste campeonato!`,
+            content: `${config.emoji.warning || "<:ama_cuidado2qn:1545494059081142403>️"} Você já está inscrito neste campeonato!`,
             flags: MessageFlags.Ephemeral,
           });
         }
       }
 
-      // 2B. CAPTURA DO BOTÃO DE VITÓRIA NO CHAVEAMENTO
+      // 2B. CAPTURA DO BOTÃO DE VITÓRIA NO CHAVEAMENTO (Legado)
       if (interaction.customId.startsWith("ff_win_")) {
         // Apenas admins podem definir o vencedor
         if (
@@ -80,7 +284,7 @@ module.exports = async (interaction) => {
           )
         ) {
           return interaction.reply({
-            content: `${config.emoji.error || "❌"} Apenas administradores podem definir o vencedor da partida.`,
+            content: `${config.emoji.error || "<:verm_x2qn:1545444524241719376>"} Apenas administradores podem definir o vencedor da partida.`,
             flags: MessageFlags.Ephemeral,
           });
         }
@@ -118,7 +322,7 @@ module.exports = async (interaction) => {
         await interaction.update({ components: updatedComponents });
 
         await interaction.followUp({
-          content: `${config.emoji.success || "✅"} **${winningTeam.teamName}** foi declarada vencedora desta chave!`,
+          content: `${config.emoji.success || "<a:ver_verifcado2qn:1535775624864473169>"} **${winningTeam.teamName}** foi declarada vencedora desta chave!`,
         });
 
         // ==========================================
@@ -145,7 +349,9 @@ module.exports = async (interaction) => {
             });
 
             const champEmbed = new EmbedBuilder()
-              .setTitle(`👑 TEMOS UM CAMPEÃO! 👑`)
+              .setTitle(
+                `<:ama_coroa2qn:1535775618615087154> TEMOS UM CAMPEÃO! <:ama_coroa2qn:1535775618615087154>`,
+              )
               .setDescription(
                 `A equipe **${champion.teamName}** formou a dupla perfeita!\n🏆 <@${champion.player1Id}> & <@${champion.player2Id}> amassaram todos e levaram o torneio!`,
               )
@@ -187,7 +393,7 @@ module.exports = async (interaction) => {
 
               const embed = new EmbedBuilder()
                 .setTitle(
-                  `⚔️ FASE ${nextRound}: ${teamA.teamName} vs ${teamB.teamName}`,
+                  `<:emojiespada:1555686156434411680> FASE ${nextRound}: ${teamA.teamName} vs ${teamB.teamName}`,
                 )
                 .setDescription(
                   `**${teamA.teamName}**\n<@${teamA.player1Id}> & <@${teamA.player2Id}>\n\n**VS**\n\n**${teamB.teamName}**\n<@${teamB.player1Id}> & <@${teamB.player2Id}>`,
@@ -199,12 +405,18 @@ module.exports = async (interaction) => {
                   .setCustomId(`ff_win_${newMatch.id}_${teamA.id}`)
                   .setLabel(`Vitória ${teamA.teamName}`)
                   .setStyle(ButtonStyle.Secondary)
-                  .setEmoji(config.emoji.success || "✅"),
+                  .setEmoji(
+                    config.emoji.success ||
+                      "<a:ver_verifcado2qn:1535775624864473169>",
+                  ),
                 new ButtonBuilder()
                   .setCustomId(`ff_win_${newMatch.id}_${teamB.id}`)
                   .setLabel(`Vitória ${teamB.teamName}`)
                   .setStyle(ButtonStyle.Secondary)
-                  .setEmoji(config.emoji.success || "✅"),
+                  .setEmoji(
+                    config.emoji.success ||
+                      "<a:ver_verifcado2qn:1535775624864473169>",
+                  ),
               );
 
               const msg = await interaction.channel.send({
@@ -254,7 +466,8 @@ module.exports = async (interaction) => {
     if (!interaction.replied && !interaction.deferred) {
       await interaction
         .reply({
-          content: "❌ Ocorreu um erro interno ao processar sua ação.",
+          content:
+            "<:verm_x2qn:1545444524241719376> Ocorreu um erro interno ao processar sua ação.",
           flags: MessageFlags.Ephemeral,
         })
         .catch(() => {});
