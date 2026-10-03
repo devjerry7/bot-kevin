@@ -202,6 +202,7 @@ module.exports = {
 
             await prisma.match.create({
               data: {
+                tournamentId: tournament.id,
                 roundId: round1.id,
                 teamAId: teamA.id,
                 teamBId: teamB ? teamB.id : null,
