@@ -1,4 +1,4 @@
-// commands/camp.js
+// commands/admin/camp.js
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -148,8 +148,8 @@ module.exports = {
               include: {
                 matches: {
                   include: {
-                    team1: { include: { players: true } },
-                    team2: { include: { players: true } },
+                    teamA: { include: { players: true } },
+                    teamB: { include: { players: true } },
                   },
                 },
               },
@@ -187,7 +187,7 @@ module.exports = {
           const match = matches[i];
           const matchNum = i + 1;
 
-          if (!match.team2) continue; // BYE
+          if (!match.teamB) continue; // BYE
 
           if (currentRow.components.length >= 4) {
             components.push(currentRow);
@@ -230,7 +230,7 @@ module.exports = {
 
       await prisma.tournament.update({
         where: { id: tournament.id },
-        data: { status: "CLOSED" },
+        data: { status: "REGISTRATION_CLOSED" },
       });
       message.reply(
         "<a:verif:1535775601363779604> Inscrições encerradas no banco de dados.",
