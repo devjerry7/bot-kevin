@@ -355,20 +355,20 @@ class TournamentService {
 
     // Agrupa de 2 em 2 para montar cada confronto
     for (let i = 0; i < shuffled.length; i += 2) {
-      const team1 = shuffled[i];
-      const team2 = shuffled[i + 1]; // Pode ser undefined se o número de equipes for ímpar
+      const teamA = shuffled[i];
+      const teamB = shuffled[i + 1]; // Pode ser undefined se o número de equipes for ímpar
 
       const match = await prisma.match.create({
         data: {
           roundId: round1.id,
-          team1Id: team1.id,
-          team2Id: team2 ? team2.id : null,
-          status: team2 ? "PENDING" : "FINISHED", // Se não houver oponente (BYE), já marca concluído
-          winnerId: team2 ? null : team1.id,
+          teamAId: teamA.id,
+          teamBId: teamB ? teamB.id : null,
+          status: teamB ? "PENDING" : "FINISHED", // Se não houver oponente (BYE), já marca concluído
+          winnerId: teamB ? null : teamA.id,
         },
         include: {
-          team1: { include: { players: true } },
-          team2: team2 ? { include: { players: true } } : true,
+          teamA: { include: { players: true } },
+          teamB: teamB ? { include: { players: true } } : true,
         },
       });
 
@@ -387,8 +387,13 @@ class TournamentService {
   /**
    * Define o vencedor de uma partida, atualiza o status e verifica se a rodada foi concluída
    * para gerar automaticamente a próxima fase ou coroar o campeão.
+   * Blindado contra duplo clique e interações inválidas.
    */
   static async recordMatchWinner(matchId, winnerTeamId) {
+    if (!winnerTeamId) {
+      throw new Error("Nenhuma equipe vencedora foi informada.");
+    }
+
     const match = await prisma.match.findUnique({
       where: { id: matchId },
       include: {
@@ -401,8 +406,8 @@ class TournamentService {
             },
           },
         },
-        team1: { include: { players: true } },
-        team2: { include: { players: true } },
+        teamA: { include: { players: true } },
+        teamB: { include: { players: true } },
       },
     });
 
@@ -411,26 +416,36 @@ class TournamentService {
       throw new Error("Esta partida já foi finalizada.");
 
     if (
-      match.team2Id &&
-      winnerTeamId !== match.team1Id &&
-      winnerTeamId !== match.team2Id
+      match.teamBId &&
+      winnerTeamId !== match.teamAId &&
+      winnerTeamId !== match.teamBId
     ) {
       throw new Error(
         "A equipe vencedora informada não faz parte desta partida.",
       );
     }
 
-    // Atualiza a partida atual
-    const updatedMatch = await prisma.match.update({
-      where: { id: matchId },
-      data: {
-        status: "FINISHED",
-        winnerId: winnerTeamId,
-      },
-      include: {
-        winner: true,
-      },
-    });
+    // Atualiza a partida atual com proteção atômica contra concorrência / duplo clique
+    let updatedMatch;
+    try {
+      updatedMatch = await prisma.match.update({
+        where: {
+          id: matchId,
+          status: { not: "FINISHED" }, // Evita race condition caso dois cliques ocorram exatamente ao mesmo tempo
+        },
+        data: {
+          status: "FINISHED",
+          winnerId: winnerTeamId,
+        },
+        include: {
+          winner: true,
+        },
+      });
+    } catch (err) {
+      throw new Error(
+        "Esta partida já foi finalizada por outra interação ou clique duplo.",
+      );
+    }
 
     const round = match.round;
     const tournament = round.tournament;
@@ -480,14 +495,14 @@ class TournamentService {
             const nextMatch = await prisma.match.create({
               data: {
                 roundId: nextRound.id,
-                team1Id: teamA.id,
-                team2Id: teamB ? teamB.id : null,
+                teamAId: teamA.id,
+                teamBId: teamB ? teamB.id : null,
                 status: teamB ? "PENDING" : "FINISHED",
                 winnerId: teamB ? null : teamA.id,
               },
               include: {
-                team1: { include: { players: true } },
-                team2: team2 ? { include: { players: true } } : true,
+                teamA: { include: { players: true } },
+                teamB: teamB ? { include: { players: true } } : true,
               },
             });
 
