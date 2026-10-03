@@ -136,9 +136,12 @@ module.exports = {
     }
 
     // ----------------------------------------------------
-    // PAINEL DE CONTROLE DOS CONFRONTOS (ROUND 1)
+    // PAINEL DE CONTROLE DOS CONFRONTOS (ROUND 1) - COM LOGS DETALHADOS
     // ----------------------------------------------------
     if (subCommand === "confrontos") {
+      console.log(
+        "\n[LOG-CAMP] >>> Iniciando execução de mc!camp confrontos...",
+      );
       try {
         let tournament = await prisma.tournament.findFirst({
           where: {
@@ -162,13 +165,32 @@ module.exports = {
           },
         });
 
+        console.log(
+          "[LOG-CAMP] Torneio encontrado no banco:",
+          tournament
+            ? {
+                id: tournament.id,
+                status: tournament.status,
+                totalTeams: tournament.teams.length,
+                totalRounds: tournament.rounds.length,
+              }
+            : "Nenhum torneio ativo encontrado!",
+        );
+
         if (!tournament) {
+          console.log("[LOG-CAMP] ABORTANDO: Torneio nulo.");
           return message.reply(
             "<:ama_cuidado2qn:1545494059081142403> Nenhum torneio ativo encontrado.",
           );
         }
 
         let round1 = tournament.rounds.find((r) => r.roundNumber === 1);
+        console.log(
+          "[LOG-CAMP] Round 1 existente:",
+          round1
+            ? { id: round1.id, matchesCount: round1.matches.length }
+            : "Round 1 ainda não existe.",
+        );
 
         // Se ainda não existem partidas geradas, cria automaticamente a Rodada 1
         if (!round1 || !round1.matches.length) {
@@ -176,12 +198,25 @@ module.exports = {
             (t) => !["CANCELLED"].includes(t.status),
           );
 
+          console.log(
+            "[LOG-CAMP] Equipes ativas para o sorteio:",
+            activeTeams.map((t) => ({
+              id: t.id,
+              name: t.name,
+              status: t.status,
+            })),
+          );
+
           if (activeTeams.length < 2) {
+            console.log(
+              "[LOG-CAMP] ABORTANDO: Menos de 2 equipes ativas cadastradas.",
+            );
             return message.reply(
               "<:ama_cuidado2qn:1545494059081142403> É preciso ter pelo menos 2 equipas cadastradas para gerar os confrontos.",
             );
           }
 
+          console.log("[LOG-CAMP] Criando registro do Round 1...");
           round1 = await prisma.round.create({
             data: {
               tournamentId: tournament.id,
@@ -189,6 +224,7 @@ module.exports = {
               name: "Rodada 1 (Mata-Mata)",
             },
           });
+          console.log("[LOG-CAMP] Round 1 criado com ID:", round1.id);
 
           const shuffledTeams = [...activeTeams].sort(
             () => Math.random() - 0.5,
@@ -199,7 +235,10 @@ module.exports = {
             const teamA = shuffledTeams[i];
             const teamB = shuffledTeams[i + 1] || null;
 
-            // CORREÇÃO DAS RELAÇÕES DE TEAM VIA CONNECT
+            console.log(
+              `[LOG-CAMP] Criando Match #${matchCounter}: Team A (${teamA.name}) vs Team B (${teamB ? teamB.name : "BYE"})`,
+            );
+
             await prisma.match.create({
               data: {
                 tournament: { connect: { id: tournament.id } },
@@ -212,11 +251,17 @@ module.exports = {
             });
           }
 
+          console.log(
+            "[LOG-CAMP] Atualizando status do torneio para IN_PROGRESS...",
+          );
           await prisma.tournament.update({
             where: { id: tournament.id },
             data: { status: "IN_PROGRESS" },
           });
 
+          console.log(
+            "[LOG-CAMP] Recarregando torneio do banco com as partidas criadas...",
+          );
           tournament = await prisma.tournament.findFirst({
             where: { id: tournament.id },
             include: {
@@ -237,11 +282,31 @@ module.exports = {
         }
 
         const matches = round1.matches;
+        console.log(
+          "[LOG-CAMP] Quantidade de partidas prontas para renderizar:",
+          matches.length,
+        );
+        matches.forEach((m, idx) => {
+          console.log(
+            `[LOG-CAMP]   -> Partida [${idx + 1}] ID: ${m.id} | Num: ${m.matchNumber} | TeamA: ${m.teamA?.name} | TeamB: ${m.teamB?.name || "BYE"}`,
+          );
+        });
+
         const adminChannel = await message.client.channels
           .fetch(DiscordMatchService.CHANNELS.ADMIN_LOGS)
-          .catch(() => null);
+          .catch((err) => {
+            console.log(
+              "[LOG-CAMP] Aviso: Não foi possível buscar ADMIN_LOGS canal:",
+              err.message,
+            );
+            return null;
+          });
 
         const targetChannel = adminChannel || message.channel;
+        console.log(
+          "[LOG-CAMP] Canal de destino selecionado:",
+          targetChannel.id,
+        );
 
         let descriptionList = `Abaixo estão listados os confrontos gerados pelo sorteio.\nClique no botão correspondente para **iniciar o confronto.**\n\n`;
 
@@ -281,6 +346,11 @@ module.exports = {
           components.push(currentRow);
         }
 
+        console.log(
+          "[LOG-CAMP] Total de action rows de botões montadas:",
+          components.length,
+        );
+
         const embedConfrontos = new EmbedBuilder()
           .setTitle(
             "<:jg_game2qn:1546273610971218000> PAINEL DE CONTROLE - RODADA 1 (MATA-MATA)",
@@ -293,12 +363,15 @@ module.exports = {
           embeds: [embedConfrontos],
           components: components.length > 0 ? components : [],
         });
+        console.log(
+          "[LOG-CAMP] Mensagem de confrontos enviada com sucesso para o canal!",
+        );
 
         return message.reply(
           `<a:rx_verfi2qn:1553155625738051604> Painel de confrontos gerado e enviado com sucesso no canal de administração!`,
         );
       } catch (err) {
-        console.error(err);
+        console.error("[LOG-CAMP] ERRO CRÍTICO NO SUBCOMANDO CONFRONTOS:", err);
         return message.reply("Erro ao gerar o painel de confrontos.");
       }
     }
