@@ -199,9 +199,10 @@ module.exports = {
             const teamA = shuffledTeams[i];
             const teamB = shuffledTeams[i + 1] || null;
 
+            // CORREÇÃO CRUCIAL AQUI: uso do `tournament: { connect: ... }` exigido pelo Prisma
             await prisma.match.create({
               data: {
-                tournamentId: tournament.id,
+                tournament: { connect: { id: tournament.id } },
                 roundId: round1.id,
                 teamAId: teamA.id,
                 teamBId: teamB ? teamB.id : null,
@@ -242,7 +243,6 @@ module.exports = {
 
         const targetChannel = adminChannel || message.channel;
 
-        // Construção da descrição detalhada e dos botões
         let descriptionList = `Abaixo estão listados os confrontos gerados pelo sorteio.\nClique no botão correspondente para **iniciar o confronto.**\n\n`;
 
         const components = [];
@@ -254,7 +254,7 @@ module.exports = {
           const teamBName = match.teamB?.name;
 
           if (teamBName) {
-            descriptionList += `⚔️️ **[Jogo #${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
+            descriptionList += `⚔ **[Jogo #${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
 
             if (currentRow.components.length >= 4) {
               components.push(currentRow);
