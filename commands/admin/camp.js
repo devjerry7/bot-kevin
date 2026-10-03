@@ -406,28 +406,67 @@ module.exports = {
     }
 
     // ----------------------------------------------------
-    // RESETAR DADOS (LIMPAR O BANCO E TÓPICOS)
+    // RESETAR DADOS (LIMPEZA GERAL DO TORNEIO)
     // ----------------------------------------------------
     if (subCommand === "reset") {
-      const tournament = await TournamentService.getOrCreateActiveTournament(
-        message.author.id,
-      );
+      const tournament = await TournamentService.getActiveTournament();
+      if (!tournament) {
+        return message.reply("Não há torneio ativo para resetar.");
+      }
 
+      // 1. Limpeza segura de tópicos no Discord (Apenas Pix e Partidas)
       try {
         const fetchedThreads =
           await message.guild.channels.fetchActiveThreads();
         for (const thread of fetchedThreads.threads.values()) {
-          if (thread.name.startsWith("pix-")) {
+          if (
+            thread.name.startsWith("pix-") ||
+            thread.name.startsWith("match-") ||
+            thread.name.startsWith("partida-")
+          ) {
             await thread.delete().catch(() => {});
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log("[LOG-CAMP] Aviso ao limpar threads:", e.message);
+      }
 
-      await prisma.team.deleteMany({ where: { tournamentId: tournament.id } });
+      try {
+        // 2. Limpeza transacional no Banco de Dados (Garante integridade sem erros de FK)
+        await prisma.$transaction(async (tx) => {
+          // Deleta todas as partidas associadas ao torneio
+          await tx.match.deleteMany({ where: { tournamentId: tournament.id } });
 
-      return message.reply(
-        "🧹 **Banco e Tópicos Limpos!** Equipes e tópicos antigos apagados. Torneio zerado e pronto para o oficial.",
-      );
+          // Deleta todas as rodadas associadas ao torneio
+          await tx.round.deleteMany({ where: { tournamentId: tournament.id } });
+
+          // Deleta todas as equipes (e jogadores vinculados, se aplicável)
+          await tx.team.deleteMany({ where: { tournamentId: tournament.id } });
+
+          // Reseta o torneio para o estado inicial de Inscrições Abertas
+          await tx.tournament.update({
+            where: { id: tournament.id },
+            data: {
+              status: "REGISTRATION_OPEN",
+              panelChannelId: null,
+              panelMessageId: null,
+            },
+          });
+        });
+
+        return message.reply(
+          "🧹 **Reset Geral Realizado com Sucesso!**\n" +
+            "• Partidas, rodadas e confrontos apagados.\n" +
+            "• Equipes e inscrições limpas do banco.\n" +
+            "• Tópicos de PIX e partidas removidos do Discord.\n" +
+            "• Torneio redefinido e pronto para um novo ciclo de inscrições (`mc!camp painel`).",
+        );
+      } catch (err) {
+        console.error("[LOG-CAMP] Erro ao executar reset geral:", err);
+        return message.reply(
+          "❌ Ocorreu um erro ao tentar resetar o torneio no banco de dados.",
+        );
+      }
     }
 
     // ----------------------------------------------------
