@@ -136,7 +136,7 @@ module.exports = {
     }
 
     // ----------------------------------------------------
-    // PAINEL DE CONTROLE DOS CONFRONTOS (ROUND 1) - COM LOGS DETALHADOS
+    // PAINEL DE CONTROLE DOS CONFRONTOS (ROUND 1) - CORRIGIDO
     // ----------------------------------------------------
     if (subCommand === "confrontos") {
       console.log(
@@ -151,17 +151,6 @@ module.exports = {
           },
           include: {
             teams: true,
-            rounds: {
-              where: { roundNumber: 1 },
-              include: {
-                matches: {
-                  include: {
-                    teamA: true,
-                    teamB: true,
-                  },
-                },
-              },
-            },
           },
         });
 
@@ -172,7 +161,6 @@ module.exports = {
                 id: tournament.id,
                 status: tournament.status,
                 totalTeams: tournament.teams.length,
-                totalRounds: tournament.rounds.length,
               }
             : "Nenhum torneio ativo encontrado!",
         );
@@ -184,16 +172,47 @@ module.exports = {
           );
         }
 
-        let round1 = tournament.rounds.find((r) => r.roundNumber === 1);
+        // Busca ou cria o Round 1 de forma segura (sem duplicar)
+        let round1 = await prisma.round.findFirst({
+          where: {
+            tournamentId: tournament.id,
+            roundNumber: 1,
+          },
+        });
+
+        if (!round1) {
+          console.log("[LOG-CAMP] Criando registro do Round 1...");
+          round1 = await prisma.round.create({
+            data: {
+              tournamentId: tournament.id,
+              roundNumber: 1,
+              name: "Rodada 1 (Mata-Mata)",
+            },
+          });
+          console.log("[LOG-CAMP] Round 1 criado com ID:", round1.id);
+        } else {
+          console.log(
+            "[LOG-CAMP] Round 1 já existente encontrado com ID:",
+            round1.id,
+          );
+        }
+
+        // Busca as partidas associadas a este Round 1
+        let matches = await prisma.match.findMany({
+          where: { roundId: round1.id },
+          include: {
+            teamA: true,
+            teamB: true,
+          },
+        });
+
         console.log(
-          "[LOG-CAMP] Round 1 existente:",
-          round1
-            ? { id: round1.id, matchesCount: round1.matches.length }
-            : "Round 1 ainda não existe.",
+          "[LOG-CAMP] Partidas encontradas para este Round 1:",
+          matches.length,
         );
 
-        // Se ainda não existem partidas geradas, cria automaticamente a Rodada 1
-        if (!round1 || !round1.matches.length) {
+        // Se não existem partidas, gera o sorteio
+        if (matches.length === 0) {
           const activeTeams = tournament.teams.filter(
             (t) => !["CANCELLED"].includes(t.status),
           );
@@ -215,16 +234,6 @@ module.exports = {
               "<:ama_cuidado2qn:1545494059081142403> É preciso ter pelo menos 2 equipas cadastradas para gerar os confrontos.",
             );
           }
-
-          console.log("[LOG-CAMP] Criando registro do Round 1...");
-          round1 = await prisma.round.create({
-            data: {
-              tournamentId: tournament.id,
-              roundNumber: 1,
-              name: "Rodada 1 (Mata-Mata)",
-            },
-          });
-          console.log("[LOG-CAMP] Round 1 criado com ID:", round1.id);
 
           const shuffledTeams = [...activeTeams].sort(
             () => Math.random() - 0.5,
@@ -259,29 +268,16 @@ module.exports = {
             data: { status: "IN_PROGRESS" },
           });
 
-          console.log(
-            "[LOG-CAMP] Recarregando torneio do banco com as partidas criadas...",
-          );
-          tournament = await prisma.tournament.findFirst({
-            where: { id: tournament.id },
+          // Recarrega as partidas recém-criadas
+          matches = await prisma.match.findMany({
+            where: { roundId: round1.id },
             include: {
-              rounds: {
-                where: { roundNumber: 1 },
-                include: {
-                  matches: {
-                    include: {
-                      teamA: true,
-                      teamB: true,
-                    },
-                  },
-                },
-              },
+              teamA: true,
+              teamB: true,
             },
           });
-          round1 = tournament.rounds[0];
         }
 
-        const matches = round1.matches;
         console.log(
           "[LOG-CAMP] Quantidade de partidas prontas para renderizar:",
           matches.length,
