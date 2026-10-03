@@ -23,10 +23,10 @@ class DiscordMatchService {
    * - Canal de texto para alinhamento de ID e Senha (marcando os capitães) + Botões de Vitória para Admins
    */
   static async setupMatchInfrastructure(guild, match, roundName) {
-    if (!match.team2) return null; // Se for BYE, não precisa de infraestrutura
+    if (!match.teamB) return null; // Se for BYE, não precisa de infraestrutura
 
-    const team1 = match.team1;
-    const team2 = match.team2;
+    const team1 = match.teamA;
+    const team2 = match.teamB;
 
     // Coletar IDs dos jogadores das duas equipes
     const team1MemberIds = team1.players.map((p) => p.discordId);
