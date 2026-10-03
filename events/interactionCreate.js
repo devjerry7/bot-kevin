@@ -26,6 +26,9 @@ const handleNotifyRoles = require("../handlers/notifyRoleHandler");
 // 🏆 IMPORTANDO O HANDLER DO CAMPEONATO 4X4 (2QN)
 const handleTournamentInteractions = require("../handlers/tournamentHandler");
 
+// 💸 IMPORTANDO O HANDLER DE PAGAMENTO E PIX
+const handlePaymentInteractions = require("../handlers/paymentHandler");
+
 // ⚔️ SERVIÇO DE INFRAESTRUTURA DE CONFRONTOS NO DISCORD
 const DiscordMatchService = require("../services/discordMatchService");
 
@@ -452,6 +455,7 @@ module.exports = async (interaction) => {
 
     // 3. ROTEAMENTO DOS SISTEMAS PRINCIPAIS (Botões, Menus e Modais ativos)
     if (await handleTournamentInteractions(interaction)) return;
+    if (await handlePaymentInteractions(interaction)) return; // <--- AGORA PLUGADO CORRETAMENTE!
     if (await handleGameRoles(interaction)) return;
     if (await handleNotifyRoles(interaction)) return;
     if (await handleStopGame(interaction)) return;
