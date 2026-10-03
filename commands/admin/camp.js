@@ -153,8 +153,8 @@ module.exports = {
               include: {
                 matches: {
                   include: {
-                    teamA: { include: { players: true } },
-                    teamB: { include: { players: true } },
+                    teamA: true,
+                    teamB: true,
                   },
                 },
               },
@@ -170,7 +170,7 @@ module.exports = {
 
         let round1 = tournament.rounds.find((r) => r.roundNumber === 1);
 
-        // Se ainda não existem partidas geradas, cria automaticamente a Rodada 1 com os times ativos
+        // Se ainda não existem partidas geradas, cria automaticamente a Rodada 1
         if (!round1 || !round1.matches.length) {
           const activeTeams = tournament.teams.filter(
             (t) => !["CANCELLED"].includes(t.status),
@@ -178,7 +178,7 @@ module.exports = {
 
           if (activeTeams.length < 2) {
             return message.reply(
-              "<:ama_cuidado2qn:1545494059081142403> É preciso ter pelo menos 2 equipes cadastradas para gerar os confrontos.",
+              "<:ama_cuidado2qn:1545494059081142403> É preciso ter pelo menos 2 equipas cadastradas para gerar os confrontos.",
             );
           }
 
@@ -190,7 +190,6 @@ module.exports = {
             },
           });
 
-          // Embaralha os times aleatoriamente para o sorteio
           const shuffledTeams = [...activeTeams].sort(
             () => Math.random() - 0.5,
           );
@@ -212,13 +211,11 @@ module.exports = {
             });
           }
 
-          // Atualiza status do torneio para IN_PROGRESS
           await prisma.tournament.update({
             where: { id: tournament.id },
             data: { status: "IN_PROGRESS" },
           });
 
-          // Recarrega o torneio com as partidas recém-criadas
           tournament = await prisma.tournament.findFirst({
             where: { id: tournament.id },
             include: {
@@ -227,8 +224,8 @@ module.exports = {
                 include: {
                   matches: {
                     include: {
-                      teamA: { include: { players: true } },
-                      teamB: { include: { players: true } },
+                      teamA: true,
+                      teamB: true,
                     },
                   },
                 },
@@ -245,46 +242,52 @@ module.exports = {
 
         const targetChannel = adminChannel || message.channel;
 
+        // Construção da descrição detalhada e dos botões
+        let descriptionList = `Abaixo estão listados os confrontos gerados pelo sorteio.\nClique no botão correspondente para **iniciar o confronto.**\n\n`;
+
+        const components = [];
+        let currentRow = new ActionRowBuilder();
+
+        matches.forEach((match, i) => {
+          const matchNum = match.matchNumber || i + 1;
+          const teamAName = match.teamA?.name || "Equipa A";
+          const teamBName = match.teamB?.name;
+
+          if (teamBName) {
+            descriptionList += `⚔️️ **[Jogo #${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
+
+            if (currentRow.components.length >= 4) {
+              components.push(currentRow);
+              currentRow = new ActionRowBuilder();
+            }
+
+            currentRow.addComponents(
+              new ButtonBuilder()
+                .setCustomId(`start_match_${match.id}`)
+                .setLabel(
+                  `Jogo #${matchNum}: ${teamAName} vs ${teamBName}`.substring(
+                    0,
+                    80,
+                  ),
+                )
+                .setStyle(ButtonStyle.Secondary),
+            );
+          } else {
+            descriptionList += `👤 **[Jogo #${matchNum}]** ${teamAName} avança automaticamente (BYE)\n`;
+          }
+        });
+
+        if (currentRow.components.length > 0) {
+          components.push(currentRow);
+        }
+
         const embedConfrontos = new EmbedBuilder()
           .setTitle(
             "<:jg_game2qn:1546273610971218000> PAINEL DE CONTROLE - RODADA 1 (MATA-MATA)",
           )
           .setColor(hexPurple)
-          .setDescription(
-            `Abaixo estão listados os confrontos gerados pelo sorteio.\n` +
-              `Clique no botão correspondente para **iniciar o confronto.**`,
-          );
-
-        const components = [];
-        let currentRow = new ActionRowBuilder();
-
-        for (let i = 0; i < matches.length; i++) {
-          const match = matches[i];
-          const matchNum = match.matchNumber || i + 1;
-
-          if (!match.teamB) continue; // Pula se for BYE
-
-          if (currentRow.components.length >= 4) {
-            components.push(currentRow);
-            currentRow = new ActionRowBuilder();
-          }
-
-          currentRow.addComponents(
-            new ButtonBuilder()
-              .setCustomId(`start_match_${match.id}`)
-              .setLabel(
-                `Jogo #${matchNum}: ${match.teamA?.name || "Time A"} vs ${match.teamB?.name || "Time B"}`.substring(
-                  0,
-                  80,
-                ),
-              )
-              .setStyle(ButtonStyle.Secondary),
-          );
-        }
-
-        if (currentRow.components.length > 0) {
-          components.push(currentRow);
-        }
+          .setImage(bannerUrl)
+          .setDescription(descriptionList);
 
         await targetChannel.send({
           embeds: [embedConfrontos],
