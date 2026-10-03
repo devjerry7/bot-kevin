@@ -28,13 +28,21 @@ class DiscordMatchService {
     const team1 = match.teamA;
     const team2 = match.teamB;
 
+    // Define os nomes com segurança (suporta tanto .name quanto .teamName do Prisma)
+    const team1Name = team1.name || team1.teamName || "Equipe 1";
+    const team2Name = team2.name || team2.teamName || "Equipe 2";
+
     // Coletar IDs dos jogadores das duas equipes
-    const team1MemberIds = team1.players.map((p) => p.discordId);
-    const team2MemberIds = team2.players.map((p) => p.discordId);
+    const team1MemberIds = team1.players
+      ? team1.players.map((p) => p.discordId)
+      : [];
+    const team2MemberIds = team2.players
+      ? team2.players.map((p) => p.discordId)
+      : [];
     const allowedUserIds = [...team1MemberIds, ...team2MemberIds];
 
-    // Nome da categoria do confronto
-    const categoryName = `⚔️ Jogo #${match.id.slice(-4)} | ${team1.name} x ${team2.name}`;
+    // Nome da categoria do confronto utilizando o nome real da equipe
+    const categoryName = `⚔️ Jogo #${match.id.slice(-4)} | ${team1Name} x ${team2Name}`;
 
     // Descobrir a posição para criar a categoria acima da categoria de referência
     let targetPosition = undefined;
@@ -82,7 +90,7 @@ class DiscordMatchService {
 
     // 2. Criar Canal de Voz da Equipe 1
     const voiceTeam1 = await guild.channels.create({
-      name: `🔊 [${team1.name}]`,
+      name: `🔊 [${team1Name}]`,
       type: ChannelType.GuildVoice,
       parent: category.id,
       permissionOverwrites,
@@ -90,7 +98,7 @@ class DiscordMatchService {
 
     // 3. Criar Canal de Voz da Equipe 2
     const voiceTeam2 = await guild.channels.create({
-      name: `🔊 [${team2.name}]`,
+      name: `🔊 [${team2Name}]`,
       type: ChannelType.GuildVoice,
       parent: category.id,
       permissionOverwrites,
@@ -107,13 +115,13 @@ class DiscordMatchService {
     // 5. Enviar Embed oficial marcando os capitães + Botões de Definição de Vencedor (Admin)
     const embedMatch = new EmbedBuilder()
       .setTitle(
-        `<:emojiespada:1555686156434411680> CONFRONTO INICIADO: ${team1.name} VS ${team2.name}`,
+        `<:emojiespada:1555686156434411680> CONFRONTO INICIADO: ${team1Name} VS ${team2Name}`,
       )
       .setColor(0x9b59b6)
       .setDescription(
         `A infraestrutura deste confronto foi gerada com sucesso!\n\n` +
-          `<:ama_coroa2qn:1535775618615087154> **Capitão Equipe 1:** <@${team1.captainId}> (${team1.name})\n` +
-          `<:ama_coroa2qn:1535775618615087154> **Capitão Equipe 2:** <@${team2.captainId}> (${team2.name})\n\n` +
+          `<:ama_coroa2qn:1535775618615087154> **Capitão Equipe 1:** <@${team1.captainId}> (${team1Name})\n` +
+          `<:ama_coroa2qn:1535775618615087154> **Capitão Equipe 2:** <@${team2.captainId}> (${team2Name})\n\n` +
           `<:verd_notas2qn:1545488990168158350> **Instruções:**\n` +
           `1. Decidam entre si qual capitão criará a sala customizada no Free Fire.\n` +
           `2. Enviem o **ID e a Senha** da sala neste chat.\n` +
@@ -125,11 +133,11 @@ class DiscordMatchService {
     const rowButtons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`match_win_${match.id}_${team1.id}`)
-        .setLabel(`Vitória ${team1.name}`)
+        .setLabel(`Vitória ${team1Name}`)
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`match_win_${match.id}_${team2.id}`)
-        .setLabel(`Vitória ${team2.name}`)
+        .setLabel(`Vitória ${team2Name}`)
         .setStyle(ButtonStyle.Secondary),
     );
 
