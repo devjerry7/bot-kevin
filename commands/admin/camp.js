@@ -140,9 +140,14 @@ module.exports = {
     // ----------------------------------------------------
     if (subCommand === "confrontos") {
       try {
-        const tournament = await prisma.tournament.findFirst({
-          where: { status: "IN_PROGRESS" },
+        let tournament = await prisma.tournament.findFirst({
+          where: {
+            status: {
+              in: ["REGISTRATION_OPEN", "REGISTRATION_CLOSED", "IN_PROGRESS"],
+            },
+          },
           include: {
+            teams: true,
             rounds: {
               where: { roundNumber: 1 },
               include: {
@@ -157,13 +162,80 @@ module.exports = {
           },
         });
 
-        if (!tournament || !tournament.rounds[0]?.matches.length) {
+        if (!tournament) {
           return message.reply(
-            "<:ama_cuidado2qn:1545494059081142403> Nenhuma partida encontrada. O torneio ainda não foi iniciado ou o sorteio não ocorreu.",
+            "<:ama_cuidado2qn:1545494059081142403> Nenhum torneio ativo encontrado.",
           );
         }
 
-        const matches = tournament.rounds[0].matches;
+        let round1 = tournament.rounds.find((r) => r.roundNumber === 1);
+
+        // Se ainda não existem partidas geradas, cria automaticamente a Rodada 1 com os times ativos
+        if (!round1 || !round1.matches.length) {
+          const activeTeams = tournament.teams.filter(
+            (t) => !["CANCELLED"].includes(t.status),
+          );
+
+          if (activeTeams.length < 2) {
+            return message.reply(
+              "<:ama_cuidado2qn:1545494059081142403> É preciso ter pelo menos 2 equipes cadastradas para gerar os confrontos.",
+            );
+          }
+
+          round1 = await prisma.round.create({
+            data: {
+              tournamentId: tournament.id,
+              roundNumber: 1,
+              name: "Rodada 1 (Mata-Mata)",
+            },
+          });
+
+          // Embaralha os times aleatoriamente para o sorteio
+          const shuffledTeams = [...activeTeams].sort(
+            () => Math.random() - 0.5,
+          );
+
+          for (let i = 0; i < shuffledTeams.length; i += 2) {
+            const teamA = shuffledTeams[i];
+            const teamB = shuffledTeams[i + 1] || null;
+
+            await prisma.match.create({
+              data: {
+                roundId: round1.id,
+                teamAId: teamA.id,
+                teamBId: teamB ? teamB.id : null,
+                status: teamB ? "PENDING" : "COMPLETED",
+              },
+            });
+          }
+
+          // Atualiza status do torneio para IN_PROGRESS
+          await prisma.tournament.update({
+            where: { id: tournament.id },
+            data: { status: "IN_PROGRESS" },
+          });
+
+          // Recarrega o torneio com as partidas recém-criadas
+          tournament = await prisma.tournament.findFirst({
+            where: { id: tournament.id },
+            include: {
+              rounds: {
+                where: { roundNumber: 1 },
+                include: {
+                  matches: {
+                    include: {
+                      teamA: { include: { players: true } },
+                      teamB: { include: { players: true } },
+                    },
+                  },
+                },
+              },
+            },
+          });
+          round1 = tournament.rounds[0];
+        }
+
+        const matches = round1.matches;
         const adminChannel = await message.client.channels
           .fetch(DiscordMatchService.CHANNELS.ADMIN_LOGS)
           .catch(() => null);
@@ -177,7 +249,7 @@ module.exports = {
           .setColor(hexPurple)
           .setDescription(
             `Abaixo estão listados os confrontos gerados pelo sorteio.\n` +
-              `Clique no botão correspondente para **iniciar o confronto.** `,
+              `Clique no botão correspondente para **iniciar o confronto.**`,
           );
 
         const components = [];
@@ -187,7 +259,7 @@ module.exports = {
           const match = matches[i];
           const matchNum = i + 1;
 
-          if (!match.teamB) continue; // BYE
+          if (!match.teamB) continue; // Pula se for BYE
 
           if (currentRow.components.length >= 4) {
             components.push(currentRow);
@@ -197,7 +269,12 @@ module.exports = {
           currentRow.addComponents(
             new ButtonBuilder()
               .setCustomId(`start_match_${match.id}`)
-              .setLabel(`Jogo #${matchNum}`)
+              .setLabel(
+                `Jogo #${matchNum}: ${match.teamA?.name || "Time A"} vs ${match.teamB?.name || "Time B"}`.substring(
+                  0,
+                  80,
+                ),
+              )
               .setStyle(ButtonStyle.Secondary),
           );
         }
@@ -212,7 +289,7 @@ module.exports = {
         });
 
         return message.reply(
-          `<a:rx_verfi2qn:1553155625738051604> Painel de controle de confrontos enviado com sucesso no canal de administração!`,
+          `<a:rx_verfi2qn:1553155625738051604> Painel de confrontos gerado e enviado com sucesso no canal de administração!`,
         );
       } catch (err) {
         console.error(err);
