@@ -195,6 +195,7 @@ module.exports = {
             () => Math.random() - 0.5,
           );
 
+          let matchCounter = 1;
           for (let i = 0; i < shuffledTeams.length; i += 2) {
             const teamA = shuffledTeams[i];
             const teamB = shuffledTeams[i + 1] || null;
@@ -205,6 +206,7 @@ module.exports = {
                 teamAId: teamA.id,
                 teamBId: teamB ? teamB.id : null,
                 status: teamB ? "PENDING" : "COMPLETED",
+                matchNumber: matchCounter++,
               },
             });
           }
@@ -257,7 +259,7 @@ module.exports = {
 
         for (let i = 0; i < matches.length; i++) {
           const match = matches[i];
-          const matchNum = i + 1;
+          const matchNum = match.matchNumber || i + 1;
 
           if (!match.teamB) continue; // Pula se for BYE
 
