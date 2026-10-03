@@ -68,8 +68,8 @@ module.exports = async (interaction) => {
           const match = await prisma.match.findUnique({
             where: { id: matchId },
             include: {
-              team1: { include: { players: true } },
-              team2: { include: { players: true } },
+              teamA: { include: { players: true } },
+              teamB: { include: { players: true } },
             },
           });
 
@@ -92,7 +92,7 @@ module.exports = async (interaction) => {
           }
 
           await interaction.editReply(
-            `<a:ver_verifcado2qn:1535775624864473169> Infraestrutura criada com sucesso! Categoria, calls e canal de texto gerados para **${match.team1.name} x ${match.team2.name}**.`,
+            `<a:ver_verifcado2qn:1535775624864473169> Infraestrutura criada com sucesso! Categoria, calls e canal de texto gerados para **${match.teamA.name} x ${match.teamB.name}**.`,
           );
 
           const adminLogChannel = await interaction.client.channels
@@ -101,7 +101,7 @@ module.exports = async (interaction) => {
 
           if (adminLogChannel) {
             await adminLogChannel.send(
-              `📢 **Confronto Iniciado:** Jogo #${match.id.slice(-4)} (${match.team1.name} vs ${match.team2.name}) liberado por <@${interaction.user.id}>.`,
+              `📢 **Confronto Iniciado:** Jogo #${match.id.slice(-4)} (${match.teamA.name} vs ${match.teamB.name}) liberado por <@${interaction.user.id}>.`,
             );
           }
         } catch (err) {
