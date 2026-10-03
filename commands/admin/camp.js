@@ -199,13 +199,13 @@ module.exports = {
             const teamA = shuffledTeams[i];
             const teamB = shuffledTeams[i + 1] || null;
 
-            // CONEXÃO CORRETA DE TOURNAMENT E ROUND PELO PRISMA
+            // CORREÇÃO DAS RELAÇÕES DE TEAM VIA CONNECT
             await prisma.match.create({
               data: {
                 tournament: { connect: { id: tournament.id } },
                 round: { connect: { id: round1.id } },
-                teamAId: teamA.id,
-                teamBId: teamB ? teamB.id : null,
+                teamA: { connect: { id: teamA.id } },
+                ...(teamB ? { teamB: { connect: { id: teamB.id } } } : {}),
                 status: teamB ? "PENDING" : "COMPLETED",
                 matchNumber: matchCounter++,
               },
