@@ -434,7 +434,7 @@ module.exports = async (interaction) => {
               const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                   .setCustomId(`ff_win_${newMatch.id}_${teamA.id}`)
-                  .setLabel(`Vitória ${teamA.teamName}`)
+                  .setLabel(`Win ${teamA.teamName}`)
                   .setStyle(ButtonStyle.Secondary)
                   .setEmoji(
                     config.emoji.success ||
@@ -442,7 +442,7 @@ module.exports = async (interaction) => {
                   ),
                 new ButtonBuilder()
                   .setCustomId(`ff_win_${newMatch.id}_${teamB.id}`)
-                  .setLabel(`Vitória ${teamB.teamName}`)
+                  .setLabel(`Win ${teamB.teamName}`)
                   .setStyle(ButtonStyle.Secondary)
                   .setEmoji(
                     config.emoji.success ||

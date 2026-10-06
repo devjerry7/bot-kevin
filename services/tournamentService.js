@@ -475,9 +475,6 @@ class TournamentService {
           status: "FINISHED",
           winnerId: winnerTeamId,
         },
-        include: {
-          winner: true,
-        },
       });
       console.log(`[LOG] Partida atualizada com sucesso:`, updatedMatch.id);
     } catch (err) {
