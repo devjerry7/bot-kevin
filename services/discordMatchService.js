@@ -32,6 +32,11 @@ class DiscordMatchService {
     const team1Name = team1.name || team1.teamName || "Equipe 1";
     const team2Name = team2.name || team2.teamName || "Equipe 2";
 
+    // Número identificador limpo da partida (fallback para os últimos digitos se matchNumber não existir)
+    const matchIdentifier = match.matchNumber
+      ? `J${match.matchNumber}`
+      : match.id.slice(-4);
+
     // Coletar IDs dos jogadores das duas equipes
     const team1MemberIds = team1.players
       ? team1.players.map((p) => p.discordId)
@@ -41,8 +46,8 @@ class DiscordMatchService {
       : [];
     const allowedUserIds = [...team1MemberIds, ...team2MemberIds];
 
-    // Nome da categoria do confronto utilizando o nome real da equipe
-    const categoryName = `⚔️ Jogo #${match.id.slice(-4)} | ${team1Name} x ${team2Name}`;
+    // Nome da categoria limpo e profissional
+    const categoryName = `⚔️ Jogo #${match.matchNumber || match.id.slice(-4)} | ${team1Name} x ${team2Name}`;
 
     // Descobrir a posição para criar a categoria acima da categoria de referência
     let targetPosition = undefined;
@@ -104,9 +109,9 @@ class DiscordMatchService {
       permissionOverwrites,
     });
 
-    // 4. Criar Canal de Texto do Confronto
+    // 4. Criar Canal de Texto do Confronto com nome limpo
     const textChannel = await guild.channels.create({
-      name: `💬-confronto-${match.id.slice(-4)}`,
+      name: `💬-confronto-${matchIdentifier.toLowerCase()}`,
       type: ChannelType.GuildText,
       parent: category.id,
       permissionOverwrites,

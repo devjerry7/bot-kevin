@@ -24,7 +24,7 @@ module.exports = async (message) => {
   const mentionEmbed = new EmbedBuilder()
     .setTitle(`${EMOJI_BOT} Olá! Eu sou o 2qn`)
     .setDescription(
-      "Estou operando com estrutura otimizada para gerenciar a segurança, moderação e os sistemas automatizados deste servidor.",
+      "funcional ",
     )
     .addFields(
       {
