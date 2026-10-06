@@ -363,12 +363,13 @@ class TournamentService {
           roundId: round1.id,
           teamAId: teamA.id,
           teamBId: teamB ? teamB.id : null,
-          status: teamB ? "PENDING" : "FINISHED", // Se não houver oponente (BYE), já marca concluído
-          winnerId: teamB ? null : teamA.id,
+          status: teamB ? "PENDING" : "FINISHED",
+          winnerTeam: teamB ? undefined : { connect: { id: teamA.id } },
         },
         include: {
           teamA: { include: { players: true } },
           teamB: teamB ? { include: { players: true } } : true,
+          winnerTeam: true,
         },
       });
 
@@ -422,7 +423,7 @@ class TournamentService {
         ? {
             id: match.id,
             status: match.status,
-            winnerId: match.winnerId,
+            winnerId: match.winnerTeamId,
             teamAId: match.teamAId,
             teamBId: match.teamBId,
           }
@@ -434,16 +435,16 @@ class TournamentService {
       throw new Error("Partida não encontrada.");
     }
 
-    // Blindagem de status: Se já estiver finalizada com vencedor, bloqueia. Se estiver finalizada sem vencedor, reativa.
+    // Blindagem de status
     if (match.status === "FINISHED") {
-      if (match.winnerId) {
+      if (match.winnerTeamId) {
         console.log(
-          `[LOG] Erro: A partida ${matchId} já está finalizada e possui o vencedor ${match.winnerId}`,
+          `[LOG] Erro: A partida ${matchId} já está finalizada e possui vencedor`,
         );
         throw new Error("Esta partida já foi finalizada.");
       } else {
         console.log(
-          `[LOG] Aviso: A partida ${matchId} está com status FINISHED mas sem winnerId. Reativando para declarar vencedor.`,
+          `[LOG] Aviso: A partida ${matchId} está com status FINISHED mas sem vencedor. Reativando.`,
         );
       }
     }
@@ -454,18 +455,18 @@ class TournamentService {
       winnerTeamId !== match.teamBId
     ) {
       console.log(
-        `[LOG] Erro: A equipe ${winnerTeamId} não pertence à partida ${matchId} (teamA: ${match.teamAId}, teamB: ${match.teamBId})`,
+        `[LOG] Erro: A equipe ${winnerTeamId} não pertence à partida ${matchId}`,
       );
       throw new Error(
         "A equipe vencedora informada não faz parte desta partida.",
       );
     }
 
-    // Atualiza a partida atual
+    // Atualiza a partida atual usando a relação winnerTeam
     let updatedMatch;
     try {
       console.log(
-        `[LOG] Tentando atualizar a partida ${matchId} com winnerId: ${winnerTeamId} e status: FINISHED`,
+        `[LOG] Tentando atualizar a partida ${matchId} com winnerTeamId: ${winnerTeamId} e status: FINISHED`,
       );
       updatedMatch = await prisma.match.update({
         where: {
@@ -473,7 +474,12 @@ class TournamentService {
         },
         data: {
           status: "FINISHED",
-          winnerId: winnerTeamId,
+          winnerTeam: {
+            connect: { id: winnerTeamId },
+          },
+        },
+        include: {
+          winnerTeam: true,
         },
       });
       console.log(`[LOG] Partida atualizada com sucesso:`, updatedMatch.id);
@@ -502,7 +508,10 @@ class TournamentService {
 
     if (pendingMatches.length === 0) {
       console.log(`[LOG] Rodada concluída! Buscando vencedores...`);
-      const winnerIds = roundMatches.map((m) => m.winnerId).filter(Boolean);
+      // Pega os IDs vencedores considerando winnerTeamId ou winnerId conforme modelagem
+      const winnerIds = roundMatches
+        .map((m) => m.winnerTeamId || m.winnerId)
+        .filter(Boolean);
       console.log(`[LOG] IDs vencedores da rodada:`, winnerIds);
 
       // Se sobrou apenas 1 vencedor, temos o GRANDE CAMPEÃO!
@@ -553,11 +562,12 @@ class TournamentService {
                 teamAId: teamA.id,
                 teamBId: teamB ? teamB.id : null,
                 status: teamB ? "PENDING" : "FINISHED",
-                winnerId: teamB ? null : teamA.id,
+                winnerTeam: teamB ? undefined : { connect: { id: teamA.id } },
               },
               include: {
                 teamA: { include: { players: true } },
                 teamB: teamB ? { include: { players: true } } : true,
+                winnerTeam: true,
               },
             });
 
