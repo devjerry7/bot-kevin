@@ -37,6 +37,34 @@ const TournamentService = require("../services/tournamentService");
 
 module.exports = async (interaction) => {
   try {
+    // ==========================================
+    // 📊 SISTEMA DE LOGS DE ENTRADA (CONSOLE)
+    // ==========================================
+    const userTag = interaction.user ? interaction.user.tag : "Desconhecido";
+    const userId = interaction.user ? interaction.user.id : "ID_DESCONHECIDO";
+    const guildName = interaction.guild ? interaction.guild.name : "DM/Privado";
+
+    if (interaction.isChatInputCommand()) {
+      console.log(
+        `[LOG / COMANDO] /${interaction.commandName} executado por ${userTag} (${userId}) em [${guildName}]`,
+      );
+    } else if (interaction.isButton()) {
+      console.log(
+        `[LOG / BOTÃO] Botão clicado: "${interaction.customId}" por ${userTag} (${userId}) em [${guildName}]`,
+      );
+    } else if (
+      interaction.isStringSelectMenu() ||
+      interaction.isAnySelectMenu()
+    ) {
+      console.log(
+        `[LOG / MENU] Menu selecionado: "${interaction.customId}" por ${userTag} (${userId}) em [${guildName}]`,
+      );
+    } else if (interaction.isModalSubmit()) {
+      console.log(
+        `[LOG / MODAL] Modal enviado: "${interaction.customId}" por ${userTag} (${userId}) em [${guildName}]`,
+      );
+    }
+
     // 1. Tenta tratar Slash Commands (/config, /ping)
     if (interaction.isChatInputCommand()) {
       await handleSlashCommand(interaction);
@@ -105,7 +133,7 @@ module.exports = async (interaction) => {
             );
           }
         } catch (err) {
-          console.error(err);
+          console.error("[ERRO MATCH START]", err);
           await interaction.editReply(
             "<:verm_x2qn:1545444524241719376> Erro ao criar a infraestrutura do confronto no Discord. Verifique os logs do console.",
           );
@@ -232,12 +260,12 @@ module.exports = async (interaction) => {
                 // Deleta a categoria
                 await category.delete().catch(() => {});
               } catch (delErr) {
-                console.error("Erro ao limpar canais do Discord:", delErr);
+                console.error("[ERRO CLEANUP CATEGORY]", delErr);
               }
             }, 10000);
           }
         } catch (err) {
-          console.error(err);
+          console.error("[ERRO MATCH WIN]", err);
           await interaction.editReply(
             `<:verm_x2qn:1545444524241719376> Erro ao registrar o vencedor: ${err.message}`,
           );
@@ -272,7 +300,7 @@ module.exports = async (interaction) => {
           });
         } catch (error) {
           return interaction.reply({
-            content: `${config.emoji.warning || "<:ama_cuidado2qn:1545494059081142403>️"} Você já está inscrito neste campeonato!`,
+            content: `${config.emoji.warning || "<:ama_cuidado2qn:1545494059081142403>️️"} Você já está inscrito neste campeonato!`,
             flags: MessageFlags.Ephemeral,
           });
         }

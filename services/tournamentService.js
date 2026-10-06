@@ -387,10 +387,15 @@ class TournamentService {
   /**
    * Define o vencedor de uma partida, atualiza o status e verifica se a rodada foi concluída
    * para gerar automaticamente a próxima fase ou coroar o campeão.
-   * Blindado contra duplo clique e interações inválidas.
+   * Instrumentado com logs detalhados para auditoria de fluxo e blindagem de status.
    */
   static async recordMatchWinner(matchId, winnerTeamId) {
+    console.log(
+      `[LOG] recordMatchWinner chamado - matchId: ${matchId}, winnerTeamId: ${winnerTeamId}`,
+    );
+
     if (!winnerTeamId) {
+      console.log(`[LOG] Erro: Nenhuma equipe vencedora foi informada.`);
       throw new Error("Nenhuma equipe vencedora foi informada.");
     }
 
@@ -411,27 +416,60 @@ class TournamentService {
       },
     });
 
-    if (!match) throw new Error("Partida não encontrada.");
-    if (match.status === "FINISHED")
-      throw new Error("Esta partida já foi finalizada.");
+    console.log(
+      `[LOG] Match encontrada no banco:`,
+      match
+        ? {
+            id: match.id,
+            status: match.status,
+            winnerId: match.winnerId,
+            teamAId: match.teamAId,
+            teamBId: match.teamBId,
+          }
+        : null,
+    );
+
+    if (!match) {
+      console.log(`[LOG] Erro: Partida não encontrada para o id ${matchId}`);
+      throw new Error("Partida não encontrada.");
+    }
+
+    // Blindagem de status: Se já estiver finalizada com vencedor, bloqueia. Se estiver finalizada sem vencedor, reativa.
+    if (match.status === "FINISHED") {
+      if (match.winnerId) {
+        console.log(
+          `[LOG] Erro: A partida ${matchId} já está finalizada e possui o vencedor ${match.winnerId}`,
+        );
+        throw new Error("Esta partida já foi finalizada.");
+      } else {
+        console.log(
+          `[LOG] Aviso: A partida ${matchId} está com status FINISHED mas sem winnerId. Reativando para declarar vencedor.`,
+        );
+      }
+    }
 
     if (
       match.teamBId &&
       winnerTeamId !== match.teamAId &&
       winnerTeamId !== match.teamBId
     ) {
+      console.log(
+        `[LOG] Erro: A equipe ${winnerTeamId} não pertence à partida ${matchId} (teamA: ${match.teamAId}, teamB: ${match.teamBId})`,
+      );
       throw new Error(
         "A equipe vencedora informada não faz parte desta partida.",
       );
     }
 
-    // Atualiza a partida atual com proteção atômica contra concorrência / duplo clique
+    // Atualiza a partida atual
     let updatedMatch;
     try {
+      console.log(
+        `[LOG] Tentando atualizar a partida ${matchId} com winnerId: ${winnerTeamId} e status: FINISHED`,
+      );
       updatedMatch = await prisma.match.update({
         where: {
           id: matchId,
-          status: { not: "FINISHED" }, // Evita race condition caso dois cliques ocorram exatamente ao mesmo tempo
         },
         data: {
           status: "FINISHED",
@@ -441,9 +479,11 @@ class TournamentService {
           winner: true,
         },
       });
+      console.log(`[LOG] Partida atualizada com sucesso:`, updatedMatch.id);
     } catch (err) {
+      console.log(`[LOG] Erro no prisma.match.update:`, err.message);
       throw new Error(
-        "Esta partida já foi finalizada por outra interação ou clique duplo.",
+        "Erro ao atualizar a partida no banco de dados: " + err.message,
       );
     }
 
@@ -456,15 +496,23 @@ class TournamentService {
     });
 
     const pendingMatches = roundMatches.filter((m) => m.status !== "FINISHED");
+    console.log(
+      `[LOG] Total de partidas na rodada ${round.id}: ${roundMatches.length}. Pendentes: ${pendingMatches.length}`,
+    );
 
     let nextRoundInfo = null;
     let champion = null;
 
     if (pendingMatches.length === 0) {
+      console.log(`[LOG] Rodada concluída! Buscando vencedores...`);
       const winnerIds = roundMatches.map((m) => m.winnerId).filter(Boolean);
+      console.log(`[LOG] IDs vencedores da rodada:`, winnerIds);
 
       // Se sobrou apenas 1 vencedor, temos o GRANDE CAMPEÃO!
       if (winnerIds.length === 1) {
+        console.log(
+          `[LOG] Encontrado 1 único vencedor. Coroando campeão: ${winnerIds[0]}`,
+        );
         champion = await prisma.team.findUnique({
           where: { id: winnerIds[0] },
           include: { players: true },
@@ -474,13 +522,20 @@ class TournamentService {
           where: { id: tournament.id },
           data: { status: "COMPLETED" },
         });
+        console.log(
+          `[LOG] Torneio ${tournament.id} atualizado para status COMPLETED.`,
+        );
       } else {
         const nextRoundNumber = round.roundNumber + 1;
+        console.log(`[LOG] Buscando próxima rodada número: ${nextRoundNumber}`);
         const nextRound = tournament.rounds.find(
           (r) => r.roundNumber === nextRoundNumber,
         );
 
         if (nextRound) {
+          console.log(
+            `[LOG] Próxima rodada encontrada: ${nextRound.id} (${nextRound.name})`,
+          );
           const winningTeams = await prisma.team.findMany({
             where: { id: { in: winnerIds } },
             include: { players: true },
@@ -492,6 +547,9 @@ class TournamentService {
             const teamA = winningTeams[i];
             const teamB = winningTeams[i + 1];
 
+            console.log(
+              `[LOG] Criando próxima partida para Team A: ${teamA?.name} e Team B: ${teamB?.name || "BYE"}`,
+            );
             const nextMatch = await prisma.match.create({
               data: {
                 roundId: nextRound.id,
@@ -513,8 +571,16 @@ class TournamentService {
             round: nextRound,
             matches: createdNextMatches,
           };
+        } else {
+          console.log(
+            `[LOG] Nenhuma próxima rodada encontrada para o número ${nextRoundNumber}`,
+          );
         }
       }
+    } else {
+      console.log(
+        `[LOG] Ainda há ${pendingMatches.length} partidas pendentes nesta rodada. Aguardando.`,
+      );
     }
 
     return {
