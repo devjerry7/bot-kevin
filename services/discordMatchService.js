@@ -71,18 +71,28 @@ class DiscordMatchService {
       },
     ];
 
-    // Adiciona permissão total para cada jogador envolvido no confronto
+    // Adiciona permissão para cada jogador envolvido no confronto (caso exista na guilda)
     for (const userId of allowedUserIds) {
-      permissionOverwrites.push({
-        id: userId,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.Connect,
-          PermissionFlagsBits.Speak,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.ReadMessageHistory,
-        ],
-      });
+      try {
+        const member =
+          guild.members.cache.get(userId) ||
+          (await guild.members.fetch(userId).catch(() => null));
+
+        if (member) {
+          permissionOverwrites.push({
+            id: userId,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.Connect,
+              PermissionFlagsBits.Speak,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+            ],
+          });
+        }
+      } catch (err) {
+        // Ignora IDs fictícios ou que não pertencem ao servidor (como os de seed de teste)
+      }
     }
 
     // 1. Criar Categoria do Confronto posicionada logo acima da referência
