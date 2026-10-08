@@ -136,7 +136,7 @@ module.exports = {
     }
 
     // ----------------------------------------------------
-    // PAINEL DE CONTROLE DOS CONFRONTOS (ROUND 1) - CORRIGIDO
+    // PAINEL DE CONTROLE DOS CONFRONTOS (DINÂMICO POR RODADA)
     // ----------------------------------------------------
     if (subCommand === "confrontos") {
       console.log(
@@ -172,66 +172,67 @@ module.exports = {
           );
         }
 
-        // Busca ou cria o Round 1 de forma segura (sem duplicar)
-        let round1 = await prisma.round.findFirst({
-          where: {
-            tournamentId: tournament.id,
-            roundNumber: 1,
+        // Busca todas as rodadas do torneio em ordem
+        let rounds = await prisma.round.findMany({
+          where: { tournamentId: tournament.id },
+          orderBy: { roundNumber: "asc" },
+          include: {
+            matches: {
+              include: { teamA: true, teamB: true },
+            },
           },
         });
 
-        if (!round1) {
-          console.log("[LOG-CAMP] Criando registro do Round 1...");
-          round1 = await prisma.round.create({
-            data: {
-              tournamentId: tournament.id,
-              roundNumber: 1,
-              name: "Rodada 1 (Mata-Mata)",
+        // Se não houver rounds criados, cria os padrão
+        if (!rounds || rounds.length === 0) {
+          const roundsData = [
+            { roundNumber: 1, name: "32avos (R32)", matchType: "BO1" },
+            { roundNumber: 2, name: "Oitavas (R16)", matchType: "BO1" },
+            { roundNumber: 3, name: "Quartas de Final", matchType: "BO1" },
+            { roundNumber: 4, name: "Semifinal", matchType: "BO1" },
+            { roundNumber: 5, name: "Grande Final", matchType: "BO3" },
+          ];
+          for (const r of roundsData) {
+            await prisma.round.create({
+              data: { tournamentId: tournament.id, ...r },
+            });
+          }
+          rounds = await prisma.round.findMany({
+            where: { tournamentId: tournament.id },
+            orderBy: { roundNumber: "asc" },
+            include: {
+              matches: { include: { teamA: true, teamB: true } },
             },
           });
-          console.log("[LOG-CAMP] Round 1 criado com ID:", round1.id);
-        } else {
-          console.log(
-            "[LOG-CAMP] Round 1 já existente encontrado com ID:",
-            round1.id,
-          );
         }
 
-        // Busca as partidas associadas a este Round 1
-        let matches = await prisma.match.findMany({
-          where: { roundId: round1.id },
-          include: {
-            teamA: true,
-            teamB: true,
-          },
-        });
+        // Determina a rodada ativa (a primeira com partidas PENDING ou a mais avançada com partidas)
+        let activeRound = rounds.find((r) =>
+          r.matches.some((m) => m.status === "PENDING"),
+        );
+        if (!activeRound) {
+          const roundsWithMatches = rounds.filter((r) => r.matches.length > 0);
+          if (roundsWithMatches.length > 0) {
+            activeRound = roundsWithMatches[roundsWithMatches.length - 1];
+          } else {
+            activeRound = rounds.find((r) => r.roundNumber === 1) || rounds[0];
+          }
+        }
 
+        let matches = activeRound.matches;
         console.log(
-          "[LOG-CAMP] Partidas encontradas para este Round 1:",
-          matches.length,
+          `[LOG-CAMP] Rodada ativa detectada: ${activeRound.name} (ID: ${activeRound.id}) | Partidas: ${matches.length}`,
         );
 
-        // Se não existem partidas, gera o sorteio
-        if (matches.length === 0) {
+        // Se estivermos no Round 1 e não houver partidas criadas, gera o sorteio inicial
+        if (activeRound.roundNumber === 1 && matches.length === 0) {
           const activeTeams = tournament.teams.filter(
             (t) => !["CANCELLED"].includes(t.status),
           );
 
-          console.log(
-            "[LOG-CAMP] Equipes ativas para o sorteio:",
-            activeTeams.map((t) => ({
-              id: t.id,
-              name: t.name,
-              status: t.status,
-            })),
-          );
-
           if (activeTeams.length < 2) {
-            console.log(
-              "[LOG-CAMP] ABORTANDO: Menos de 2 equipes ativas cadastradas.",
-            );
             return message.reply(
-              "<:ama_cuidado2qn:1545494059081142403> É preciso ter pelo menos 2 equipas cadastradas para gerar os confrontos.",
+              "<:ama_cuidado2qn:1545494059081142403> É preciso ter pelo menos 2 equipes cadastradas para gerar os confrontos.",
             );
           }
 
@@ -244,38 +245,34 @@ module.exports = {
             const teamA = shuffledTeams[i];
             const teamB = shuffledTeams[i + 1] || null;
 
-            console.log(
-              `[LOG-CAMP] Criando Match #${matchCounter}: Team A (${teamA.name}) vs Team B (${teamB ? teamB.name : "BYE"})`,
-            );
-
             await prisma.match.create({
               data: {
-                tournament: { connect: { id: tournament.id } },
-                round: { connect: { id: round1.id } },
-                teamA: { connect: { id: teamA.id } },
-                ...(teamB ? { teamB: { connect: { id: teamB.id } } } : {}),
-                status: teamB ? "PENDING" : "COMPLETED",
+                tournamentId: tournament.id,
+                roundId: activeRound.id,
                 matchNumber: matchCounter++,
+                teamAId: teamA.id,
+                teamBId: teamB ? teamB.id : null,
+                status: teamB ? "PENDING" : "FINISHED",
+                winnerTeam: teamB ? undefined : { connect: { id: teamA.id } },
               },
             });
           }
 
-          console.log(
-            "[LOG-CAMP] Atualizando status do torneio para IN_PROGRESS...",
-          );
           await prisma.tournament.update({
             where: { id: tournament.id },
             data: { status: "IN_PROGRESS" },
           });
 
-          // Recarrega as partidas recém-criadas
-          matches = await prisma.match.findMany({
-            where: { roundId: round1.id },
+          // Recarrega as partidas do Round 1 recém criadas
+          rounds = await prisma.round.findMany({
+            where: { tournamentId: tournament.id },
+            orderBy: { roundNumber: "asc" },
             include: {
-              teamA: true,
-              teamB: true,
+              matches: { include: { teamA: true, teamB: true } },
             },
           });
+          activeRound = rounds.find((r) => r.roundNumber === 1);
+          matches = activeRound.matches;
         }
 
         console.log(
@@ -284,55 +281,71 @@ module.exports = {
         );
         matches.forEach((m, idx) => {
           console.log(
-            `[LOG-CAMP]   -> Partida [${idx + 1}] ID: ${m.id} | Num: ${m.matchNumber} | TeamA: ${m.teamA?.name} | TeamB: ${m.teamB?.name || "BYE"}`,
+            `[LOG-CAMP]   -> Partida [${idx + 1}] ID: ${m.id} | Num: ${m.matchNumber} | Status: ${m.status} | TeamA: ${m.teamA?.name} | TeamB: ${m.teamB?.name || "BYE"}`,
           );
         });
 
         const adminChannel = await message.client.channels
           .fetch(DiscordMatchService.CHANNELS.ADMIN_LOGS)
-          .catch((err) => {
-            console.log(
-              "[LOG-CAMP] Aviso: Não foi possível buscar ADMIN_LOGS canal:",
-              err.message,
-            );
-            return null;
-          });
+          .catch(() => null);
 
         const targetChannel = adminChannel || message.channel;
-        console.log(
-          "[LOG-CAMP] Canal de destino selecionado:",
-          targetChannel.id,
-        );
 
-        let descriptionList = `Abaixo estão listados os confrontos gerados pelo sorteio.\nClique no botão correspondente para **iniciar o confronto.**\n\n`;
+        let descriptionList = `Abaixo estão listados os confrontos da fase **${activeRound.name}**.\nClique no botão correspondente para **iniciar o confronto.**\n\n`;
 
         const components = [];
         let currentRow = new ActionRowBuilder();
 
         matches.forEach((match, i) => {
           const matchNum = match.matchNumber || i + 1;
-          const teamAName = match.teamA?.name || "Equipa A";
+          const teamAName = match.teamA?.name || "Equipe A";
           const teamBName = match.teamB?.name;
 
           if (teamBName) {
-            descriptionList += `⚔ **[Jogo #${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
+            const statusBadge =
+              match.status === "FINISHED"
+                ? "✅ [Finalizada]"
+                : match.status === "IN_PROGRESS"
+                  ? "⚔️ [Em Andamento]"
+                  : "⏳ [Pendente]";
+            descriptionList += `${statusBadge} **[Jogo #${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
 
-            if (currentRow.components.length >= 4) {
+            if (currentRow.components.length < 4) {
+              currentRow.addComponents(
+                new ButtonBuilder()
+                  .setCustomId(`start_match_${match.id}`)
+                  .setLabel(
+                    `Jogo #${matchNum}: ${teamAName} vs ${teamBName}`.substring(
+                      0,
+                      80,
+                    ),
+                  )
+                  .setStyle(
+                    match.status === "FINISHED"
+                      ? ButtonStyle.Success
+                      : ButtonStyle.Secondary,
+                  )
+                  .setDisabled(match.status === "FINISHED"),
+              );
+            } else {
               components.push(currentRow);
-              currentRow = new ActionRowBuilder();
+              currentRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                  .setCustomId(`start_match_${match.id}`)
+                  .setLabel(
+                    `Jogo #${matchNum}: ${teamAName} vs ${teamBName}`.substring(
+                      0,
+                      80,
+                    ),
+                  )
+                  .setStyle(
+                    match.status === "FINISHED"
+                      ? ButtonStyle.Success
+                      : ButtonStyle.Secondary,
+                  )
+                  .setDisabled(match.status === "FINISHED"),
+              );
             }
-
-            currentRow.addComponents(
-              new ButtonBuilder()
-                .setCustomId(`start_match_${match.id}`)
-                .setLabel(
-                  `Jogo #${matchNum}: ${teamAName} vs ${teamBName}`.substring(
-                    0,
-                    80,
-                  ),
-                )
-                .setStyle(ButtonStyle.Secondary),
-            );
           } else {
             descriptionList += `👤 **[Jogo #${matchNum}]** ${teamAName} avança automaticamente (BYE)\n`;
           }
@@ -342,14 +355,9 @@ module.exports = {
           components.push(currentRow);
         }
 
-        console.log(
-          "[LOG-CAMP] Total de action rows de botões montadas:",
-          components.length,
-        );
-
         const embedConfrontos = new EmbedBuilder()
           .setTitle(
-            "<:jg_game2qn:1546273610971218000> PAINEL DE CONTROLE - RODADA 1 (MATA-MATA)",
+            `<:jg_game2qn:1546273610971218000> PAINEL DE CONTROLE - ${activeRound.name.toUpperCase()}`,
           )
           .setColor(hexPurple)
           .setImage(bannerUrl)
@@ -359,12 +367,9 @@ module.exports = {
           embeds: [embedConfrontos],
           components: components.length > 0 ? components : [],
         });
-        console.log(
-          "[LOG-CAMP] Mensagem de confrontos enviada com sucesso para o canal!",
-        );
 
         return message.reply(
-          `<a:rx_verfi2qn:1553155625738051604> Painel de confrontos gerado e enviado com sucesso no canal de administração!`,
+          `<a:rx_verfi2qn:1553155625738051604> Painel de confrontos (${activeRound.name}) gerado e enviado com sucesso no canal de administração!`,
         );
       } catch (err) {
         console.error("[LOG-CAMP] ERRO CRÍTICO NO SUBCOMANDO CONFRONTOS:", err);
@@ -406,7 +411,7 @@ module.exports = {
     }
 
     // ----------------------------------------------------
-    // RESETAR DADOS (LIMPEZA GERAL DO TORNEIO) - CORRIGIDO
+    // RESETAR DADOS (LIMPEZA GERAL DO TORNEIO)
     // ----------------------------------------------------
     if (subCommand === "reset") {
       try {
