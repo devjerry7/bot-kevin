@@ -352,6 +352,7 @@ class TournamentService {
     }
 
     const createdMatches = [];
+    let matchCounter = 1;
 
     // Agrupa de 2 em 2 para montar cada confronto
     for (let i = 0; i < shuffled.length; i += 2) {
@@ -361,6 +362,7 @@ class TournamentService {
       const match = await prisma.match.create({
         data: {
           roundId: round1.id,
+          matchNumber: matchCounter++,
           teamAId: teamA.id,
           teamBId: teamB ? teamB.id : null,
           status: teamB ? "PENDING" : "FINISHED",
@@ -547,6 +549,7 @@ class TournamentService {
           });
 
           const createdNextMatches = [];
+          let nextMatchCounter = 1;
 
           for (let i = 0; i < winningTeams.length; i += 2) {
             const teamA = winningTeams[i];
@@ -558,6 +561,7 @@ class TournamentService {
             const nextMatch = await prisma.match.create({
               data: {
                 roundId: nextRound.id,
+                matchNumber: nextMatchCounter++,
                 teamAId: teamA.id,
                 teamBId: teamB ? teamB.id : null,
                 status: teamB ? "PENDING" : "FINISHED",
