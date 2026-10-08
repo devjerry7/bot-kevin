@@ -226,7 +226,7 @@ class TournamentService {
       if (
         confirmedTeams.length >= tournament.maxTeams &&
         tournament.status !== "IN_PROGRESS" &&
-        tournament.status !== "COMPLETED"
+        tournament.status !== "FINISHED"
       ) {
         // Fecha as inscrições automaticamente
         await prisma.tournament.update({
@@ -508,7 +508,6 @@ class TournamentService {
 
     if (pendingMatches.length === 0) {
       console.log(`[LOG] Rodada concluída! Buscando vencedores...`);
-      // Pega os IDs vencedores considerando winnerTeamId ou winnerId conforme modelagem
       const winnerIds = roundMatches
         .map((m) => m.winnerTeamId || m.winnerId)
         .filter(Boolean);
@@ -526,10 +525,10 @@ class TournamentService {
 
         await prisma.tournament.update({
           where: { id: tournament.id },
-          data: { status: "COMPLETED" },
+          data: { status: "FINISHED" },
         });
         console.log(
-          `[LOG] Torneio ${tournament.id} atualizado para status COMPLETED.`,
+          `[LOG] Torneio ${tournament.id} atualizado para status FINISHED.`,
         );
       } else {
         const nextRoundNumber = round.roundNumber + 1;
