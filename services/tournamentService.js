@@ -396,6 +396,7 @@ class TournamentService {
 
       const match = await prisma.match.create({
         data: {
+          tournamentId: tournamentId,
           roundId: round1.id,
           matchNumber: matchCounter++,
           teamAId: teamA.id,
@@ -597,6 +598,7 @@ class TournamentService {
             );
             const nextMatch = await prisma.match.create({
               data: {
+                tournamentId: tournament.id,
                 roundId: nextRound.id,
                 matchNumber: nextMatchCounter++,
                 teamAId: teamA.id,
