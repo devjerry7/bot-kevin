@@ -1,19 +1,12 @@
-// commands/seed.js
-const SeedService = require("../services/seedService");
-const TournamentService = require("../services/tournamentService");
+// commands/admin/seed.js
+const SeedService = require("../../services/seedService");
+const TournamentService = require("../../services/tournamentService");
 
 module.exports = {
   name: "seed",
   description:
     "Gera 32 equipes fictícias e inicia o torneio para testes em massa.",
   async execute(message, args) {
-    // Verificação opcional de segurança (descomente se quiser restringir apenas a administradores)
-    /*
-    if (!message.member.permissions.has("ADMINISTRATOR")) {
-      return message.reply("❌ Você não tem permissão para usar este comando.");
-    }
-    */
-
     const loadingMsg = await message.reply(
       "⚙️ Gerando 32 equipes de teste, fechando inscrições e sorteando o Round 1...",
     );
