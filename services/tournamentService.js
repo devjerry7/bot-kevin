@@ -41,6 +41,7 @@ class TournamentService {
         teams: {
           include: { players: true, payments: true },
         },
+        rounds: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -54,9 +55,18 @@ class TournamentService {
           teams: {
             include: { players: true, payments: true },
           },
+          rounds: true,
         },
       });
     }
+
+    const roundsData = [
+      { roundNumber: 1, name: "32avos (R32)", matchType: "BO1" },
+      { roundNumber: 2, name: "Oitavas (R16)", matchType: "BO1" },
+      { roundNumber: 3, name: "Quartas de Final", matchType: "BO1" },
+      { roundNumber: 4, name: "Semifinal", matchType: "BO1" },
+      { roundNumber: 5, name: "Grande Final", matchType: "BO3" },
+    ];
 
     // Se não existir, cria
     if (!tournament) {
@@ -74,18 +84,22 @@ class TournamentService {
           teams: {
             include: { players: true, payments: true },
           },
+          rounds: true,
         },
       });
 
-      // Cria os Rounds padrão
-      const roundsData = [
-        { roundNumber: 1, name: "32avos (R32)", matchType: "BO1" },
-        { roundNumber: 2, name: "Oitavas (R16)", matchType: "BO1" },
-        { roundNumber: 3, name: "Quartas de Final", matchType: "BO1" },
-        { roundNumber: 4, name: "Semifinal", matchType: "BO1" },
-        { roundNumber: 5, name: "Grande Final", matchType: "BO3" },
-      ];
-
+      for (const r of roundsData) {
+        await prisma.round.create({
+          data: {
+            tournamentId: tournament.id,
+            ...r,
+          },
+        });
+      }
+    } else if (!tournament.rounds || tournament.rounds.length === 0) {
+      console.log(
+        `[ROUNDS-FIX] Torneio ${tournament.id} encontrado sem rounds. Criando rounds padrão...`,
+      );
       for (const r of roundsData) {
         await prisma.round.create({
           data: {
@@ -316,6 +330,10 @@ class TournamentService {
    * Embaralha as equipes confirmadas e gera as partidas do Round 1.
    */
   static async generateFirstRoundMatches(tournamentId) {
+    console.log(
+      `[MATCH-GEN] Buscando torneio ${tournamentId} e equipes CONFIRMED...`,
+    );
+
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
@@ -328,8 +346,17 @@ class TournamentService {
       },
     });
 
-    if (!tournament) throw new Error("Campeonato não encontrado.");
+    if (!tournament) {
+      console.log(`[MATCH-GEN] ERRO: Torneio não encontrado.`);
+      throw new Error("Campeonato não encontrado.");
+    }
+
+    console.log(`[MATCH-GEN] Rounds encontrados para R1:`, tournament.rounds);
+
     if (!tournament.rounds || tournament.rounds.length === 0) {
+      console.log(
+        `[MATCH-GEN] ERRO: Round 1 não existe no banco para este torneio.`,
+      );
       throw new Error(
         "Primeira rodada (Round 1) não encontrada no campeonato.",
       );
@@ -337,6 +364,10 @@ class TournamentService {
 
     const round1 = tournament.rounds[0];
     const confirmedTeams = tournament.teams;
+
+    console.log(
+      `[MATCH-GEN] Total de equipes confirmadas: ${confirmedTeams.length}`,
+    );
 
     if (confirmedTeams.length < 2) {
       throw new Error(
@@ -358,6 +389,10 @@ class TournamentService {
     for (let i = 0; i < shuffled.length; i += 2) {
       const teamA = shuffled[i];
       const teamB = shuffled[i + 1]; // Pode ser undefined se o número de equipes for ímpar
+
+      console.log(
+        `[MATCH-GEN] Criando Partida #${matchCounter} | A: ${teamA.name} vs B: ${teamB ? teamB.name : "BYE"}`,
+      );
 
       const match = await prisma.match.create({
         data: {
@@ -384,13 +419,15 @@ class TournamentService {
       data: { status: "IN_PROGRESS" },
     });
 
+    console.log(
+      `[MATCH-GEN] Total de ${createdMatches.length} partidas criadas com sucesso no Round 1.`,
+    );
     return createdMatches;
   }
 
   /**
    * Define o vencedor de uma partida, atualiza o status e verifica se a rodada foi concluída
    * para gerar automaticamente a próxima fase ou coroar o campeão.
-   * Instrumentado com logs detalhados para auditoria de fluxo e blindagem de status.
    */
   static async recordMatchWinner(matchId, winnerTeamId) {
     console.log(
