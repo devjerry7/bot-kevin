@@ -210,6 +210,24 @@ process.env.EMOJI_VIP_NIGHT = config.vip.emojis.vipNight;
 process.env.EMOJI_CART = config.vip.emojis.cart;
 process.env.EMOJI_TITLE_VIP = config.vip.emojis.titleIcon;
 
+// Emojis de Jogos (Atualizados direto do objeto config)
+process.env.EMOJI_GAME_FF = config.gameEmojis.ff;
+process.env.EMOJI_GAME_VAL = config.gameEmojis.val;
+process.env.EMOJI_GAME_CS = config.gameEmojis.cs;
+process.env.EMOJI_GAME_GTA = config.gameEmojis.gta;
+process.env.EMOJI_GAME_ROBLOX = config.gameEmojis.roblox;
+process.env.EMOJI_GAME_MINE = config.gameEmojis.mine;
+process.env.EMOJI_GAME_CODENAMES = config.gameEmojis.codenames;
+process.env.EMOJI_GAME_AMONGUS = config.gameEmojis.amongus;
+process.env.EMOJI_GAME_LOL = config.gameEmojis.lol;
+process.env.EMOJI_GAME_PLATO = config.gameEmojis.plato;
+process.env.EMOJI_GAME_GARTIC = config.gameEmojis.gartic;
+process.env.EMOJI_GAME_BLOODSTRIKE = config.gameEmojis.bloodstrike;
+process.env.EMOJI_GAME_CLASH = config.gameEmojis.clash;
+process.env.EMOJI_GAME_STANDOFF = config.gameEmojis.standoff;
+process.env.EMOJI_GAME_STUMBLE = config.gameEmojis.stumble;
+process.env.EMOJI_GAME_FORTNITE = config.gameEmojis.fortnite;
+
 // Cores Extras
 process.env.COLOR_WARNING = `#${config.colorWarning.toString(16)}`;
 process.env.COLOR_SUCCESS = `#00ff00`;
