@@ -27,8 +27,8 @@ const handleGameRolesPanel = async (message) => {
   // --- Lendo variáveis estéticas do .env ---
   const COLOR_BASE = process.env.COLOR_BASE
     ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
-    : 0x00e5ff;
-  const BANNER_URL = process.env.BANNER_URL;
+    : 0x962dc0;
+  const BANNER_URL = process.env.BANNER_URL || process.env.BANNER_VIP;
   const EMOJI_PANEL_GAMES = process.env.EMOJI_PANEL_GAMES || "🎮";
 
   const embed = new EmbedBuilder()
