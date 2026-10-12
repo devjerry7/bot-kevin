@@ -20,9 +20,14 @@ const handleNotifyRolesPanel = async (message) => {
   const COLOR_BASE = process.env.COLOR_BASE
     ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
     : 0x962dc0;
-  const BANNER_URL = process.env.BANNER_URL;
 
-  // Puxando os emojis customizados do .env (Se não achar, usa os normais de segurança)
+  // Garante que pegue um banner válido (priorizando o BANNER_VIP caso definido, ou o BANNER_URL geral)
+  const BANNER_URL =
+    process.env.BANNER_VIP && process.env.BANNER_VIP.trim() !== ""
+      ? process.env.BANNER_VIP
+      : process.env.BANNER_URL;
+
+  // Puxando os emojis customizados do .env (Se não achar, usa os normais)
   const EMOJI_SORTEIO = process.env.EMOJI_NOTIFY_SORTEIO || "🎁";
   const EMOJI_INTERACAO = process.env.EMOJI_NOTIFY_INTERACAO || "🎉";
   const EMOJI_LIVE = process.env.EMOJI_NOTIFY_LIVE || "🔴";
@@ -46,7 +51,10 @@ const handleNotifyRolesPanel = async (message) => {
       iconURL: message.guild.iconURL(),
     });
 
-  if (BANNER_URL) embed.setImage(BANNER_URL);
+  // Aplica o banner apenas se houver uma URL válida
+  if (BANNER_URL && BANNER_URL.startsWith("http")) {
+    embed.setImage(BANNER_URL);
+  }
 
   // Colocando seus emojis customizados nos botões
   const row = new ActionRowBuilder().addComponents(
