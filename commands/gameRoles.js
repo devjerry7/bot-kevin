@@ -7,11 +7,23 @@ const {
   PermissionsBitField,
 } = require("discord.js");
 
-// Função para extrair apenas o ID do emoji do .env e evitar erros na renderização
-const parseEmoji = (emojiString, fallback = "🎮") => {
+// Função robusta para extrair o ID do emoji personalizado ou retornar emoji padrão
+const parseEmoji = (emojiString, fallback) => {
   if (!emojiString) return fallback;
-  const match = emojiString.match(/:(\d+)>$/);
-  return match ? match[1] : emojiString;
+
+  // Captura o ID do emoji no formato <:nome:123456789> ou <a:nome:123456789>
+  const match =
+    emojiString.match(/<a?:.+?:(\d+)>/) || emojiString.match(/:(\d+)>/);
+  if (match && match[1]) {
+    return match[1]; // Retorna apenas o ID
+  }
+
+  // Se já for apenas o ID numérico
+  if (/^\d+$/.test(emojiString.trim())) {
+    return emojiString.trim();
+  }
+
+  return fallback;
 };
 
 const handleGameRolesPanel = async (message) => {
@@ -24,32 +36,44 @@ const handleGameRolesPanel = async (message) => {
     );
   }
 
-  // --- Lendo variáveis estéticas do .env ---
+  // --- Lendo variáveis estéticas ---
   const COLOR_BASE = process.env.COLOR_BASE
     ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
     : 0x962dc0;
-  const BANNER_URL = process.env.BANNER_URL || process.env.BANNER_VIP;
+
+  // Garante que pegue um banner válido se BANNER_VIP estiver vazio
+  const BANNER_URL =
+    process.env.BANNER_VIP && process.env.BANNER_VIP.trim() !== ""
+      ? process.env.BANNER_VIP
+      : process.env.BANNER_URL;
+
   const EMOJI_PANEL_GAMES = process.env.EMOJI_PANEL_GAMES || "🎮";
+  const EMOJI_DOT =
+    process.env.EMOJI_DOT || "<:br_ponto2qn:1556901316230651954>";
 
   const embed = new EmbedBuilder()
-    .setTitle(`${EMOJI_PANEL_GAMES}  GAMES`)
+    .setTitle(`${EMOJI_PANEL_GAMES} GAMES`)
     .setDescription(
       "**Mostre quais jogos você curte!**\n\n" +
-        "<:pontinho:1545828067035848814> Selecione seus jogos favoritos para receber notificações quando a galera estiver jogando.",
+        `${EMOJI_DOT} Selecione seus jogos favoritos para receber notificações quando a galera estiver jogando.`,
     )
     .setColor(COLOR_BASE)
-    .setImage(BANNER_URL)
     .setFooter({
       text: "2qn",
       iconURL: message.guild.iconURL(),
     });
 
+  // Aplica o banner apenas se houver uma URL válida
+  if (BANNER_URL && BANNER_URL.startsWith("http")) {
+    embed.setImage(BANNER_URL);
+  }
+
   // --- Criando o Menu Suspenso Múltiplo ---
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId("select_game_roles")
     .setPlaceholder("Selecione os jogos que você joga...")
-    .setMinValues(0) // 0 permite que o cara desmarque tudo se quiser
-    .setMaxValues(16) // Permite selecionar vários de uma vez só!
+    .setMinValues(0)
+    .setMaxValues(16)
     .addOptions([
       new StringSelectMenuOptionBuilder()
         .setLabel("Free Fire")
@@ -117,10 +141,8 @@ const handleGameRolesPanel = async (message) => {
         .setEmoji(parseEmoji(process.env.EMOJI_GAME_FORTNITE, "⛏️")),
     ]);
 
-  // Colocando o menu na ActionRow
   const row = new ActionRowBuilder().addComponents(selectMenu);
 
-  // Envio da mensagem limpa e compacta
   await message.channel.send({
     embeds: [embed],
     components: [row],
