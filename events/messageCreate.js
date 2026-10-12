@@ -289,7 +289,12 @@ module.exports = async (message) => {
     `${command}.js`,
   );
 
+  console.log(
+    `[DEBUG PREFIX] Comando recebido: "${command}". Buscando arquivo em: ${adminCommandPath}`,
+  );
+
   if (fs.existsSync(adminCommandPath)) {
+    console.log(`[DEBUG PREFIX] Arquivo do comando encontrado! Executando...`);
     if (message.deletable) {
       try {
         await message.delete();
@@ -310,11 +315,15 @@ module.exports = async (message) => {
       await adminCommand.execute(safeMessage, args);
       return;
     } catch (error) {
-      console.error(`[ERRO COMANDO ADMIN]`, error);
+      console.error(`[ERRO CRÍTICO EXECUÇÃO COMANDO ADMIN]`, error);
       return message.channel.send(
-        `${EMOJI_ERROR} Ocorreu um erro ao executar este comando.`,
+        `${EMOJI_ERROR} Ocorreu um erro ao executar este comando: ${error.message}`,
       );
     }
+  } else {
+    console.log(
+      `[DEBUG PREFIX] Arquivo NÃO encontrado em: ${adminCommandPath}`,
+    );
   }
 
   if (message.deletable) {
