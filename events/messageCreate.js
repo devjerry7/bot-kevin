@@ -4,6 +4,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  PermissionsBitField,
 } = require("discord.js");
 const config = require("../config");
 const path = require("path");
@@ -333,9 +334,7 @@ module.exports = async (message) => {
     )
   ) {
     if (
-      !message.member.permissions.has(
-        PermissionsBitField?.Flags?.Administrator || 8n,
-      )
+      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
     ) {
       return message.channel.send(
         "<:verm_x2qn:1545444524241719376> Apenas administradores podem postar o painel de denúncias.",
