@@ -304,9 +304,7 @@ module.exports = {
 
         const selectMenu = new StringSelectMenuBuilder()
           .setCustomId("select_start_match")
-          .setPlaceholder(
-            "<:jg_espada2qn:1555686156434411680> Selecione um confronto para iniciar...",
-          )
+          .setPlaceholder("Selecione um confronto para iniciar...")
           .setMinValues(1)
           .setMaxValues(1);
 
@@ -480,7 +478,9 @@ module.exports = {
       const maxTeams = tournament ? tournament.maxTeams : 32;
 
       const embedInfo = new EmbedBuilder()
-        .setTitle("<:serv:1545459134088256> INFORMAÇÕES - CAMPEONATO 4X4 2QN")
+        .setTitle(
+          "<a:am_trofeu2qn:1556881758723776605> INFORMAÇÕES - CAMPEONATO 4X4 2QN",
+        )
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
@@ -491,7 +491,7 @@ module.exports = {
             `<:serv:1553154980108828742> **Inscrição:**\n` +
             `<:br_pontinho2qn:1545828067035848814> **R$ ${fee} por equipe**.\n` +
             `<:br_pontinho2qn:1545828067035848814> Inscrição confirmada após o envio do comprovante PIX.\n\n` +
-            `<:serv:1545459134088256> **Premiação:**\n` +
+            `<a:am_trofeu2qn:1556881758723776605> **Premiação:**\n` +
             `<:br_pontinho2qn:1545828067035848814> **R$ 200,00** para o campeonato.\n\n` +
             `<:br_calendario2qn:1545457506392875118> **Data do campeonato:**\n` +
             `<:br_pontinho2qn:1545828067035848814> Será divulgada após o encerramento das inscrições.\n\n` +
