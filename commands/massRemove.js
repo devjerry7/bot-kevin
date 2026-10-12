@@ -1,5 +1,5 @@
 // commands/massRemove.js
-const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 const handleMassRemove = async (message, args) => {
   try {
@@ -11,6 +11,9 @@ const handleMassRemove = async (message, args) => {
     const COLOR_SUCCESS = process.env.COLOR_SUCCESS
       ? parseInt(process.env.COLOR_SUCCESS.replace("#", ""), 16)
       : 0x00ff00;
+    const COLOR_ERROR = process.env.COLOR_ERROR
+      ? parseInt(process.env.COLOR_ERROR.replace("#", ""), 16)
+      : 0xff0000;
 
     const EMOJI_ERROR = process.env.EMOJI_ERROR || "❌";
     const EMOJI_SUCCESS = process.env.EMOJI_SUCCESS || "✅";
@@ -18,14 +21,28 @@ const handleMassRemove = async (message, args) => {
     const EMOJI_LOADING = process.env.EMOJI_LOADING || "🔄";
     const EMOJI_WARNING = process.env.EMOJI_WARNING || "⚠️";
     const EMOJI_BROOM = process.env.EMOJI_BROOM || "🧹";
+    const EMOJI_SHIELD = process.env.EMOJI_SHIELD || "🛡️";
 
-    // 1. Verificação de Permissão (Apenas Admins)
-    if (
-      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-    ) {
-      return message.channel.send(
-        `${EMOJI_ERROR} Você precisa ser Administrador para usar este comando.`,
-      );
+    // Whitelist de Segurança Extrema (Apenas Donos)
+    const whitelistEnv = process.env.WHITELIST_IDS || "";
+    const WHITELIST_IDS = whitelistEnv
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
+    // 1. Verificação de Acesso: Apenas Whitelist pode executar limpeza em massa
+    if (!WHITELIST_IDS.includes(message.author.id)) {
+      return message.channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(`${EMOJI_ERROR} Acesso Negado`)
+            .setDescription(
+              "Apenas membros da **Whitelist Oficial (Donos)** podem executar remoções em massa de cargos.",
+            )
+            .setColor(COLOR_ERROR)
+            .setTimestamp(),
+        ],
+      });
     }
 
     // 2. Identificar o Cargo (por Menção ou ID)
@@ -38,15 +55,21 @@ const handleMassRemove = async (message, args) => {
       );
     }
 
-    // 3. Verificação de Hierarquia (O bot precisa estar ACIMA do cargo)
+    // 3. Proteção contra remoção do cargo gerenciado do próprio bot ou cargos administrativos críticos
+    if (role.managed || role.permissions.has("Administrator")) {
+      return message.channel.send(
+        `${EMOJI_SHIELD} **BLOQUEADO:** Você não pode executar limpeza em massa em cargos administrativos ou integrados por bots.`,
+      );
+    }
+
+    // 4. Verificação de Hierarquia (O bot precisa estar ACIMA do cargo)
     if (role.position >= message.guild.members.me.roles.highest.position) {
       return message.channel.send(
         `${EMOJI_ERROR} Erro de Hierarquia: O cargo **${role.name}** está acima do meu cargo mais alto.`,
       );
     }
 
-    // 4. Início do Processo
-    // Usamos channel.send para evitar o erro de "Unknown Message" se o comando foi deletado
+    // 5. Início do Processo
     const statusMsg = await message.channel.send(
       `${EMOJI_LOADING} Buscando membros com o cargo **${role.name}**... aguarde.`,
     );
@@ -62,7 +85,7 @@ const handleMassRemove = async (message, args) => {
       );
     }
 
-    // 5. Embed de Progresso
+    // 6. Embed de Progresso
     const progressEmbed = new EmbedBuilder()
       .setTitle(`${EMOJI_BROOM} Limpeza Iniciada: ${role.name}`)
       .setDescription(
@@ -76,11 +99,17 @@ const handleMassRemove = async (message, args) => {
 
     await statusMsg.edit({ content: null, embeds: [progressEmbed] });
 
-    // 6. Loop de Remoção com Delay (Anti-Rate Limit)
+    // 7. Loop de Remoção com Delay (Anti-Rate Limit) e checagem de imunidade Whitelist
     let processed = 0;
     let errors = 0;
 
     for (const [id, member] of membersWithRole) {
+      // Impede que o massRemove afete membros da Whitelist mesmo se tiverem o cargo alvo
+      if (WHITELIST_IDS.includes(member.id)) {
+        errors++;
+        continue;
+      }
+
       try {
         await member.roles.remove(role);
         processed++;
@@ -95,24 +124,23 @@ const handleMassRemove = async (message, args) => {
       // Atualiza o embed a cada 5 membros para dar feedback visual
       if (processed % 5 === 0 || processed === total) {
         progressEmbed.setDescription(
-          `${EMOJI_WAIT} Progresso: **${processed}/${total}** removidos.\nFalhas: **${errors}**`,
+          `${EMOJI_WAIT} Progresso: **${processed}/${total}** removidos.\nFalhas/Imunes: **${errors}**`,
         );
         await statusMsg.edit({ embeds: [progressEmbed] }).catch(() => {});
       }
     }
 
-    // 7. Finalização
+    // 8. Finalização
     const finalEmbed = new EmbedBuilder()
       .setTitle(`${EMOJI_SUCCESS} Limpeza Concluída: ${role.name}`)
       .addFields(
         { name: "Sucesso", value: `\`${processed}\` membros`, inline: true },
-        { name: "Falhas", value: `\`${errors}\` membros`, inline: true },
+        { name: "Falhas/Imunes", value: `\`${errors}\` membros`, inline: true },
       )
       .setColor(COLOR_SUCCESS)
       .setTimestamp();
 
     await statusMsg.edit({ embeds: [finalEmbed] }).catch(() => {
-      // Caso a mensagem de status tenha sido apagada, envia uma nova
       message.channel.send({ embeds: [finalEmbed] });
     });
   } catch (error) {

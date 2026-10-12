@@ -26,7 +26,7 @@ module.exports = {
               new EmbedBuilder()
                 .setTitle("🚫 Acesso Negado")
                 .setDescription(
-                  `Você está na **Lista Negra (Blacklist)** deste servidor e foi banido automaticamente.`,
+                  `Você está na **(Blacklist)** deste servidor e foi banido automaticamente.`,
                 )
                 .setColor(COLOR_ERROR),
             ],

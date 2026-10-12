@@ -1,6 +1,7 @@
 // securityManager.js
 const { AuditLogEvent } = require("discord.js");
-const logEmbed = require("../utils/logEmbed"); // Puxando o seu gerador de logs recém-refatorado!
+const logEmbed = require("../utils/logEmbed");
+const { triggerAutoLockdown } = require("../commands/lockdown");
 
 // --- CONFIGURAÇÃO DE LIMITES (Puxando do .env com fallback) ---
 const TIME_WINDOW = Number(process.env.ANTI_NUKE_TIME_MS) || 10000;
@@ -30,8 +31,17 @@ const LIMITS = {
 // Armazenamento temporário em memória: Map<UserID, Map<ActionType, {count, timer}>>
 const tracker = new Map();
 
+// Auxiliar para obter a Whitelist formatada corretamente
+const getWhitelistIds = () => {
+  const whitelistEnv = process.env.WHITELIST_IDS || "";
+  return whitelistEnv
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+};
+
 /**
- * Função principal de verificação de segurança
+ * Função principal de verificação de segurança (Anti-Nuke)
  */
 async function checkSecurity(client, guild, actionType, auditType) {
   try {
@@ -45,15 +55,15 @@ async function checkSecurity(client, guild, actionType, auditType) {
     if (Date.now() - entry.createdTimestamp > 5000) return;
 
     const executor = entry.executor;
+    if (!executor) return;
 
-    // --- 2. VERIFICAÇÃO DE WHITELIST (Lendo do .env) ---
-    const envWhitelist = process.env.WHITELIST_IDS?.split(",") || [];
+    // --- 2. VERIFICAÇÃO DE WHITELIST RIGOROSA ---
+    const envWhitelist = getWhitelistIds();
 
     if (
       executor.id === client.user.id || // Próprio bot
-      executor.id === guild.ownerId || // Dono do Servidor (Discord bloqueia punição de qualquer jeito)
-      executor.id === process.env.OWNER_1_ID || // Você (Desenvolvedor)
-      envWhitelist.includes(executor.id) // Outros bots ou administradores de confiança
+      executor.id === guild.ownerId || // Dono do Servidor
+      envWhitelist.includes(executor.id) // Whitelist oficial configurada
     ) {
       return;
     }
@@ -89,13 +99,15 @@ async function checkSecurity(client, guild, actionType, auditType) {
 }
 
 /**
- * Punição Automática: Remove cargos, Bane e Envia Log
+ * Punição Automática: Remove cargos, Bane, Aciona Lockdown e Envia Logs
  */
 async function punishNuker(guild, user, reasonType) {
   try {
     const member = await guild.members.fetch(user.id).catch(() => null);
 
-    console.log(`[ANTI-NUKE] DETECTADO ATAQUE DE ${user.tag} (${reasonType})`);
+    console.log(
+      `[ANTI-NUKE] 🚨 ATAQUE DETECTADO DE ${user.tag} (${reasonType})`,
+    );
 
     // A. Tenta remover todos os cargos (Quarentena imediata)
     if (member) {
@@ -103,24 +115,35 @@ async function punishNuker(guild, user, reasonType) {
         (r) => r.name !== "@everyone" && r.editable,
       );
       await member.roles
-        .remove(roles, `Anti-Nuke: Detectado ${reasonType}`)
-        .catch(console.error);
+        .remove(
+          roles,
+          `Anti-Nuke: Detectado comportamento hostil (${reasonType})`,
+        )
+        .catch(() => {});
     }
 
-    // B. Bane o usuário
-    await guild.members.ban(user.id, {
-      reason: `[SISTEMA DE SEGURANÇA] Anti-Nuke Trigger: ${reasonType}`,
-    });
+    // B. Bane o usuário do servidor imediatamente
+    await guild.members
+      .ban(user.id, {
+        reason: `[SISTEMA DE SEGURANÇA] Anti-Nuke Trigger: ${reasonType}`,
+      })
+      .catch(() => {});
 
-    // C. Avisa no canal de logs usando sua utilidade oficial
+    // C. Aciona o Lockdown Automático Global do Servidor para estancar o ataque
+    await triggerAutoLockdown(
+      guild,
+      `Ataque Anti-Nuke detectado: ${reasonType} por${user.tag}`,
+    );
+
+    // D. Avisa no canal de logs usando a utilidade oficial
     const logId = process.env.SECURITY_LOG_ID;
     if (logId) {
       await logEmbed(
         guild.client,
         logId,
-        "🚨 ATAQUE DETECTADO E BLOQUEADO",
-        `O sistema Anti-Nuke automático foi acionado e neutralizou uma ameaça.`,
-        0xff0000, // Cor Vermelha
+        "🚨 ATAQUE DE NUKE NEUTRALIZADO",
+        `O sistema Anti-Nuke automático foi acionado, baniu o infrator e ativou o lockdown de segurança.`,
+        0xff0000,
         [
           { name: "Infrator", value: `${user} (\`${user.id}\`)`, inline: true },
           { name: "Gatilho", value: `\`${reasonType}\``, inline: true },

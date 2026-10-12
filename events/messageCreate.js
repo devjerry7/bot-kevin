@@ -17,10 +17,11 @@ const { calculateScores, postReviewEmbed } = require("../game/scoreSystem");
 const { startRound } = require("../game/gameManager");
 const { handlePDCommand } = require("../pdManager");
 
-// --- IMPORTAÇÕES DE HANDLERS (SEGURANÇA) ---
+// --- IMPORTAÇÕES DE HANDLERS (SEGURANÇA E BLACKLIST) ---
 const handleMention = require("../handlers/mentionHandler");
 const handleAntiSpam = require("../handlers/antiSpamHandler");
 const handleChatProtection = require("../handlers/chatProtectionHandler");
+const { isBlacklisted } = require("../protectionManager");
 
 // --- IMPORTAÇÕES DOS COMANDOS (Módulos externos) ---
 const { handleAvatar } = require("../commands/avatar");
@@ -64,6 +65,9 @@ const ffSairCommand = require("../commands/ffsair");
 const staffChatTracker = require("../listeners/staffChatTracker");
 const { handleMeta, handlePausa } = require("../commands/staffUtils");
 
+// ID Direto do Dono para Alertas Críticos de Segurança
+const OWNER_LOG_ID = "1551147533454282806";
+
 // Helper Visual Dinâmico
 const createFeedbackEmbed = (title, description, color) => {
   const COLOR_ERROR = config.colorError || 0xff0000;
@@ -77,6 +81,44 @@ const createFeedbackEmbed = (title, description, color) => {
 // --- INÍCIO DO MÓDULO ---
 module.exports = async (message) => {
   if (message.author.bot || !message.guild) return;
+
+  // ====================================================
+  // 1. CHECAGEM DE BLACKLIST (AÇÃO PUNITIVA IMEDIATA)
+  // ====================================================
+  const userIsBlacklisted = await isBlacklisted(message.author.id);
+  if (userIsBlacklisted) {
+    try {
+      // Deleta a mensagem do usuário na blacklist
+      if (message.deletable) await message.delete().catch(() => {});
+
+      // Banimento imediato do servidor por estar na Blacklist
+      if (message.member && message.member.bannable) {
+        await message.guild.members.ban(message.author.id, {
+          reason: "Segurança: Usuário consta na Blacklist Oficial do Bot.",
+        });
+      }
+
+      // Notifica o Dono no PV sobre a remoção
+      const ownerUser = await message.client.users
+        .fetch(OWNER_LOG_ID)
+        .catch(() => null);
+      if (ownerUser) {
+        const alertEmbed = new EmbedBuilder()
+          .setTitle("🚨 [SEGURANÇA] MEMBRO DA BLACKLIST ELIMINADO")
+          .setDescription(
+            `Um usuário presente na **Blacklist** tentou enviar mensagem no servidor **${message.guild.name}** e foi banido imediatamente.\n\n` +
+              `👤 **Usuário:** ${message.author.tag} (\`${message.author.id}\`)`,
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await ownerUser.send({ embeds: [alertEmbed] }).catch(() => {});
+      }
+    } catch (err) {
+      console.error("[BLACKLIST ENFORCE ERROR]", err);
+    }
+    return; // Interrompe qualquer processamento da mensagem
+  }
 
   // ====================================================
   // ESCUTAR COMPROVANTES NOS TÓPICOS PIX
@@ -167,7 +209,7 @@ module.exports = async (message) => {
   const EMOJI_STOP = config.emoji?.stop || "🛑";
 
   // ====================================================
-  // 2. CAMADA DE SEGURANÇA
+  // 2. CAMADA DE SEGURANÇA (CHAT E ANTI-SPAM)
   // ====================================================
   if (await handleChatProtection(message)) return;
   if (await handleAntiSpam(message)) return;

@@ -1,6 +1,15 @@
 // protectionManager.js
 const prisma = require("./database");
 
+// Auxiliar para ler e limpar os IDs da whitelist do .env
+const getWhitelistIds = () => {
+  const whitelistEnv = process.env.WHITELIST_IDS || "";
+  return whitelistEnv
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+};
+
 module.exports = {
   // ==========================================
   // 🛡️ PANELA (Anti-ban / Whitelist)
@@ -26,8 +35,8 @@ module.exports = {
   },
 
   isPanela: async (userId) => {
-    // 1. Imunidade Suprema: Verifica se é o dono ou se está na whitelist fixa do .env
-    const envWhitelist = process.env.WHITELIST_IDS?.split(",") || [];
+    // 1. Imunidade Suprema: Verifica se está na whitelist fixa do .env com tratamento correto
+    const envWhitelist = getWhitelistIds();
     if (userId === process.env.OWNER_1_ID || envWhitelist.includes(userId)) {
       return true;
     }
@@ -47,6 +56,15 @@ module.exports = {
   // ==========================================
   addToBlacklist: async (userId) => {
     try {
+      // Trava de segurança: Membros da Whitelist jamais podem ser colocados na Blacklist
+      const envWhitelist = getWhitelistIds();
+      if (userId === process.env.OWNER_1_ID || envWhitelist.includes(userId)) {
+        console.warn(
+          `[SECURITY WARNING] Tentativa bloqueada de colocar um membro da Whitelist (${userId}) na Blacklist.`,
+        );
+        return false;
+      }
+
       await prisma.blacklist.create({ data: { userId } });
       return true;
     } catch (e) {

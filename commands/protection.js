@@ -1,5 +1,5 @@
 // commands/protection.js
-const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const {
   addToPanela,
   removeFromPanela,
@@ -15,10 +15,17 @@ module.exports = {
     const PANELA_LOG_ID = process.env.PANELA_LOG_ID;
     const BLACKLIST_LOG_ID = process.env.BLACKLIST_LOG_ID;
 
+    // Apenas membros presentes na WHITELIST_IDS podem gerenciar segurança
+    const whitelistEnv = process.env.WHITELIST_IDS || "";
+    const WHITELIST_IDS = whitelistEnv
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
     // Cores
     const COLOR_BASE = process.env.COLOR_BASE
       ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
-      : 0x00e5ff;
+      : 0x962dc0;
     const COLOR_SUCCESS = process.env.COLOR_SUCCESS
       ? parseInt(process.env.COLOR_SUCCESS.replace("#", ""), 16)
       : 0x00ff00;
@@ -40,14 +47,13 @@ module.exports = {
         .setTimestamp();
     };
 
-    if (
-      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-    ) {
+    // Bloqueia qualquer um que NÃO esteja na Whitelist (mesmo que seja Administrador)
+    if (!WHITELIST_IDS.includes(message.author.id)) {
       return message.channel.send({
         embeds: [
           createEmbed(
-            `${EMOJI_ERROR} Sem Permissão`,
-            "Apenas Administradores podem gerenciar a Proteção.",
+            `${EMOJI_ERROR} Acesso Negado`,
+            "Apenas a **Whitelist Oficial (Donos)** pode gerenciar os sistemas de proteção do servidor.",
             COLOR_ERROR,
           ),
         ],
@@ -108,8 +114,8 @@ module.exports = {
           return message.channel.send({
             embeds: [
               createEmbed(
-                `${EMOJI_COMMUNITY} Adicionado`,
-                `<@${targetId}> agora está na **Panela** e não pode ser banido pelo bot.`,
+                `${EMOJI_COMMUNITY} Adicionado à Panela`,
+                `<@${targetId}> agora está na **Panela** e não pode ser punido por sistemas automáticos.`,
               ),
             ],
           });
@@ -131,7 +137,7 @@ module.exports = {
           return message.channel.send({
             embeds: [
               createEmbed(
-                `${EMOJI_COMMUNITY} Removido`,
+                `${EMOJI_COMMUNITY} Removido da Panela`,
                 `<@${targetId}> foi removido da Panela.`,
                 COLOR_ERROR,
               ),
@@ -153,53 +159,57 @@ module.exports = {
           : "Ninguém na blacklist.";
         return message.channel.send({
           embeds: [
-            createEmbed(`${EMOJI_SKULL} Blacklist`, description, 0x2f3136),
+            createEmbed(
+              `${EMOJI_SKULL} Blacklist Geral`,
+              description,
+              0x2f3136,
+            ),
           ],
         });
       }
 
       if (!targetId) {
         return message.channel.send(
-          `${EMOJI_ERROR} Uso: \`${PREFIX}blacklist add/rem <id>\` ou \`${PREFIX}blacklist list\``,
+          `${EMOJI_ERROR} Uso: \`${PREFIX}blacklist add/rem <id/menção>\` ou \`${PREFIX}blacklist list\``,
         );
       }
 
       if (action === "add") {
-        const member = await message.guild.members
-          .fetch(targetId)
-          .catch(() => null);
+        // 1. Adiciona obrigatoriamente no banco de dados primeiro
+        const added = await addToBlacklist(targetId);
 
-        if (member) {
-          if (!member.bannable) {
-            return message.channel.send(
-              `${EMOJI_ERROR} Não consigo banir este usuário agora (cargo alto), mas adicionei à lista.`,
-            );
-          }
-          await member.ban({
-            reason: `Blacklist adicionada por ${message.author.tag}`,
-          });
-        }
-
-        if (await addToBlacklist(targetId)) {
-          await sendLog(
-            BLACKLIST_LOG_ID,
-            "🚫 Blacklist Atualizada",
-            `O ID \`${targetId}\` foi **ADICIONADO** à Blacklist.`,
-            0x2f3136,
+        if (!added) {
+          return message.channel.send(
+            `${EMOJI_ERROR} Este ID já está na blacklist.`,
           );
-
-          return message.channel.send({
-            embeds: [
-              createEmbed(
-                `${EMOJI_SKULL} Blacklist`,
-                `O ID \`${targetId}\` foi adicionado à Blacklist e será banido se entrar.`,
-              ),
-            ],
-          });
         }
-        return message.channel.send(
-          `${EMOJI_ERROR} Este ID já está na blacklist.`,
+
+        // 2. Tenta efetuar o banimento direto no servidor
+        let banStatus = "Usuário banido com sucesso!";
+        try {
+          await message.guild.members.ban(targetId, {
+            reason: `Adicionado à Blacklist por ${message.author.tag}`,
+          });
+        } catch (err) {
+          banStatus =
+            "Adicionado à blacklist (mas não foi possível banir no momento devido a permissões/hierarquia). Ele será expulso se tentar entrar.";
+        }
+
+        await sendLog(
+          BLACKLIST_LOG_ID,
+          "🚫 Blacklist Atualizada",
+          `O ID \`${targetId}\` foi **ADICIONADO** à Blacklist por <@${message.author.id}>.`,
+          0x2f3136,
         );
+
+        return message.channel.send({
+          embeds: [
+            createEmbed(
+              `${EMOJI_SKULL} Blacklist Atualizada`,
+              `O ID \`${targetId}\` foi adicionado à Blacklist.\n\n📌 **Status:** ${banStatus}`,
+            ),
+          ],
+        });
       }
 
       if (action === "rem") {
@@ -211,15 +221,15 @@ module.exports = {
           await sendLog(
             BLACKLIST_LOG_ID,
             "🚫 Blacklist Atualizada",
-            `O ID \`${targetId}\` foi **REMOVIDO** da Blacklist.`,
+            `O ID \`${targetId}\` foi **REMOVIDO** da Blacklist por <@${message.author.id}>.`,
             COLOR_ERROR,
           );
 
           return message.channel.send({
             embeds: [
               createEmbed(
-                `${EMOJI_SKULL} Blacklist`,
-                `O ID \`${targetId}\` foi removido da Blacklist.`,
+                `${EMOJI_SKULL} Blacklist Atualizada`,
+                `O ID \`${targetId}\` foi removido da Blacklist e desbanido.`,
                 COLOR_ERROR,
               ),
             ],

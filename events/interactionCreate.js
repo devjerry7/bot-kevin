@@ -300,7 +300,7 @@ module.exports = async (interaction) => {
           });
         } catch (error) {
           return interaction.reply({
-            content: `${config.emoji.warning || "<:ama_cuidado2qn:1545494059081142403>️️"} Você já está inscrito neste campeonato!`,
+            content: `${config.emoji.warning || "<:ama_cuidado2qn:1545494059081142403>"} Você já está inscrito neste campeonato!`,
             flags: MessageFlags.Ephemeral,
           });
         }
@@ -483,7 +483,7 @@ module.exports = async (interaction) => {
 
     // 3. ROTEAMENTO DOS SISTEMAS PRINCIPAIS (Botões, Menus e Modais ativos)
     if (await handleTournamentInteractions(interaction)) return;
-    if (await handlePaymentInteractions(interaction)) return; // <--- AGORA PLUGADO CORRETAMENTE!
+    if (await handlePaymentInteractions(interaction)) return;
     if (await handleGameRoles(interaction)) return;
     if (await handleNotifyRoles(interaction)) return;
     if (await handleStopGame(interaction)) return;
