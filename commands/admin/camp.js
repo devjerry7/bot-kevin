@@ -230,7 +230,7 @@ module.exports = {
 
         let matches = activeRound.matches;
         console.log(
-          `[LOG-CAMP] Rodada ativa detectada: ${activeRound.name} (ID: ${activeRound.id}) | Partidas: ${matches.length}`,
+          `[LOG-CAMP] Rodada ativa detectada: ${activeRound.name} (ID: ${activeRound.id}) | Partidas no banco: ${matches.length}`,
         );
 
         // Se estivermos no Round 1 e não houver partidas criadas, gera o sorteio inicial
@@ -284,15 +284,24 @@ module.exports = {
           matches = activeRound.matches;
         }
 
-        console.log(
-          "[LOG-CAMP] Quantidade de partidas prontas para renderizar:",
-          matches.length,
-        );
-        matches.forEach((m, idx) => {
-          console.log(
-            `[LOG-CAMP]   -> Partida [${idx + 1}] ID: ${m.id} | Num: ${m.matchNumber} | Status: ${m.status} | TeamA: ${m.teamA?.name} | TeamB: ${m.teamB?.name || "BYE"}`,
-          );
+        // =========================================================
+        // AGRUPAMENTO DE PARTIDAS POR CONFRONTO (matchNumber)
+        // Evita listar confrontos duplicados na exibição do painel
+        // =========================================================
+        const groupedMatchesMap = new Map();
+
+        matches.forEach((m) => {
+          const matchNum = m.matchNumber;
+          if (!groupedMatchesMap.has(matchNum)) {
+            groupedMatchesMap.set(matchNum, []);
+          }
+          groupedMatchesMap.get(matchNum).push(m);
         });
+
+        // Ordena os confrontos sequencialmente pelo matchNumber
+        const sortedMatchNumbers = Array.from(groupedMatchesMap.keys()).sort(
+          (a, b) => a - b,
+        );
 
         const adminChannel = await message.client.channels
           .fetch(DiscordMatchService.CHANNELS.ADMIN_LOGS)
@@ -310,22 +319,36 @@ module.exports = {
 
         let hasPendingMatches = false;
 
-        matches.forEach((match, i) => {
-          const matchNum = match.matchNumber || i + 1;
-          const teamAName = match.teamA?.name || "Equipe A";
-          const teamBName = match.teamB?.name;
+        sortedMatchNumbers.forEach((matchNum) => {
+          const matchGroup = groupedMatchesMap.get(matchNum);
+
+          // Pega a partida ativa/pendente prioritariamente, senão pega a mais recente
+          const activeOrPendingMatch =
+            matchGroup.find((m) => m.status === "IN_PROGRESS") ||
+            matchGroup.find((m) => m.status === "PENDING") ||
+            matchGroup[matchGroup.length - 1];
+
+          // Define o status consolidado do confronto
+          const isGroupFinished = matchGroup.every(
+            (m) => m.status === "FINISHED",
+          );
+          const isGroupInProgress = matchGroup.some(
+            (m) => m.status === "IN_PROGRESS",
+          );
+
+          const teamAName = activeOrPendingMatch.teamA?.name || "Equipe A";
+          const teamBName = activeOrPendingMatch.teamB?.name;
 
           if (teamBName) {
-            const statusBadge =
-              match.status === "FINISHED"
-                ? "<a:ver_verifcado2qn:1535775624864473169> [Finalizada]"
-                : match.status === "IN_PROGRESS"
-                  ? "<:jg_espada2qn:1555686156434411680> [Em Andamento]"
-                  : "<:marr_tempo2qn:1545445362255400960> [Pendente]";
+            const statusBadge = isGroupFinished
+              ? "<a:ver_verifcado2qn:1535775624864473169> [Finalizada]"
+              : isGroupInProgress
+                ? "<:jg_espada2qn:1555686156434411680> [Em Andamento]"
+                : "<:marr_tempo2qn:1545445362255400960> [Pendente]";
 
             descriptionList += `${statusBadge} **[Jogo ${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
 
-            if (match.status !== "FINISHED") {
+            if (!isGroupFinished) {
               hasPendingMatches = true;
               selectMenu.addOptions(
                 new StringSelectMenuOptionBuilder()
@@ -335,9 +358,9 @@ module.exports = {
                       100,
                     ),
                   )
-                  .setValue(match.id)
+                  .setValue(activeOrPendingMatch.id)
                   .setDescription(
-                    match.status === "IN_PROGRESS"
+                    isGroupInProgress
                       ? "Confronto em andamento (já iniciado)"
                       : "Clique para criar a infraestrutura privada",
                   ),
