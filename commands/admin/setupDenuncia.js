@@ -1,33 +1,28 @@
-// commands/admin/setupDenuncia.js
+// commands/prefix/setupDenuncia.js (ou o caminho equivalente no seu projeto)
 const {
-  SlashCommandBuilder,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   PermissionsBitField,
-  MessageFlags,
 } = require("discord.js");
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName("setup-denuncia")
-    .setDescription(
-      "Posta o painel oficial de denúncias e reclamações do torneio.",
-    ),
-
-  async execute(interaction) {
+  name: "setupdenuncia",
+  aliases: ["setup-denuncia", "paineldenuncia"],
+  description: "Posta o painel oficial de denúncias e reclamações do torneio.",
+  async execute(message, args) {
+    // Validação de permissão de Administrador
     if (
-      !interaction.member.permissions.has(
-        PermissionsBitField.Flags.Administrator,
-      )
+      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
     ) {
-      return interaction.reply({
-        content:
-          "<:verm_x2qn:1545444524241719376> Apenas administradores podem executar este comando.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return message.reply(
+        "<:verm_x2qn:1545444524241719376> Apenas administradores podem executar este comando.",
+      );
     }
+
+    // Tenta apagar a mensagem do comando para manter o canal limpo
+    await message.delete().catch(() => {});
 
     const embed = new EmbedBuilder()
       .setTitle(
@@ -54,15 +49,9 @@ module.exports = {
         .setEmoji("<a:verm_alerta2qn:1555456678256975974>"),
     );
 
-    await interaction.channel.send({
+    await message.channel.send({
       embeds: [embed],
       components: [row],
-    });
-
-    return interaction.reply({
-      content:
-        "<a:ver_verifcado2qn:1535775624864473169> Painel de denúncias postado com sucesso neste canal!",
-      flags: MessageFlags.Ephemeral,
     });
   },
 };
