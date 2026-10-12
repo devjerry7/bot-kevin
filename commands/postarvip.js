@@ -74,7 +74,7 @@ const handlePostVip = async (message) => {
       .setColor(COLOR_BASE)
       .setImage(BANNER_VIP)
       .setFooter({
-        text: "**__Todo valor arrecadado é revertido em melhorias para o servidor!__**",
+        text: "Todo valor arrecadado é revertido em melhorias para o servidor!",
         iconURL: message.guild.iconURL(),
       })
       .setTimestamp();
