@@ -169,6 +169,24 @@ const config = {
 // ==========================================
 // 💡 INJEÇÃO MÁGICA DE COMPATIBILIDADE
 // ==========================================
+// Cargo de Jogos (Injeção que faltava!)
+process.env.ROLE_FF = config.gameRoles.ff;
+process.env.ROLE_VAL = config.gameRoles.val;
+process.env.ROLE_CS = config.gameRoles.cs;
+process.env.ROLE_GTA = config.gameRoles.gta;
+process.env.ROLE_ROBLOX = config.gameRoles.roblox;
+process.env.ROLE_MINE = config.gameRoles.mine;
+process.env.ROLE_CODENAMES = config.gameRoles.codenames;
+process.env.ROLE_AMONGUS = config.gameRoles.amongus;
+process.env.ROLE_LOL = config.gameRoles.lol;
+process.env.ROLE_PLATO = config.gameRoles.plato;
+process.env.ROLE_GARTIC = config.gameRoles.gartic;
+process.env.ROLE_BLOODSTRIKE = config.gameRoles.bloodstrike;
+process.env.ROLE_CLASH = config.gameRoles.clash;
+process.env.ROLE_STANDOFF = config.gameRoles.standoff;
+process.env.ROLE_STUMBLE = config.gameRoles.stumble;
+process.env.ROLE_FORTNITE = config.gameRoles.fortnite;
+
 process.env.DISCORD_TOKEN = config.token;
 process.env.CLIENT_ID = config.clientId;
 process.env.GUILD_ID = config.guildId;
