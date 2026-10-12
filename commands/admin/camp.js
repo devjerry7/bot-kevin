@@ -4,6 +4,8 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
   PermissionsBitField,
 } = require("discord.js");
 const TournamentService = require("../../services/tournamentService");
@@ -143,7 +145,7 @@ module.exports = {
     }
 
     // ----------------------------------------------------
-    // PAINEL DE CONTROLE DOS CONFRONTOS (DINÂMICO POR RODADA)
+    // PAINEL DE CONTROLE DOS CONFRONTOS (DROPDOWN MENU)
     // ----------------------------------------------------
     if (subCommand === "confrontos") {
       console.log(
@@ -298,10 +300,17 @@ module.exports = {
 
         const targetChannel = adminChannel || message.channel;
 
-        let descriptionList = `Abaixo estão listados os confrontos da fase **${activeRound.name}**.\nClique no botão correspondente para **iniciar o confronto.**\n\n`;
+        let descriptionList = `Abaixo estão listados os confrontos da fase **${activeRound.name}**.\nSelecione a partida no menu abaixo para **iniciar o confronto.**\n\n`;
 
-        const components = [];
-        let currentRow = new ActionRowBuilder();
+        const selectMenu = new StringSelectMenuBuilder()
+          .setCustomId("select_start_match")
+          .setPlaceholder(
+            "<:jg_espada2qn:1555686156434411680> Selecione um confronto para iniciar...",
+          )
+          .setMinValues(1)
+          .setMaxValues(1);
+
+        let hasPendingMatches = false;
 
         matches.forEach((match, i) => {
           const matchNum = match.matchNumber || i + 1;
@@ -311,55 +320,39 @@ module.exports = {
           if (teamBName) {
             const statusBadge =
               match.status === "FINISHED"
-                ? "✅ [Finalizada]"
+                ? "<a:ver_verifcado2qn:1535775624864473169> [Finalizada]"
                 : match.status === "IN_PROGRESS"
-                  ? "⚔️ [Em Andamento]"
-                  : "⏳ [Pendente]";
-            descriptionList += `${statusBadge} **[Jogo #${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
+                  ? "<:jg_espada2qn:1555686156434411680> [Em Andamento]"
+                  : "<:marr_tempo2qn:1545445362255400960> [Pendente]";
 
-            if (currentRow.components.length < 4) {
-              currentRow.addComponents(
-                new ButtonBuilder()
-                  .setCustomId(`start_match_${match.id}`)
+            descriptionList += `${statusBadge} **[Jogo ${matchNum}]** ${teamAName} **VS** ${teamBName}\n`;
+
+            if (match.status !== "FINISHED") {
+              hasPendingMatches = true;
+              selectMenu.addOptions(
+                new StringSelectMenuOptionBuilder()
                   .setLabel(
-                    `Jogo #${matchNum}: ${teamAName} vs ${teamBName}`.substring(
+                    `Jogo ${matchNum}: ${teamAName} vs ${teamBName}`.substring(
                       0,
-                      80,
+                      100,
                     ),
                   )
-                  .setStyle(
-                    match.status === "FINISHED"
-                      ? ButtonStyle.Success
-                      : ButtonStyle.Secondary,
-                  )
-                  .setDisabled(match.status === "FINISHED"),
-              );
-            } else {
-              components.push(currentRow);
-              currentRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                  .setCustomId(`start_match_${match.id}`)
-                  .setLabel(
-                    `Jogo #${matchNum}: ${teamAName} vs ${teamBName}`.substring(
-                      0,
-                      80,
-                    ),
-                  )
-                  .setStyle(
-                    match.status === "FINISHED"
-                      ? ButtonStyle.Success
-                      : ButtonStyle.Secondary,
-                  )
-                  .setDisabled(match.status === "FINISHED"),
+                  .setValue(match.id)
+                  .setDescription(
+                    match.status === "IN_PROGRESS"
+                      ? "Confronto em andamento (já iniciado)"
+                      : "Clique para criar a infraestrutura privada",
+                  ),
               );
             }
           } else {
-            descriptionList += `👤 **[Jogo #${matchNum}]** ${teamAName} avança automaticamente (BYE)\n`;
+            descriptionList += `👤 **[Jogo ${matchNum}]** ${teamAName} avança automaticamente (BYE)\n`;
           }
         });
 
-        if (currentRow.components.length > 0) {
-          components.push(currentRow);
+        const components = [];
+        if (hasPendingMatches) {
+          components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
 
         const embedConfrontos = new EmbedBuilder()
@@ -372,7 +365,7 @@ module.exports = {
 
         await targetChannel.send({
           embeds: [embedConfrontos],
-          components: components.length > 0 ? components : [],
+          components,
         });
 
         return message.reply(

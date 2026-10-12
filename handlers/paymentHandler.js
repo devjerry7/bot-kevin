@@ -7,6 +7,8 @@ const {
   ChannelType,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 /**
  * Manipulador de interações focado em Pagamentos, PIX, Comprovantes e Validação da Equipe
@@ -16,7 +18,7 @@ module.exports = async function handlePaymentInteractions(interaction) {
     // 1. Botão para Copiar Chave PIX
     if (interaction.isButton() && interaction.customId === "btn_copiar_pix") {
       await interaction.reply({
-        content: `**Chave PIX:**\n\`pix@2qn.com.br\`\n\n*(Pelo celular, pressione e segure o texto acima para copiar a chave!)*`,
+        content: `**Chave PIX:**\n\`discord.gg2qn@gmail.com\`\n\n*(Pelo celular, pressione e segure o texto acima para copiar a chave!)*`,
         flags: MessageFlags.Ephemeral,
       });
       return true;
@@ -27,7 +29,6 @@ module.exports = async function handlePaymentInteractions(interaction) {
       interaction.isButton() &&
       interaction.customId.startsWith("btn_enviar_comprovante_")
     ) {
-      // Adicionado deferReply imediato para evitar o erro de "não respondeu a tempo" (limite de 3s do Discord)
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const teamId = interaction.customId.replace(
@@ -35,6 +36,19 @@ module.exports = async function handlePaymentInteractions(interaction) {
         "",
       );
       const channel = interaction.channel;
+
+      // 🛑 MARCA A EQUIPE COMO 'PAYMENT_REVIEW' PARA CANCELAR/IGNORAR O TIMEOUT DE 15 MINUTOS
+      try {
+        await prisma.team.update({
+          where: { id: teamId },
+          data: { status: "PAYMENT_REVIEW" },
+        });
+      } catch (err) {
+        console.error(
+          "[PAYMENT LOG] Erro ao atualizar status para PAYMENT_REVIEW:",
+          err,
+        );
+      }
 
       const thread = await channel.threads.create({
         name: `pix-${teamId}-${interaction.user.username}`.substring(0, 100),
@@ -56,7 +70,7 @@ module.exports = async function handlePaymentInteractions(interaction) {
       return true;
     }
 
-    // 3. Aprovação ou Rejeição de Comprovante pela Equipe
+    // 3. Aprovação ou Rejeição de Comprovante pela Equipe / Staff
     if (
       interaction.isButton() &&
       (interaction.customId.startsWith("staff_approve_") ||
@@ -164,10 +178,10 @@ module.exports = async function handlePaymentInteractions(interaction) {
             const freshTournament =
               await TournamentService.getActiveTournament();
             if (freshTournament) {
-              const activeTeams = freshTournament.teams.filter(
-                (t) => !["CANCELLED"].includes(t.status),
+              const confirmedCount = freshTournament.teams.filter(
+                (t) => t.status === "CONFIRMED",
               ).length;
-              const vagasRestantes = freshTournament.maxTeams - activeTeams;
+              const vagasRestantes = freshTournament.maxTeams - confirmedCount;
               const oldEmbed = panelMsg.embeds[0];
               const newEmbed = EmbedBuilder.from(oldEmbed).setDescription(
                 `Chegou a hora! Registre seu squad abaixo.\n\n` +
@@ -207,10 +221,23 @@ module.exports = async function handlePaymentInteractions(interaction) {
         });
         return true;
       } else {
+        // REJEITADO
+        try {
+          await prisma.team.update({
+            where: { id: teamId },
+            data: { status: "CANCELLED" },
+          });
+        } catch (err) {
+          console.error(
+            "[PAYMENT LOG] Erro ao mudar status para CANCELLED:",
+            err,
+          );
+        }
+
         if (ticketThread) {
           await ticketThread
             .send(
-              `<:serv:1545444524241719376> **Comprovante Recusado.** Por favor, envie um comprovante válido neste chat.`,
+              `<:serv:1545444524241719376> **Comprovante Recusado.** Vaga liberada. Se você já pagou, entre em contato com a moderação.`,
             )
             .catch(() => {});
         }

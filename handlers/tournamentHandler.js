@@ -14,6 +14,8 @@ const {
   ChannelType,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 // Armazenamento temporário em memória para o fluxo de seleção de emuladores antes de salvar no banco
 const pendingRegistrations = new Map();
@@ -301,7 +303,6 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       pendingRegistrations.delete(captainId);
 
-      const tournament = await TournamentService.getActiveTournament();
       const team = await TournamentService.registerTeam({
         tournamentId: pending.tournamentId,
         teamName: pending.teamName,
@@ -310,6 +311,73 @@ module.exports = async function handleTournamentInteractions(interaction) {
       });
 
       console.log("[TOURNAMENT LOG] Equipe registrada com ID:", team.id);
+
+      // =========================================================================
+      // ⏳ TIMEOUT DE 15 MINUTOS (BLINDAGEM CONTRA CURIOSOS)
+      // =========================================================================
+      setTimeout(
+        async () => {
+          try {
+            const checkTeam = await prisma.team.findUnique({
+              where: { id: team.id },
+            });
+
+            // Se após 15 minutos a equipe ainda estiver aguardando pagamento
+            if (checkTeam && checkTeam.status === "PENDING_PAYMENT") {
+              await prisma.team.update({
+                where: { id: team.id },
+                data: { status: "CANCELLED" },
+              });
+
+              // Tenta avisar o capitão na DM
+              try {
+                const captainUser = await interaction.client.users.fetch(
+                  team.captainId,
+                );
+                if (captainUser) {
+                  await captainUser.send(
+                    `⏱️ **Tempo Limite de Inscrição Expirado!**\n\n` +
+                      `Sua pré-reserva para a equipe **${team.name}** no Campeonato 4x4 foi **cancelada** pois o comprovante PIX não foi enviado em até 15 minutos.\n\n` +
+                      `• Se ainda deseja participar, por favor realize o processo de inscrição novamente.\n` +
+                      `• **Aviso:** Se você realizou o pagamento via PIX após o tempo limite, entre em contato imediatamente com a administração da **2QN** para validar sua vaga manualmente.`,
+                  );
+                }
+              } catch (dmErr) {
+                console.log(
+                  `[TIMEOUT LOG] Não foi possível enviar DM para o capitão ${team.captainId}`,
+                );
+              }
+
+              // Procura e deleta o tópico do PIX caso tenha sido aberto
+              try {
+                const fetchedThreads =
+                  await interaction.guild.channels.fetchActiveThreads();
+                const pixThread = fetchedThreads.threads.find(
+                  (t) => t.name && t.name.includes(team.id),
+                );
+                if (pixThread) {
+                  await pixThread.delete().catch(() => {});
+                }
+              } catch (threadErr) {
+                console.error(
+                  "[TIMEOUT LOG] Erro ao deletar tópico do PIX expirado:",
+                  threadErr,
+                );
+              }
+
+              console.log(
+                `[TIMEOUT LOG] Equipe ${team.name} (${team.id}) cancelada por inatividade.`,
+              );
+            }
+          } catch (timeoutErr) {
+            console.error(
+              "[TIMEOUT LOG] Erro no timeout da equipe:",
+              timeoutErr,
+            );
+          }
+        },
+        15 * 60 * 1000,
+      ); // 15 Minutos
 
       const playersFormattedList = team.players
         .map(
@@ -326,7 +394,7 @@ module.exports = async function handleTournamentInteractions(interaction) {
           `**Equipe:** ${team.name}\n` +
             `**Capitão:** <@${team.captainId}>\n\n` +
             `<:an_membro:1553155856168652800> **Jogadores:**\n${playersFormattedList}\n\n` +
-            `Realize o pagamento da taxa via PIX e envie o comprovante.`,
+            `⏱️ **Você tem 15 minutos para realizar o pagamento via PIX e enviar o comprovante.**`,
         )
         .setColor(0x9b59b6);
 

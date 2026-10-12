@@ -47,7 +47,7 @@ class DiscordMatchService {
     const allowedUserIds = [...team1MemberIds, ...team2MemberIds];
 
     // Nome da categoria limpo e profissional
-    const categoryName = `⚔️ Jogo #${match.matchNumber || match.id.slice(-4)} | ${team1Name} x ${team2Name}`;
+    const categoryName = `⚔️ Jogo ${match.matchNumber || match.id.slice(-4)} | ${team1Name} x ${team2Name}`;
 
     // Descobrir a posição para criar a categoria acima da categoria de referência
     let targetPosition = undefined;
@@ -105,7 +105,7 @@ class DiscordMatchService {
 
     // 2. Criar Canal de Voz da Equipe 1
     const voiceTeam1 = await guild.channels.create({
-      name: `🔊 [${team1Name}]`,
+      name: `🔊 ${team1Name}`,
       type: ChannelType.GuildVoice,
       parent: category.id,
       permissionOverwrites,
@@ -113,7 +113,7 @@ class DiscordMatchService {
 
     // 3. Criar Canal de Voz da Equipe 2
     const voiceTeam2 = await guild.channels.create({
-      name: `🔊 [${team2Name}]`,
+      name: `🔊 ${team2Name}`,
       type: ChannelType.GuildVoice,
       parent: category.id,
       permissionOverwrites,
@@ -121,7 +121,7 @@ class DiscordMatchService {
 
     // 4. Criar Canal de Texto do Confronto com nome limpo
     const textChannel = await guild.channels.create({
-      name: `💬-confronto-${matchIdentifier.toLowerCase()}`,
+      name: `💬-confronto-${match.matchNumber}`,
       type: ChannelType.GuildText,
       parent: category.id,
       permissionOverwrites,

@@ -23,11 +23,14 @@ const handleTempVoicePanel = require("../handlers/tempVoicePanelHandler");
 // 🔔 IMPORTANDO O NOSSO NOVO SISTEMA DE NOTIFICAÇÕES
 const handleNotifyRoles = require("../handlers/notifyRoleHandler");
 
-// 🏆 IMPORTANDO O HANDLER DO CAMPEONATO 4X4 (2QN)
+// <a:am_trofelzinho:1556881756521766934> IMPORTANDO O HANDLER DO CAMPEONATO 4X4 (2QN)
 const handleTournamentInteractions = require("../handlers/tournamentHandler");
 
 // 💸 IMPORTANDO O HANDLER DE PAGAMENTO E PIX
 const handlePaymentInteractions = require("../handlers/paymentHandler");
+
+// 🚨 IMPORTANDO O HANDLER DE DENÚNCIAS
+const handleReportInteractions = require("../handlers/reportHandler");
 
 // ⚔️ SERVIÇO DE INFRAESTRUTURA DE CONFRONTOS NO DISCORD
 const DiscordMatchService = require("../services/discordMatchService");
@@ -72,10 +75,81 @@ module.exports = async (interaction) => {
     }
 
     // ==========================================
-    // 🏆 SISTEMA DE TORNEIO FREE FIRE (LEGADO & 4X4)
+    // <a:am_trofelzinho:1556881756521766934> MENU DE SELEÇÃO DE CONFRONTOS (4X4)
+    // ==========================================
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId === "select_start_match") {
+        if (
+          !interaction.member.permissions.has(
+            PermissionsBitField.Flags.Administrator,
+          )
+        ) {
+          return interaction.reply({
+            content: `${config.emoji.error || "<:verm_x2qn:1545444524241719376>"} Apenas administradores podem iniciar os confrontos.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const matchId = interaction.values[0];
+
+        try {
+          const match = await prisma.match.findUnique({
+            where: { id: matchId },
+            include: {
+              teamA: { include: { players: true } },
+              teamB: { include: { players: true } },
+            },
+          });
+
+          if (!match) {
+            return interaction.editReply(
+              "<:verm_x2qn:1545444524241719376> Partida não encontrada no banco de dados.",
+            );
+          }
+
+          const infra = await DiscordMatchService.setupMatchInfrastructure(
+            interaction.guild,
+            match,
+            "Confronto",
+          );
+
+          if (!infra) {
+            return interaction.editReply(
+              "<:ama_cuidado2qn:1545494059081142403> Esta partida é um BYE e não possui infraestrutura de Discord.",
+            );
+          }
+
+          await interaction.editReply(
+            `<a:ver_verifcado2qn:1535775624864473169> Infraestrutura criada com sucesso! Categoria, calls e canal de texto gerados para **${match.teamA.name} x ${match.teamB.name}**.`,
+          );
+
+          const adminLogChannel = await interaction.client.channels
+            .fetch(DiscordMatchService.CHANNELS.ADMIN_LOGS)
+            .catch(() => null);
+
+          if (adminLogChannel) {
+            const matchNum = match.matchNumber || 1;
+            await adminLogChannel.send(
+              `📢 **Confronto Iniciado:** Jogo ${matchNum} (${match.teamA.name} vs ${match.teamB.name}) liberado por <@${interaction.user.id}>.`,
+            );
+          }
+        } catch (err) {
+          console.error("[ERRO MATCH START]", err);
+          await interaction.editReply(
+            "<:verm_x2qn:1545444524241719376> Erro ao criar a infraestrutura do confronto no Discord. Verifique os logs do console.",
+          );
+        }
+        return;
+      }
+    }
+
+    // ==========================================
+    // <a:am_trofelzinho:1556881756521766934> SISTEMA DE TORNEIO FREE FIRE (LEGADO & 4X4)
     // ==========================================
     if (interaction.isButton()) {
-      // 2C. CAPTURA DO BOTÃO DE INICIAR CONFRONTO (4X4 - PAINEL DA ADMINISTRAÇÃO)
+      // 2C. CAPTURA DO BOTÃO DE INICIAR CONFRONTO (LEGADO - MANTIDO PARA COMPATIBILIDADE)
       if (interaction.customId.startsWith("start_match_")) {
         if (
           !interaction.member.permissions.has(
@@ -128,8 +202,9 @@ module.exports = async (interaction) => {
             .catch(() => null);
 
           if (adminLogChannel) {
+            const matchNum = match.matchNumber || 1;
             await adminLogChannel.send(
-              `📢 **Confronto Iniciado:** Jogo #${match.id.slice(-4)} (${match.teamA.name} vs ${match.teamB.name}) liberado por <@${interaction.user.id}>.`,
+              `📢 **Confronto Iniciado:** Jogo ${matchNum} (${match.teamA.name} vs ${match.teamB.name}) liberado por <@${interaction.user.id}>.`,
             );
           }
         } catch (err) {
@@ -141,7 +216,7 @@ module.exports = async (interaction) => {
         return;
       }
 
-      // 2D. CAPTURA DO BOTÃO DE DECLARAÇÃO DE VITÓRIA (4X4 - NOVO SISTEMA)
+      // 2D. CAPTURA DO BOTÃO DE DECLARAÇÃO DE VITÓRIA (4X4 - COM SUPORTE A MD3)
       if (interaction.customId.startsWith("match_win_")) {
         if (
           !interaction.member.permissions.has(
@@ -156,21 +231,55 @@ module.exports = async (interaction) => {
 
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        // Formato do ID: match_win_MATCHID_WINNERTEAMID
         const parts = interaction.customId.split("_");
         const matchId = parts[2];
         const winnerTeamId = parts[3];
 
         try {
-          // Processa a vitória no TournamentService e avança a chave se necessário
           const result = await TournamentService.recordMatchWinner(
             matchId,
             winnerTeamId,
           );
 
-          const winningTeamName = result.updatedMatch.winner
-            ? result.updatedMatch.winner.name
+          const updatedMatch = result.updatedMatch;
+          const teamA = updatedMatch.teamA;
+          const teamB = updatedMatch.teamB;
+
+          // Busca o nome do round para saber se é BO3 (Grande Final)
+          let roundName = "Fase Eliminatória";
+          let isBo3 = false;
+          if (updatedMatch.roundId) {
+            const rData = await prisma.round.findUnique({
+              where: { id: updatedMatch.roundId },
+            });
+            if (rData) {
+              roundName = rData.name;
+              isBo3 = rData.matchType === "BO3";
+            }
+          }
+
+          // Se for MD3 e o jogo ainda não acabou (nenhuma equipe chegou a 2 vitórias)
+          if (isBo3 && updatedMatch.status !== "FINISHED") {
+            await interaction.editReply(
+              `<a:ver_verifcado2qn:1535775624864473169> Ponto computado com sucesso!\n` +
+                `📊 **Placar Atual da Grande Final (MD3):**\n` +
+                `• **${teamA.name}**: ${updatedMatch.scoreTeamA} vitória(s)\n` +
+                `• **${teamB.name}**: ${updatedMatch.scoreTeamB} vitória(s)\n\n` +
+                `*A série continua até uma equipe alcançar 2 vitórias.*`,
+            );
+            return;
+          }
+
+          // Se o jogo foi concluído (BO1 ou MD3 finalizada com 2 vitórias)
+          const winningTeam = updatedMatch.winnerTeam;
+          const winningTeamName = winningTeam
+            ? winningTeam.name
             : "Equipe Vencedora";
+          let losingTeamName = "Equipe Derrotada";
+          if (teamA && teamB && winningTeam) {
+            losingTeamName =
+              teamA.id === winningTeam.id ? teamB.name : teamA.name;
+          }
 
           // Desativa os botões da mensagem do canal do confronto
           try {
@@ -178,7 +287,7 @@ module.exports = async (interaction) => {
               (row) => {
                 const newRow = new ActionRowBuilder();
                 row.components.forEach((btn) => {
-                  const isWinner = btn.customId.includes(winnerTeamId);
+                  const isWinner = btn.customId.includes(winningTeam.id);
                   const newBtn = ButtonBuilder.from(btn)
                     .setDisabled(true)
                     .setStyle(
@@ -192,23 +301,34 @@ module.exports = async (interaction) => {
 
             await interaction.message.edit({ components: disabledComponents });
           } catch (e) {
-            // Caso a mensagem já tenha sido apagada ou haja erro de edição, segue o fluxo
+            // Caso a mensagem já tenha sido apagada
           }
 
           await interaction.editReply(
-            `<a:ver_verifcado2qn:1535775624864473169> Vitória registrada para **${winningTeamName}** com sucesso!`,
+            `<a:ver_verifcado2qn:1535775624864473169> Série finalizada! Vitória definitiva registrada para **${winningTeamName}**.`,
           );
 
-          // Envia log nos resultados públicos
+          // Envia Embed oficial nos resultados públicos
           const resultadosChannel = await interaction.client.channels
             .fetch(DiscordMatchService.CHANNELS.RESULTADOS)
             .catch(() => null);
 
           if (resultadosChannel) {
-            await resultadosChannel.send(
-              `🏆 **RESULTADO DO CONFRONTO (Jogo #${matchId.slice(-4)})**\n` +
-                `A equipe **${winningTeamName}** venceu a partida e avançou na competição!`,
-            );
+            const matchNum = updatedMatch.matchNumber || 1;
+            const resultEmbed = new EmbedBuilder()
+              .setTitle(
+                `<a:am_trofelzinho:1556881756521766934> RESULTADO DO CONFRONTO — JOGO ${matchNum}`,
+              )
+              .setColor(0x9b59b6)
+              .setDescription(
+                `Fase: **${roundName}**\n\n` +
+                  `<:ama_coroa2qn:1535775618615087154> **Equipe Vencedora:** ${winningTeamName} (${updatedMatch.scoreTeamA}x${updatedMatch.scoreTeamB})\n` +
+                  `<:verm_x2qn:1545444524241719376> **Equipe Derrotada:** ${losingTeamName}\n\n` +
+                  `*A equipe vencedora avançou na competição!*`,
+              )
+              .setTimestamp();
+
+            await resultadosChannel.send({ embeds: [resultEmbed] });
           }
 
           // Se tivermos um CAMPEÃO DO TORNEIO
@@ -233,7 +353,7 @@ module.exports = async (interaction) => {
             }
           }
 
-          // Se a rodada acabou e gerou o próximo round, avisa no canal de logs/resultados
+          // Se a rodada acabou e gerou o próximo round
           if (result.nextRoundInfo) {
             if (resultadosChannel) {
               await resultadosChannel.send(
@@ -242,7 +362,7 @@ module.exports = async (interaction) => {
             }
           }
 
-          // Limpeza opcional da categoria e canais do Discord após 10 segundos
+          // Limpeza da categoria e canais do Discord após 10 segundos
           const channel = interaction.channel;
           if (channel && channel.parent) {
             const category = channel.parent;
@@ -253,11 +373,9 @@ module.exports = async (interaction) => {
 
             setTimeout(async () => {
               try {
-                // Deleta todos os canais filhos da categoria (texto e vozes)
                 for (const [, childChannel] of category.children.cache) {
                   await childChannel.delete().catch(() => {});
                 }
-                // Deleta a categoria
                 await category.delete().catch(() => {});
               } catch (delErr) {
                 console.error("[ERRO CLEANUP CATEGORY]", delErr);
@@ -308,7 +426,6 @@ module.exports = async (interaction) => {
 
       // 2B. CAPTURA DO BOTÃO DE VITÓRIA NO CHAVEAMENTO (Legado)
       if (interaction.customId.startsWith("ff_win_")) {
-        // Apenas admins podem definir o vencedor
         if (
           !interaction.member.permissions.has(
             PermissionsBitField.Flags.Administrator,
@@ -320,21 +437,17 @@ module.exports = async (interaction) => {
           });
         }
 
-        // Extrai os dados do customId (ex: ff_win_MATCHID_TEAMID)
         const [, , matchId, winnerTeamId] = interaction.customId.split("_");
 
-        // Atualiza a partida no banco de dados
         await prisma.ffMatch.update({
           where: { id: matchId },
           data: { status: "finished", winnerId: winnerTeamId },
         });
 
-        // Busca o nome da equipe vencedora para a mensagem
         const winningTeam = await prisma.ffTeam.findUnique({
           where: { id: winnerTeamId },
         });
 
-        // Refaz os botões da mensagem para desativá-los e destacar o vencedor
         const updatedComponents = interaction.message.components.map((row) => {
           const newRow = new ActionRowBuilder();
           row.components.forEach((btn) => {
@@ -349,16 +462,12 @@ module.exports = async (interaction) => {
           return newRow;
         });
 
-        // Atualiza a mensagem original desativando os botões
         await interaction.update({ components: updatedComponents });
 
         await interaction.followUp({
           content: `${config.emoji.success || "<a:ver_verifcado2qn:1535775624864473169>"} **${winningTeam.teamName}** foi declarada vencedora desta chave!`,
         });
 
-        // ==========================================
-        // 🔄 CHECAGEM AUTOMÁTICA DE PROGRESSÃO DE ROUND
-        // ==========================================
         const matchData = await prisma.ffMatch.findUnique({
           where: { id: matchId },
         });
@@ -384,7 +493,7 @@ module.exports = async (interaction) => {
                 `<:ama_coroa2qn:1535775618615087154> TEMOS UM CAMPEÃO! <:ama_coroa2qn:1535775618615087154>`,
               )
               .setDescription(
-                `A equipe **${champion.teamName}** formou a dupla perfeita!\n🏆 <@${champion.player1Id}> & <@${champion.player2Id}> amassaram todos e levaram o torneio!`,
+                `A equipe **${champion.teamName}** formou a dupla perfeita!\n<a:am_trofelzinho:1556881756521766934> <@${champion.player1Id}> & <@${champion.player2Id}> amassaram todos e levaram o torneio!`,
               )
               .setColor(0xffd700)
               .setThumbnail(
@@ -459,7 +568,6 @@ module.exports = async (interaction) => {
                 data: { messageId: msg.id },
               });
             } else {
-              // CORREÇÃO W.O: Cria uma partida fantasma concluída para a equipe que sobrou ir direto para a próxima fase
               const soloTeam = teams[i];
               await prisma.ffMatch.create({
                 data: {
@@ -482,6 +590,7 @@ module.exports = async (interaction) => {
     }
 
     // 3. ROTEAMENTO DOS SISTEMAS PRINCIPAIS (Botões, Menus e Modais ativos)
+    if (await handleReportInteractions(interaction)) return;
     if (await handleTournamentInteractions(interaction)) return;
     if (await handlePaymentInteractions(interaction)) return;
     if (await handleGameRoles(interaction)) return;
@@ -494,7 +603,6 @@ module.exports = async (interaction) => {
   } catch (error) {
     console.error("[FATAL ERROR] Erro crítico no interactionCreate:", error);
 
-    // Fallback para avisar o usuário sem travar o bot
     if (!interaction.replied && !interaction.deferred) {
       await interaction
         .reply({

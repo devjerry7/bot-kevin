@@ -169,13 +169,12 @@ class TournamentService {
       throw new Error("Campeonato não encontrado no banco de dados.");
     }
 
-    const activeTeams = tournament.teams.filter((t) =>
-      ["CONFIRMED", "PENDING_PAYMENT", "PAYMENT_REVIEW", "ACTIVE"].includes(
-        t.status,
-      ),
+    // Apenas equipes CONFIRMED ocupam as vagas oficiais do campeonato
+    const confirmedTeams = tournament.teams.filter(
+      (t) => t.status === "CONFIRMED",
     );
 
-    const isFull = activeTeams.length >= tournament.maxTeams;
+    const isFull = confirmedTeams.length >= tournament.maxTeams;
     const initialStatus = isFull ? "WAITLIST" : "PENDING_PAYMENT";
 
     let waitlistOrder = null;
@@ -427,8 +426,8 @@ class TournamentService {
   }
 
   /**
-   * Define o vencedor de uma partida, atualiza o status e verifica se a rodada foi concluída
-   * para gerar automaticamente a próxima fase ou coroar o campeão.
+   * Define o vencedor de uma partida (suporta BO1 e MD3/BO3 para a Grande Final),
+   * atualiza placares e verifica se a rodada foi concluída.
    */
   static async recordMatchWinner(matchId, winnerTeamId) {
     console.log(
@@ -454,21 +453,9 @@ class TournamentService {
         },
         teamA: { include: { players: true } },
         teamB: { include: { players: true } },
+        winnerTeam: true,
       },
     });
-
-    console.log(
-      `[LOG] Match encontrada no banco:`,
-      match
-        ? {
-            id: match.id,
-            status: match.status,
-            winnerId: match.winnerTeamId,
-            teamAId: match.teamAId,
-            teamBId: match.teamBId,
-          }
-        : null,
-    );
 
     if (!match) {
       console.log(`[LOG] Erro: Partida não encontrada para o id ${matchId}`);
@@ -476,17 +463,11 @@ class TournamentService {
     }
 
     // Blindagem de status
-    if (match.status === "FINISHED") {
-      if (match.winnerTeamId) {
-        console.log(
-          `[LOG] Erro: A partida ${matchId} já está finalizada e possui vencedor`,
-        );
-        throw new Error("Esta partida já foi finalizada.");
-      } else {
-        console.log(
-          `[LOG] Aviso: A partida ${matchId} está com status FINISHED mas sem vencedor. Reativando.`,
-        );
-      }
+    if (match.status === "FINISHED" && match.winnerTeamId) {
+      console.log(
+        `[LOG] Erro: A partida ${matchId} já está finalizada e possui vencedor`,
+      );
+      throw new Error("Esta partida já foi finalizada.");
     }
 
     if (
@@ -502,27 +483,59 @@ class TournamentService {
       );
     }
 
-    // Atualiza a partida atual usando a relação winnerTeam
+    const round = match.round;
+    const isBo3 = round.matchType === "BO3";
+
+    let newScoreA = match.scoreTeamA;
+    let newScoreB = match.scoreTeamB;
+    let isMatchCompleted = false;
+    let finalWinnerId = null;
+
+    if (isBo3) {
+      // Lógica de MD3: Incrementa o ponto da equipe vencedora do mapa
+      if (winnerTeamId === match.teamAId) {
+        newScoreA += 1;
+      } else if (winnerTeamId === match.teamBId) {
+        newScoreB += 1;
+      }
+
+      // A série BO3 termina quando uma das equipes atinge 2 vitórias
+      if (newScoreA >= 2 || newScoreB >= 2) {
+        isMatchCompleted = true;
+        finalWinnerId = newScoreA >= 2 ? match.teamAId : match.teamBId;
+      } else {
+        isMatchCompleted = false;
+      }
+    } else {
+      // Lógica padrão BO1: Primeira vitória encerra o confronto
+      isMatchCompleted = true;
+      finalWinnerId = winnerTeamId;
+      if (winnerTeamId === match.teamAId) newScoreA = 1;
+      if (winnerTeamId === match.teamBId) newScoreB = 1;
+    }
+
+    // Atualiza a partida no banco
     let updatedMatch;
     try {
       console.log(
-        `[LOG] Tentando atualizar a partida ${matchId} com winnerTeamId: ${winnerTeamId} e status: FINISHED`,
+        `[LOG] Atualizando partida ${matchId} | Placar A: ${newScoreA} | Placar B: ${newScoreB} | Concluída: ${isMatchCompleted}`,
       );
       updatedMatch = await prisma.match.update({
-        where: {
-          id: matchId,
-        },
+        where: { id: matchId },
         data: {
-          status: "FINISHED",
-          winnerTeam: {
-            connect: { id: winnerTeamId },
-          },
+          scoreTeamA: newScoreA,
+          scoreTeamB: newScoreB,
+          status: isMatchCompleted ? "FINISHED" : "PENDING",
+          winnerTeam: isMatchCompleted
+            ? { connect: { id: finalWinnerId } }
+            : undefined,
         },
         include: {
           winnerTeam: true,
+          teamA: { include: { players: true } },
+          teamB: { include: { players: true } },
         },
       });
-      console.log(`[LOG] Partida atualizada com sucesso:`, updatedMatch.id);
     } catch (err) {
       console.log(`[LOG] Erro no prisma.match.update:`, err.message);
       throw new Error(
@@ -530,7 +543,16 @@ class TournamentService {
       );
     }
 
-    const round = match.round;
+    // Se a partida (série) ainda não foi concluída na MD3, retornamos sem avançar fases
+    if (!isMatchCompleted) {
+      return {
+        updatedMatch,
+        isRoundCompleted: false,
+        champion: null,
+        nextRoundInfo: null,
+      };
+    }
+
     const tournament = round.tournament;
 
     // Verifica se todas as partidas da rodada atual foram finalizadas
@@ -548,9 +570,7 @@ class TournamentService {
 
     if (pendingMatches.length === 0) {
       console.log(`[LOG] Rodada concluída! Buscando vencedores...`);
-      const winnerIds = roundMatches
-        .map((m) => m.winnerTeamId || m.winnerId)
-        .filter(Boolean);
+      const winnerIds = roundMatches.map((m) => m.winnerTeamId).filter(Boolean);
       console.log(`[LOG] IDs vencedores da rodada:`, winnerIds);
 
       // Se sobrou apenas 1 vencedor, temos o GRANDE CAMPEÃO!
