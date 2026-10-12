@@ -115,6 +115,7 @@ const config = {
     panelaLogId: "1545510700003106926",
     blacklistLogId: "1545510794589118495",
     jailRoleId: "1545516786072686623",
+    whitelistIds: "1551147533454282806,697947696702554223",
     antiSpam: {
       limit: 15,
       timeMs: 5000,
@@ -233,11 +234,12 @@ process.env.COLOR_WARNING = `#${config.colorWarning.toString(16)}`;
 process.env.COLOR_SUCCESS = `#00ff00`;
 process.env.COLOR_ERROR = `#ff0000`;
 
-// Segurança e Logs
+// Segurança e Logs (Incluindo Whitelist tratada)
 process.env.SECURITY_LOG_ID = config.security.logId;
 process.env.PANELA_LOG_ID = config.security.panelaLogId;
 process.env.BLACKLIST_LOG_ID = config.security.blacklistLogId;
 process.env.JAIL_ROLE_ID = config.security.jailRoleId;
+process.env.WHITELIST_IDS = config.security.whitelistIds;
 
 // Anti-Spam & Anti-Nuke
 process.env.ANTI_SPAM_LIMIT = config.security.antiSpam.limit;

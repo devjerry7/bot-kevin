@@ -3,12 +3,16 @@ const { EmbedBuilder } = require("discord.js");
 
 module.exports = async (message) => {
   if (message.author.bot) return false;
-  if (message.guild.ownerId === message.author.id) return false;
 
-  // Carrega a whitelist diretamente do .env
+  // Carrega a whitelist tratando espaços extras entre as vírgulas
   const whitelistEnv = process.env.WHITELIST_IDS || "";
-  const WHITELIST_IDS = whitelistEnv ? whitelistEnv.split(",") : [];
+  const WHITELIST_IDS = whitelistEnv
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
 
+  // Apenas quem estiver na Whitelist é ignorado pelas regras de segurança
+  // Administradores e até o Dono do Servidor (ownerId) passam pela verificação
   if (WHITELIST_IDS.includes(message.author.id)) return false;
 
   const { content, channel } = message;
