@@ -289,12 +289,7 @@ module.exports = async (message) => {
     `${command}.js`,
   );
 
-  console.log(
-    `[DEBUG PREFIX] Comando recebido: "${command}". Buscando arquivo em: ${adminCommandPath}`,
-  );
-
   if (fs.existsSync(adminCommandPath)) {
-    console.log(`[DEBUG PREFIX] Arquivo do comando encontrado! Executando...`);
     if (message.deletable) {
       try {
         await message.delete();
@@ -315,15 +310,11 @@ module.exports = async (message) => {
       await adminCommand.execute(safeMessage, args);
       return;
     } catch (error) {
-      console.error(`[ERRO CRÍTICO EXECUÇÃO COMANDO ADMIN]`, error);
+      console.error(`[ERRO COMANDO ADMIN]`, error);
       return message.channel.send(
-        `${EMOJI_ERROR} Ocorreu um erro ao executar este comando: ${error.message}`,
+        `${EMOJI_ERROR} Ocorreu um erro ao executar este comando.`,
       );
     }
-  } else {
-    console.log(
-      `[DEBUG PREFIX] Arquivo NÃO encontrado em: ${adminCommandPath}`,
-    );
   }
 
   if (message.deletable) {
@@ -332,6 +323,52 @@ module.exports = async (message) => {
     } catch (error) {
       if (error.code !== 10008) console.error("Erro delete:", error);
     }
+  }
+
+  // ====================================================
+  // PAINEL DE DENÚNCIAS E RECLAMAÇÕES (PREFIXO)
+  // ====================================================
+  if (
+    ["setupdenuncia", "setup-denuncia", "paineldenuncia", "denuncias"].includes(
+      command,
+    )
+  ) {
+    if (
+      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
+    ) {
+      return message.channel.send(
+        "<:verm_x2qn:1545444524241719376> Apenas administradores podem postar o painel de denúncias.",
+      );
+    }
+
+    const reportEmbed = new EmbedBuilder()
+      .setTitle("🚨 PAINEL OFICIAL DE DENÚNCIAS — TORNEIO 4X4")
+      .setColor(0xe74c3c)
+      .setDescription(
+        `Presenciou alguma irregularidade ou descumprimento das regras durante o torneio? Abra uma denúncia formal com a nossa equipe de moderação.\n\n` +
+          `**📜 Regras e Diretrizes:**\n` +
+          `• **Uso de Hacks/Cheats:** Proibição imediata e banimento permanente.\n` +
+          `• **Emuladores Excedidos:** Máximo de 2 emuladores por equipe.\n` +
+          `• **Jogador Gatuno:** Apenas jogadores inscritos na line podem jogar.\n` +
+          `• **Provas Obrigatórias:** Tenha prints ou vídeos comprovando a infração.\n\n` +
+          `*Clique no botão abaixo para abrir seu tópico privado de denúncia.*`,
+      )
+      .setFooter({ text: "Sistema de Integridade 2QN • Suporte a Denúncias" })
+      .setTimestamp();
+
+    const reportRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("btn_open_report_ticket")
+        .setLabel("Abrir Denúncia / Reclamação")
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji("🚨"),
+    );
+
+    await message.channel.send({
+      embeds: [reportEmbed],
+      components: [reportRow],
+    });
+    return;
   }
 
   if (command === "ffcampeao") return ffCampeaoCommand.execute(message, args);
