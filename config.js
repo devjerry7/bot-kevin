@@ -161,7 +161,7 @@ const config = {
       vipStream: "<:verm_stream2qn:1542026411144126484>",
       vipNight: "<:azu_serv2qn:1542177571750551592>",
       cart: "<:rx_compras2qn:1558947070239314020>",
-      titleIcon: "<:rx_2qn:1542026409067937824>",
+      titleIcon: "<:rx_logo2qn:1559289750601334815>",
     },
   },
 };
