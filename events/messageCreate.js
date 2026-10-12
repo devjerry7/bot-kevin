@@ -57,6 +57,7 @@ const { handleCrime } = require("../commands/crime");
 const { handleTicketPanel } = require("../commands/ticketPanel");
 const { handleMassRemove } = require("../commands/massRemove");
 const { handlePostVip } = require("../commands/postarvip");
+const setupDenunciaCommand = require("../../commands/admin/setupdenuncia");
 
 // --- IMPORTAÇÕES DOS COMANDOS FREE FIRE ---
 const ffCampeaoCommand = require("../commands/ffcampeao");
@@ -325,50 +326,13 @@ module.exports = async (message) => {
     }
   }
 
-  // ====================================================
-  // PAINEL DE DENÚNCIAS E RECLAMAÇÕES (PREFIXO)
-  // ====================================================
+  // ROTEAMENTO DIRETO DO SEU PAINEL DE DENÚNCIAS
   if (
     ["setupdenuncia", "setup-denuncia", "paineldenuncia", "denuncias"].includes(
       command,
     )
   ) {
-    if (
-      !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-    ) {
-      return message.channel.send(
-        "<:verm_x2qn:1545444524241719376> Apenas administradores podem postar o painel de denúncias.",
-      );
-    }
-
-    const reportEmbed = new EmbedBuilder()
-      .setTitle("🚨 PAINEL OFICIAL DE DENÚNCIAS — TORNEIO 4X4")
-      .setColor(0xe74c3c)
-      .setDescription(
-        `Presenciou alguma irregularidade ou descumprimento das regras durante o torneio? Abra uma denúncia formal com a nossa equipe de moderação.\n\n` +
-          `**📜 Regras e Diretrizes:**\n` +
-          `• **Uso de Hacks/Cheats:** Proibição imediata e banimento permanente.\n` +
-          `• **Emuladores Excedidos:** Máximo de 2 emuladores por equipe.\n` +
-          `• **Jogador Gatuno:** Apenas jogadores inscritos na line podem jogar.\n` +
-          `• **Provas Obrigatórias:** Tenha prints ou vídeos comprovando a infração.\n\n` +
-          `*Clique no botão abaixo para abrir seu tópico privado de denúncia.*`,
-      )
-      .setFooter({ text: "Sistema de Integridade 2QN • Suporte a Denúncias" })
-      .setTimestamp();
-
-    const reportRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("btn_open_report_ticket")
-        .setLabel("Abrir Denúncia / Reclamação")
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji("🚨"),
-    );
-
-    await message.channel.send({
-      embeds: [reportEmbed],
-      components: [reportRow],
-    });
-    return;
+    return setupDenunciaCommand.execute(message, args);
   }
 
   if (command === "ffcampeao") return ffCampeaoCommand.execute(message, args);
