@@ -3,87 +3,78 @@ const { EmbedBuilder } = require("discord.js");
 const config = require("../config");
 
 module.exports = async (interaction) => {
-  if (!interaction.isStringSelectMenu()) return false;
+  // 1. Escuta apenas Select Menus
+  if (!interaction.isStringSelectMenu && !interaction.isAnySelectMenu())
+    return false;
 
   const { customId } = interaction;
+
+  // 2. Trava para responder APENAS ao menu de jogos
   if (customId !== "select_game_roles") return false;
 
-  await interaction.deferReply({ ephemeral: true });
-
-  // Mapeamento buscando diretamente do config.js ou process.env
-  const rolesConfig = config.gameRoles || {};
-  const roleMap = {
-    role_ff: rolesConfig.ff || process.env.ROLE_FF,
-    ff: rolesConfig.ff || process.env.ROLE_FF,
-    role_val: rolesConfig.val || process.env.ROLE_VAL,
-    val: rolesConfig.val || process.env.ROLE_VAL,
-    valorant: rolesConfig.val || process.env.ROLE_VAL,
-    role_cs: rolesConfig.cs || process.env.ROLE_CS,
-    cs: rolesConfig.cs || process.env.ROLE_CS,
-    csgo: rolesConfig.cs || process.env.ROLE_CS,
-    role_roblox: rolesConfig.roblox || process.env.ROLE_ROBLOX,
-    roblox: rolesConfig.roblox || process.env.ROLE_ROBLOX,
-    role_gta: rolesConfig.gta || process.env.ROLE_GTA,
-    gta: rolesConfig.gta || process.env.ROLE_GTA,
-    role_mine: rolesConfig.mine || process.env.ROLE_MINE,
-    mine: rolesConfig.mine || process.env.ROLE_MINE,
-    minecraft: rolesConfig.mine || process.env.ROLE_MINE,
-    role_codenames: rolesConfig.codenames || process.env.ROLE_CODENAMES,
-    codenames: rolesConfig.codenames || process.env.ROLE_CODENAMES,
-    role_amongus: rolesConfig.amongus || process.env.ROLE_AMONGUS,
-    amongus: rolesConfig.amongus || process.env.ROLE_AMONGUS,
-    role_lol: rolesConfig.lol || process.env.ROLE_LOL,
-    lol: rolesConfig.lol || process.env.ROLE_LOL,
-    role_plato: rolesConfig.plato || process.env.ROLE_PLATO,
-    plato: rolesConfig.plato || process.env.ROLE_PLATO,
-    role_gartic: rolesConfig.gartic || process.env.ROLE_GARTIC,
-    gartic: rolesConfig.gartic || process.env.ROLE_GARTIC,
-    role_bloodstrike: rolesConfig.bloodstrike || process.env.ROLE_BLOODSTRIKE,
-    bloodstrike: rolesConfig.bloodstrike || process.env.ROLE_BLOODSTRIKE,
-    role_clash: rolesConfig.clash || process.env.ROLE_CLASH,
-    clash: rolesConfig.clash || process.env.ROLE_CLASH,
-    role_standoff: rolesConfig.standoff || process.env.ROLE_STANDOFF,
-    standoff: rolesConfig.standoff || process.env.ROLE_STANDOFF,
-    role_stumble: rolesConfig.stumble || process.env.ROLE_STUMBLE,
-    stumble: rolesConfig.stumble || process.env.ROLE_STUMBLE,
-    role_fortnite: rolesConfig.fortnite || process.env.ROLE_FORTNITE,
-    fortnite: rolesConfig.fortnite || process.env.ROLE_FORTNITE,
-  };
-
-  const COLOR_BASE = config.colorBase || 0x962dc0;
-  const COLOR_ERROR = config.colorError || 0xff0000;
-  const BANNER_URL = config.bannerUrl || "";
-
-  const createResponse = (desc, color = COLOR_BASE) => {
-    const embed = new EmbedBuilder()
-      .setDescription(desc)
-      .setColor(color)
-      .setTimestamp();
-
-    if (BANNER_URL) embed.setImage(BANNER_URL);
-    return embed;
-  };
-
   try {
+    await interaction.deferReply({ ephemeral: true });
+
+    const rolesConfig = config.gameRoles || {};
+
+    // Mapeamento das opções do menu para os IDs dos cargos no config.js
+    const roleMap = {
+      role_ff: rolesConfig.ff,
+      role_val: rolesConfig.val,
+      role_cs: rolesConfig.cs,
+      role_gta: rolesConfig.gta,
+      role_roblox: rolesConfig.roblox,
+      role_mine: rolesConfig.mine,
+      role_codenames: rolesConfig.codenames,
+      role_amongus: rolesConfig.amongus,
+      role_lol: rolesConfig.lol,
+      role_plato: rolesConfig.plato,
+      role_gartic: rolesConfig.gartic,
+      role_bloodstrike: rolesConfig.bloodstrike,
+      role_clash: rolesConfig.clash,
+      role_standoff: rolesConfig.standoff,
+      role_stumble: rolesConfig.stumble,
+      role_fortnite: rolesConfig.fortnite,
+    };
+
+    const COLOR_BASE = config.colorBase || 0x962dc0;
+    const COLOR_ERROR = config.colorError || 0xff0000;
+    const BANNER_URL = config.bannerUrl || config.vip?.bannerVip || "";
+
+    const createResponse = (desc, color = COLOR_BASE) => {
+      const embed = new EmbedBuilder()
+        .setDescription(desc)
+        .setColor(color)
+        .setTimestamp();
+
+      if (BANNER_URL && BANNER_URL.startsWith("http"))
+        embed.setImage(BANNER_URL);
+      return embed;
+    };
+
+    // Todos os cargos gerenciados por este painel
     const allManagedRoles = [
       ...new Set(Object.values(roleMap).filter((id) => id && id.trim() !== "")),
     ];
 
+    // Cargos que o usuário selecionou no menu atual
     const selectedRoles = [
       ...new Set(
         interaction.values
-          .map((val) => (/^\d{17,20}$/.test(val) ? val : roleMap[val]))
+          .map((val) => roleMap[val])
           .filter((id) => id && id.trim() !== ""),
       ),
     ];
 
     const memberRoles = interaction.member.roles;
 
+    // Lógica do Delta (Adicionar / Remover)
     const rolesToAdd = selectedRoles.filter((id) => !memberRoles.cache.has(id));
     const rolesToRemove = allManagedRoles.filter(
       (id) => memberRoles.cache.has(id) && !selectedRoles.includes(id),
     );
 
+    // Aplicação das alterações no Discord
     if (rolesToAdd.length > 0) await memberRoles.add(rolesToAdd);
     if (rolesToRemove.length > 0) await memberRoles.remove(rolesToRemove);
 
@@ -91,8 +82,13 @@ module.exports = async (interaction) => {
       "🎮 **Suas tags de jogos foram atualizadas com sucesso!**\n\n";
 
     if (rolesToAdd.length === 0 && rolesToRemove.length === 0) {
-      replyText +=
-        "Nenhuma alteração foi feita (você já possui exatamente estas tags).";
+      if (selectedRoles.length === 0 && interaction.values.length > 0) {
+        replyText =
+          "⚠️ **Cargos não encontrados:** Os IDs para as opções selecionadas não estão configurados no `config.js`.";
+      } else {
+        replyText +=
+          "Nenhuma alteração foi feita (suas tags já estão atualizadas).";
+      }
     } else {
       if (rolesToAdd.length > 0) {
         replyText += `➕ **Adicionados:** <@&${rolesToAdd.join("> <@&")}>\n`;
@@ -106,14 +102,17 @@ module.exports = async (interaction) => {
     return true;
   } catch (error) {
     console.error("[AUTO-ROLE ERROR]:", error);
-    await interaction.editReply({
-      embeds: [
-        createResponse(
-          "❌ **Erro de Permissão:** O cargo do bot precisa estar no topo da hierarquia (acima dos cargos de jogos) no Discord.",
-          COLOR_ERROR,
-        ),
-      ],
-    });
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setDescription(
+              "❌ **Erro de Permissão:** Garanta que o cargo do bot esteja acima dos cargos de jogos na hierarquia do servidor.",
+            )
+            .setColor(0xff0000),
+        ],
+      });
+    }
     return true;
   }
 };
