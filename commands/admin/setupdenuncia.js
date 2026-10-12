@@ -25,14 +25,14 @@ module.exports = {
       .setTitle(
         "<a:verm_alerta2qn:1555456678256975974> PAINEL OFICIAL DE DENÚNCIAS — TORNEIO 4X4",
       )
-      .setColor(0xe74c3c)
+      .setColor(0x962dc0)
       .setDescription(
         `Presenciou alguma irregularidade ou descumprimento das regras durante o torneio? Abra uma denúncia formal com a nossa equipe de moderação.\n\n` +
           `**<:br_registro2qn:1557798191100072119> Regras e Diretrizes:**\n` +
-          `• **Uso de Hacks/Cheats:** Proibição imediata e banimento permanente.\n` +
-          `• **Emuladores Excedidos:** Máximo de 2 emuladores por equipe.\n` +
-          `• **Jogador Gatuno:** Apenas jogadores inscritos na line podem jogar.\n` +
-          `• **Provas Obrigatórias:** Tenha prints ou vídeos comprovando a infração.\n\n` +
+          `<:br_ponto2qn:1556901316230651954> **Uso de Hacks:** Proibição imediata e banimento permanente.\n` +
+          `<:br_ponto2qn:1556901316230651954> **Emuladores Excedidos:** Máximo de 2 emuladores por equipe.\n` +
+          `<:br_ponto2qn:1556901316230651954> **Jogador Gatuno:** Apenas jogadores inscritos na line podem jogar.\n` +
+          `<:br_ponto2qn:1556901316230651954> **Provas Obrigatórias:** Tenha prints ou vídeos comprovando a infração.\n\n` +
           `*Clique no botão abaixo para abrir seu tópico privado de denúncia.*`,
       )
       .setFooter({ text: "2qn" })
