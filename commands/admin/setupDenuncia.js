@@ -1,4 +1,4 @@
-// commands/prefix/setupDenuncia.js (ou o caminho equivalente no seu projeto)
+// commands/admin/setupdenuncia.js
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -20,9 +20,6 @@ module.exports = {
         "<:verm_x2qn:1545444524241719376> Apenas administradores podem executar este comando.",
       );
     }
-
-    // Tenta apagar a mensagem do comando para manter o canal limpo
-    await message.delete().catch(() => {});
 
     const embed = new EmbedBuilder()
       .setTitle(
