@@ -57,7 +57,7 @@ const { handleCrime } = require("../commands/crime");
 const { handleTicketPanel } = require("../commands/ticketPanel");
 const { handleMassRemove } = require("../commands/massRemove");
 const { handlePostVip } = require("../commands/postarvip");
-const setupDenunciaCommand = require("../../commands/admin/setupdenuncia");
+const setupDenunciaCommand = require("../commands/setupdenuncia");
 
 // --- IMPORTAÇÕES DOS COMANDOS FREE FIRE ---
 const ffCampeaoCommand = require("../commands/ffcampeao");
@@ -90,14 +90,17 @@ module.exports = async (message) => {
   const userIsBlacklisted = await isBlacklisted(message.author.id);
   if (userIsBlacklisted) {
     try {
+      // Deleta a mensagem do usuário na blacklist
       if (message.deletable) await message.delete().catch(() => {});
 
+      // Banimento imediato do servidor por estar na Blacklist
       if (message.member && message.member.bannable) {
         await message.guild.members.ban(message.author.id, {
           reason: "Segurança: Usuário consta na Blacklist Oficial do Bot.",
         });
       }
 
+      // Notifica o Dono no PV sobre a remoção
       const ownerUser = await message.client.users
         .fetch(OWNER_LOG_ID)
         .catch(() => null);
@@ -116,7 +119,7 @@ module.exports = async (message) => {
     } catch (err) {
       console.error("[BLACKLIST ENFORCE ERROR]", err);
     }
-    return;
+    return; // Interrompe qualquer processamento da mensagem
   }
 
   // ====================================================
@@ -133,6 +136,7 @@ module.exports = async (message) => {
       let teamId = null;
       let team = null;
 
+      // 1. Tenta achar pelo ID extraído do nome do canal
       const parts = message.channel.name.split("-");
       if (parts[1]) {
         teamId = parts[1];
@@ -143,6 +147,7 @@ module.exports = async (message) => {
           .catch(() => null);
       }
 
+      // 2. Se não achou pelo canal (ID desatualizado/errado), acha pelo usuário no banco
       if (!team) {
         const playerRecord = await prisma.player
           .findFirst({
@@ -326,7 +331,6 @@ module.exports = async (message) => {
     }
   }
 
-  // ROTEAMENTO DIRETO DO SEU PAINEL DE DENÚNCIAS
   if (
     ["setupdenuncia", "setup-denuncia", "paineldenuncia", "denuncias"].includes(
       command,
