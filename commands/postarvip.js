@@ -49,7 +49,7 @@ const handlePostVip = async (message) => {
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Sorteios exclusivos.\n` +
           `${EMOJI_DOT} Permissão de <#1545530073686347776>.\n\n` +
-          `${EMOJI_VIP_SELECT} **VIP SELECT - ${PRICE_SELECT}**\n` +
+          `${EMOJI_VIP_SELECT} **VIP SELECT - R$${PRICE_SELECT}**\n` +
           `${EMOJI_DOT} Cargo destacado no Servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Tag personalizada;\n` +
@@ -59,10 +59,10 @@ const handlePostVip = async (message) => {
           `${EMOJI_DOT} Cargo destacado no servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Call privada + tag personalizada;\n` +
-          `${EMOJI_DOT} Acesso liberado ao chat <#1535759130298421258>;\n` +
+          `${EMOJI_DOT} Vantagens no servidor. (<@&1537258569265717258>);\n` +
           `${EMOJI_DOT} Sorteios exclusivos;\n` +
-          `${EMOJI_DOT} Vantagens no servidor. (<@&1537258569265717258>).\n\n` +
-          `${EMOJI_VIP_NIGHT} **VIP NIGHT - ${PRICE_NIGHT}**\n` +
+          `${EMOJI_DOT} Acesso liberado ao chat <#1535759130298421258>.\n\n` +
+          `${EMOJI_VIP_NIGHT} **VIP NIGHT - R$${PRICE_NIGHT}**\n` +
           `${EMOJI_DOT} Cargo destacado no servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Call privada + tag personalizada;\n` +
