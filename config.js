@@ -42,7 +42,7 @@ const config = {
     notifyInteracao: "<:interaes:1546265751730790411>",
     notifyLive: "<:transmisso:1546265901161255085>",
     notifyIcon: "<:notificao:1546265830457606285>",
-    warning: "<:avisoemoji:1545494059081142403>", // Emoji de aviso que faltava
+    warning: "<:avisoemoji:1545494059081142403>",
   },
 
   // --- EMOJIS DOS JOGOS (ATUALIZADOS) ---
@@ -109,8 +109,6 @@ const config = {
     workMax: 200,
   },
 
-  // 👇 BLOCOS NOVOS ADICIONADOS A PARTIR DAQUI 👇
-
   // --- SEGURANÇA E PUNIÇÕES ---
   security: {
     logId: "1535946213520711751",
@@ -145,6 +143,26 @@ const config = {
     gifPolice:
       "https://i.pinimg.com/originals/ea/0c/cd/ea0ccd11f06cba1bfe842f1c47e7242d.gif",
   },
+
+  // --- VIP / DONOS / PAINEL ---
+  vip: {
+    owner1Id: "1551147533454282806",
+    owner2Id: "697947696702554223",
+    bannerVip:
+      "https://cdn.discordapp.com/attachments/1544098404508893307/1557627452992524368/2QN_Banner_oficial.png?ex=6ac87d1c&is=6ac72b9c&hm=d58dcf1688761a0bbb1f4a8429488435506ff97f519ab9250f1c2b509304e22c&",
+    priceSelect: "24,99",
+    priceStream: "EXCLUSIVO PARA INFLUENCERS",
+    priceNight: "79,99",
+    emojis: {
+      dot: "<:br_ponto2qn:1556901316230651954>",
+      boost: "<:azu_seta2qn:1542026412783829034>",
+      selectVip: "<:azu_vipselect2qn:1559094878322040863>",
+      vipStream: "<:verm_stream2qn:1542026411144126484>",
+      vipNight: "<:azu_serv2qn:1542177571750551592>",
+      cart: "<:rx_compras2qn:1558947070239314020>",
+      titleIcon: "<:rx_2qn:1542026409067937824>",
+    },
+  },
 };
 
 // ==========================================
@@ -177,53 +195,25 @@ process.env.EMOJI_NOTIFY_INTERACAO = config.emoji.notifyInteracao;
 process.env.EMOJI_NOTIFY_LIVE = config.emoji.notifyLive;
 process.env.EMOJI_NOTIFY_ICON = config.emoji.notifyIcon;
 
-// Emojis de Jogos (Atualizados)
-process.env.EMOJI_GAME_FF = config.gameEmojis.ff;
-process.env.EMOJI_GAME_VAL = config.gameEmojis.val;
-process.env.EMOJI_GAME_CS = config.gameEmojis.cs;
-process.env.EMOJI_GAME_GTA = config.gameEmojis.gta;
-process.env.EMOJI_GAME_ROBLOX = config.gameEmojis.roblox;
-process.env.EMOJI_GAME_MINE = config.gameEmojis.mine;
-process.env.EMOJI_GAME_CODENAMES = config.gameEmojis.codenames;
-process.env.EMOJI_GAME_AMONGUS = config.gameEmojis.amongus;
-process.env.EMOJI_GAME_LOL = config.gameEmojis.lol;
-process.env.EMOJI_GAME_PLATO = config.gameEmojis.plato;
-process.env.EMOJI_GAME_GARTIC = config.gameEmojis.gartic;
-process.env.EMOJI_GAME_BLOODSTRIKE = config.gameEmojis.bloodstrike;
-process.env.EMOJI_GAME_CLASH = config.gameEmojis.clash;
-process.env.EMOJI_GAME_STANDOFF = config.gameEmojis.standoff;
-process.env.EMOJI_GAME_STUMBLE = config.gameEmojis.stumble;
-process.env.EMOJI_GAME_FORTNITE = config.gameEmojis.fortnite;
-
-// Roles (Cargos) de Jogos
-process.env.ROLE_FF = config.gameRoles.ff;
-process.env.ROLE_VAL = config.gameRoles.val;
-process.env.ROLE_CS = config.gameRoles.cs;
-process.env.ROLE_GTA = config.gameRoles.gta;
-process.env.ROLE_ROBLOX = config.gameRoles.roblox;
-process.env.ROLE_MINE = config.gameRoles.mine;
-process.env.ROLE_CODENAMES = config.gameRoles.codenames;
-process.env.ROLE_AMONGUS = config.gameRoles.amongus;
-process.env.ROLE_LOL = config.gameRoles.lol;
-process.env.ROLE_PLATO = config.gameRoles.plato;
-process.env.ROLE_GARTIC = config.gameRoles.gartic;
-process.env.ROLE_BLOODSTRIKE = config.gameRoles.bloodstrike;
-process.env.ROLE_CLASH = config.gameRoles.clash;
-process.env.ROLE_STANDOFF = config.gameRoles.standoff;
-process.env.ROLE_STUMBLE = config.gameRoles.stumble;
-process.env.ROLE_FORTNITE = config.gameRoles.fortnite;
-
-// Roles (Cargos) de Notificação
-process.env.ROLE_NOTIFY_INTERACTION = config.notifyRoles.interaction;
-process.env.ROLE_NOTIFY_GIVEAWAY = config.notifyRoles.giveaway;
-process.env.ROLE_NOTIFY_LIVE = config.notifyRoles.live;
-
-// 👇 INJEÇÕES NOVAS ADICIONADAS A PARTIR DAQUI 👇
+// VIP & Donos
+process.env.OWNER_1_ID = config.vip.owner1Id;
+process.env.OWNER_2_ID = config.vip.owner2Id;
+process.env.BANNER_VIP = config.vip.bannerVip;
+process.env.PRICE_VIP_SELECT = config.vip.priceSelect;
+process.env.PRICE_VIP_STREAM = config.vip.priceStream;
+process.env.PRICE_VIP_NIGHT = config.vip.priceNight;
+process.env.EMOJI_DOT = config.vip.emojis.dot;
+process.env.EMOJI_BOOST = config.vip.emojis.boost;
+process.env.EMOJI_VIP_SELECT = config.vip.emojis.selectVip;
+process.env.EMOJI_VIP_STREAM = config.vip.emojis.vipStream;
+process.env.EMOJI_VIP_NIGHT = config.vip.emojis.vipNight;
+process.env.EMOJI_CART = config.vip.emojis.cart;
+process.env.EMOJI_TITLE_VIP = config.vip.emojis.titleIcon;
 
 // Cores Extras
 process.env.COLOR_WARNING = `#${config.colorWarning.toString(16)}`;
-process.env.COLOR_SUCCESS = `#00ff00`; // Passado direto pra não dar erro de formatação
-process.env.COLOR_ERROR = `#ff0000`; // Passado direto pra não dar erro de formatação
+process.env.COLOR_SUCCESS = `#00ff00`;
+process.env.COLOR_ERROR = `#ff0000`;
 
 // Segurança e Logs
 process.env.SECURITY_LOG_ID = config.security.logId;
@@ -231,7 +221,7 @@ process.env.PANELA_LOG_ID = config.security.panelaLogId;
 process.env.BLACKLIST_LOG_ID = config.security.blacklistLogId;
 process.env.JAIL_ROLE_ID = config.security.jailRoleId;
 
-// Anti-Spam & Anti-Nuke Injeções
+// Anti-Spam & Anti-Nuke
 process.env.ANTI_SPAM_LIMIT = config.security.antiSpam.limit;
 process.env.ANTI_SPAM_TIME_MS = config.security.antiSpam.timeMs;
 process.env.ANTI_SPAM_TIMEOUT_MIN = config.security.antiSpam.timeoutMin;

@@ -118,13 +118,20 @@ module.exports = {
               (report.emulatorOverflows.length > 0
                 ? `<:ama_cuidado2qn:1545494059081142403> **Alerta de Emuladores (>2):**\n` +
                   report.emulatorOverflows
-                    .map((t) => `• ${t.name} (${t.emulatorsCount} emuladores)`)
+                    .map(
+                      (t) =>
+                        `<:br_pontinho2qn:1545828067035848814> ${t.name} (${t.emulatorsCount} emuladores)`,
+                    )
                     .join("\n") +
                   `\n\n`
                 : `<:azu_serv2qn:1542177571750551592> Nenhum alerta de emuladores.\n\n`) +
               (report.incompleteTeams.length > 0
                 ? `<:ama_cuidado2qn:1545494059081142403> **Equipes Incompletas (<4 jogadores):**\n` +
-                  report.incompleteTeams.map((t) => `• ${t.name}`).join("\n")
+                  report.incompleteTeams
+                    .map(
+                      (t) => `<:br_pontinho2qn:1545828067035848814> ${t.name}`,
+                    )
+                    .join("\n")
                 : `<:azu_serv2qn:1542177571750551592> Todas as equipes estão completas.`),
           );
 
@@ -458,10 +465,10 @@ module.exports = {
 
         return message.reply(
           "🧹 **Reset Geral Realizado com Sucesso!**\n" +
-            "• Partidas, rodadas e confrontos apagados.\n" +
-            "• Equipes e inscrições limpas do banco.\n" +
-            "• Tópicos de PIX e partidas removidos do Discord.\n" +
-            "• Torneio redefinido e pronto para um novo ciclo de inscrições.",
+            "<:br_pontinho2qn:1545828067035848814> Partidas, rodadas e confrontos apagados.\n" +
+            "<:br_pontinho2qn:1545828067035848814> Equipes e inscrições limpas do banco.\n" +
+            "<:br_pontinho2qn:1545828067035848814> Tópicos de PIX e partidas removidos do Discord.\n" +
+            "<:br_pontinho2qn:1545828067035848814> Torneio redefinido e pronto para um novo ciclo de inscrições.",
         );
       } catch (err) {
         console.error("[LOG-CAMP] Erro ao executar reset geral:", err);
@@ -480,22 +487,27 @@ module.exports = {
       const maxTeams = tournament ? tournament.maxTeams : 32;
 
       const embedInfo = new EmbedBuilder()
-        .setTitle(
-          "<:serv:1545459134089138256> INFORMAÇÕES - CAMPEONATO 4X4 2QN",
-        )
+        .setTitle("<:serv:1545459134088256> INFORMAÇÕES - CAMPEONATO 4X4 2QN")
         .setColor(hexPurple)
         .setImage(bannerUrl)
         .setDescription(
           `\n\n<:serv:1545488990168158350> **Formato e Regras:**\n` +
-            `• Disputa no formato **4x4** (4 jogadores por time).\n` +
-            `• **Máximo de 2 emuladores** por equipe.\n` +
-            `• Capacidade máxima de **${maxTeams} Equipes**.\n\n` +
-            `<:serv:1553154980108828742> **Taxa de Inscrição:**\n` +
-            `• Valor: **R$ ${fee}** por equipe.\n\n` +
+            `<:br_pontinho2qn:1545828067035848814> Disputa no formato **4x4** (4 jogadores por time).\n` +
+            `<:br_pontinho2qn:1545828067035848814> Máximo de **2 emuladores** por equipe.\n` +
+            `<:br_pontinho2qn:1545828067035848814> Limite de **${maxTeams} equipes**.\n\n` +
+            `<:serv:1553154980108828742> **Inscrição:**\n` +
+            `<:br_pontinho2qn:1545828067035848814> **R$ ${fee} por equipe**.\n` +
+            `<:br_pontinho2qn:1545828067035848814> Inscrição confirmada após o envio do comprovante PIX.\n\n` +
+            `<:serv:1545459134088256> **Premiação:**\n` +
+            `<:br_pontinho2qn:1545828067035848814> **R$ 200,00** para o campeonato.\n\n` +
+            `<:br_calendario2qn:1545457506392875118> **Data do campeonato:**\n` +
+            `<:br_pontinho2qn:1545828067035848814> Será divulgada após o encerramento das inscrições.\n\n` +
+            `<:am_presente2qn:1546265787776503888> **Sorteio para membros:**\n` +
+            `<:br_pontinho2qn:1545828067035848814> Durante a final, haverá sorteio para os membros da 2QN.\n\n` +
             `<:serv:1545468689405583370> **Como Participar:**\n` +
-            `1. Clique no botão **INSCREVER EQUIPE** em <#1553186399967256629>.\n` +
+            `1. Clique em **INSCREVER EQUIPE** em <#1553186399967256629>.\n` +
             `2. Preencha os dados dos 4 jogadores e seus dispositivos.\n` +
-            `3. Realize o PIX, entre no tópico gerado e envie o comprovante.`,
+            `3. Realize o PIX e envie o comprovante no tópico gerado.`,
         );
 
       await message.delete().catch(() => {});
