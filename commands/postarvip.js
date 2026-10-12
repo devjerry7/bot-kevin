@@ -41,8 +41,8 @@ const handlePostVip = async (message) => {
     const embed = new EmbedBuilder()
       .setTitle(`${EMOJI_TITLE} Cargos & Planos Vip ${EMOJI_TITLE}`)
       .setDescription(
-        `Confira os benefícios de cada tier no nosso servidor e escolha o seu!\n\n` +
-          `${EMOJI_CART} **COMO COMPRAR:**\n` +
+        `**Quer ter vantagens exclusivas, se destacar no chat e ainda ajudar a nossa comunidade a crescer? Chegou a hora! Confira tudo o que preparamos para vocês.**\n\n` +
+          `${EMOJI_CART} | **COMO COMPRAR:**\n` +
           `Para adquirir o seu VIP, entre em contato com <@${DONO_1}> e <@${DONO_2}>.\n\n` +
           `${EMOJI_BOOST} **LEVEL UP - BOOSTER**\n` +
           `${EMOJI_DOT} Cargo destacado no servidor;\n` +
@@ -74,7 +74,7 @@ const handlePostVip = async (message) => {
       .setColor(COLOR_BASE)
       .setImage(BANNER_VIP)
       .setFooter({
-        text: "Ao adquirir um VIP, você ajuda a manter o servidor ativo e com novidades!",
+        text: "**__Todo valor arrecadado é revertido em melhorias para o servidor!__**",
         iconURL: message.guild.iconURL(),
       })
       .setTimestamp();
