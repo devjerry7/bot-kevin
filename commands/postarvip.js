@@ -13,11 +13,12 @@ const handlePostVip = async (message) => {
   }
 
   try {
-    // --- Lendo variáveis do .env ---
+    // --- Lendo variáveis do .env / config ---
     const COLOR_BASE = process.env.COLOR_BASE
       ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
-      : 0x00e5ff;
-    const BANNER_URL = process.env.BANNER_VIP;
+      : 0x962dc0;
+
+    const BANNER_VIP = process.env.BANNER_VIP;
 
     // Contato
     const DONO_1 = process.env.OWNER_1_ID;
@@ -28,8 +29,8 @@ const handlePostVip = async (message) => {
     const PRICE_STREAM = process.env.PRICE_VIP_STREAM || "A definir";
     const PRICE_NIGHT = process.env.PRICE_VIP_NIGHT || "A definir";
 
-    // Emojis
-    const EMOJI_DIAMOND = process.env.EMOJI_DIAMOND || "💎";
+    // Emojis atualizados do painel
+    const EMOJI_TITLE = process.env.EMOJI_TITLE_VIP || "🎛️";
     const EMOJI_CART = process.env.EMOJI_CART || "🛒";
     const EMOJI_DOT = process.env.EMOJI_DOT || "•";
     const EMOJI_BOOST = process.env.EMOJI_BOOST || "🚀";
@@ -38,7 +39,7 @@ const handlePostVip = async (message) => {
     const EMOJI_VIP_NIGHT = process.env.EMOJI_VIP_NIGHT || "🌙";
 
     const embed = new EmbedBuilder()
-      .setTitle(`Vantagens e Apoiadores`)
+      .setTitle(`${EMOJI_TITLE} Cargos & Planos Vip ${EMOJI_TITLE}`)
       .setDescription(
         `Confira os benefícios de cada tier no nosso servidor e escolha o seu!\n\n` +
           `${EMOJI_CART} **COMO COMPRAR:**\n` +
@@ -54,7 +55,7 @@ const handlePostVip = async (message) => {
           `${EMOJI_DOT} Tag personalizada;\n` +
           `${EMOJI_DOT} Sorteios exclusivos;\n` +
           `${EMOJI_DOT} Permissão de <#1545530073686347776>.\n\n` +
-          `${EMOJI_VIP_STREAM} **VIP STREAM - EXCLUSIVO PARA INFLUENCERS**\n` +
+          `${EMOJI_VIP_STREAM} **VIP STREAM - ${PRICE_STREAM}**\n` +
           `${EMOJI_DOT} Cargo destacado no servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Call privada + tag personalizada;\n` +
@@ -71,6 +72,7 @@ const handlePostVip = async (message) => {
           `${EMOJI_DOT} Direito a <@&1535758383297073202>`,
       )
       .setColor(COLOR_BASE)
+      .setImage(BANNER_VIP)
       .setFooter({
         text: "Ao adquirir um VIP, você ajuda a manter o servidor ativo e com novidades!",
         iconURL: message.guild.iconURL(),
