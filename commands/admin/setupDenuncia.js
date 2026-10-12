@@ -10,7 +10,7 @@ const {
 module.exports = {
   name: "setupdenuncia",
   aliases: ["setup-denuncia", "paineldenuncia"],
-  description: "Posta o painel oficial de denúncias e reclamações do torneio.",
+  description: "Posta o painel oficial de denúncias e reclamações do torneio",
   async execute(message, args) {
     // Validação de permissão de Administrador
     if (
