@@ -5,6 +5,7 @@ const {
   ButtonBuilder,
   MessageFlags,
   ChannelType,
+  PermissionsBitField,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
 const { PrismaClient } = require("@prisma/client");
@@ -57,7 +58,25 @@ module.exports = async function handlePaymentInteractions(interaction) {
         invitable: false,
       });
 
+      // Adiciona o usuário ao tópico
       await thread.members.add(interaction.user.id);
+
+      // Sobrescreve as permissões garantindo fala, envio de arquivos e links no tópico
+      try {
+        await thread.permissionOverwrites.edit(interaction.user.id, {
+          [PermissionsBitField.Flags.ViewChannel]: true,
+          [PermissionsBitField.Flags.SendMessages]: true,
+          [PermissionsBitField.Flags.SendMessagesInThreads]: true,
+          [PermissionsBitField.Flags.AttachFiles]: true,
+          [PermissionsBitField.Flags.EmbedLinks]: true,
+          [PermissionsBitField.Flags.ReadMessageHistory]: true,
+        });
+      } catch (permErr) {
+        console.error(
+          "[PAYMENT LOG] Erro ao aplicar permissões no tópico:",
+          permErr,
+        );
+      }
 
       await thread.send(
         `<@${interaction.user.id}>, envie a **FOTO DO SEU COMPROVANTE PIX** aqui.\n\n` +
