@@ -20,7 +20,7 @@ module.exports = async (interaction) => {
 
   let customId = interaction.customId;
 
-  // Se for o menu dropdown principal, pegamos o valor selecionado (ex: "vpanel_lock")
+  // Se for o menu dropdown principal, pega o valor selecionado
   if (interaction.isStringSelectMenu() && customId === "vpanel_menu") {
     customId = interaction.values[0];
   }
@@ -32,7 +32,6 @@ module.exports = async (interaction) => {
   )
     return;
 
-  // Pega o canal exato onde a interação foi acionada
   const channel = interaction.channel;
   const member = interaction.member;
 
@@ -49,6 +48,7 @@ module.exports = async (interaction) => {
   const isOwner = channel
     .permissionsFor(member)
     ?.has(PermissionFlagsBits.ManageChannels);
+
   if (!isOwner) {
     return interaction.reply({
       content: `${EMOJI_ERROR} Apenas o **dono** desta sala específica pode usar este painel!`,
@@ -63,10 +63,7 @@ module.exports = async (interaction) => {
     });
     await channel.permissionOverwrites.edit(member.id, { Connect: true });
 
-    const replyMethod = interaction.isStringSelectMenu()
-      ? interaction.update
-      : interaction.reply;
-    return replyMethod({
+    return interaction.reply({
       content:
         "<:br_proibido2qn:1556914029841088573> Sua call foi **privada** com sucesso!",
       flags: MessageFlags.Ephemeral,
@@ -79,10 +76,7 @@ module.exports = async (interaction) => {
       Connect: true,
     });
 
-    const replyMethod = interaction.isStringSelectMenu()
-      ? interaction.update
-      : interaction.reply;
-    return replyMethod({
+    return interaction.reply({
       content:
         "<:br_correto2qn:1556905093729882217> Sua call foi **aberta** para todos!",
       flags: MessageFlags.Ephemeral,
@@ -156,10 +150,7 @@ module.exports = async (interaction) => {
       .setMaxValues(1);
     const row = new ActionRowBuilder().addComponents(select);
 
-    const replyMethod = interaction.isStringSelectMenu()
-      ? interaction.update
-      : interaction.reply;
-    return replyMethod({
+    return interaction.reply({
       content: "Selecione o usuário que deseja **permitir** na call:",
       components: [row],
       flags: MessageFlags.Ephemeral,
@@ -170,7 +161,7 @@ module.exports = async (interaction) => {
     const targetId = interaction.values[0];
     await channel.permissionOverwrites.edit(targetId, { Connect: true });
     return interaction.update({
-      content: `<:br_correto2qn:1556905093729882217> Permissão concedida para <@${targetId}> entrar na call!`,
+      content: `<:br_correto2qn:1556905093729882217> Permissao concedida para <@${targetId}> entrar na call!`,
       components: [],
     });
   }
@@ -184,10 +175,7 @@ module.exports = async (interaction) => {
       .setMaxValues(1);
     const row = new ActionRowBuilder().addComponents(select);
 
-    const replyMethod = interaction.isStringSelectMenu()
-      ? interaction.update
-      : interaction.reply;
-    return replyMethod({
+    return interaction.reply({
       content: "Selecione o usuário que deseja **expulsar** da call:",
       components: [row],
       flags: MessageFlags.Ephemeral,
