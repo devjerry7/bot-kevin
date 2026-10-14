@@ -8,8 +8,18 @@ const {
   EmbedBuilder,
 } = require("discord.js");
 
-// --- IMPORTAÇÃO DA STAFF (NOVO) ---
+// --- IMPORTAÇÃO DA STAFF ---
 const staffVoiceTracker = require("../listeners/staffVoiceTracker");
+
+// Helper seguro para formatar/extrair o emoji para os botões do Discord.js
+const parseButtonEmoji = (emojiString, fallback) => {
+  if (!emojiString) return fallback;
+  const match = emojiString.match(/<a?:.+?:(\d+)>/);
+  if (match && match[1]) {
+    return match[1]; // Retorna apenas o ID numérico do emoji customizado
+  }
+  return emojiString.trim();
+};
 
 module.exports = async (oldState, newState, client) => {
   const creatorChannelId = process.env.JOIN_TO_CREATE_ID;
@@ -19,8 +29,7 @@ module.exports = async (oldState, newState, client) => {
   const guild = newState.guild;
 
   // ====================================================
-  // [NOVO] TRACKER DE VOZ DA STAFF
-  // Roda em background sem travar o processamento do resto
+  // TRACKER DE VOZ DA STAFF
   // ====================================================
   if (member) {
     staffVoiceTracker(oldState, newState).catch((err) =>
@@ -49,7 +58,7 @@ module.exports = async (oldState, newState, client) => {
           {
             id: member.id,
             allow: [
-              PermissionFlagsBits.Connect, // 🔥 ADICIONADO AQUI PARA O DONO NÃO PERDER ACESSO
+              PermissionFlagsBits.Connect,
               PermissionFlagsBits.ManageChannels,
               PermissionFlagsBits.MoveMembers,
               PermissionFlagsBits.MuteMembers,
@@ -61,9 +70,10 @@ module.exports = async (oldState, newState, client) => {
 
       await member.voice.setChannel(tempChannel);
 
-      const EMOJI_LOCK = process.env.EMOJI_LOCK || "🔒";
-      const EMOJI_UNLOCK = process.env.EMOJI_UNLOCK || "🔓";
-      const EMOJI_RENAME = process.env.EMOJI_RENAME || "✏️";
+      const emojiLock = parseButtonEmoji(process.env.EMOJI_LOCK, "🔒");
+      const emojiUnlock = parseButtonEmoji(process.env.EMOJI_UNLOCK, "🔓");
+      const emojiRename = parseButtonEmoji(process.env.EMOJI_RENAME, "✏️");
+
       const COLOR_BASE = process.env.COLOR_BASE
         ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
         : 0x00e5ff;
@@ -80,17 +90,17 @@ module.exports = async (oldState, newState, client) => {
         new ButtonBuilder()
           .setCustomId("vpanel_lock")
           .setLabel("Privar")
-          .setEmoji(EMOJI_LOCK)
+          .setEmoji(emojiLock)
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("vpanel_unlock")
           .setLabel("Abrir")
-          .setEmoji(EMOJI_UNLOCK)
+          .setEmoji(emojiUnlock)
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("vpanel_rename")
           .setLabel("Renomear")
-          .setEmoji(EMOJI_RENAME)
+          .setEmoji(emojiRename)
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("vpanel_limit")
