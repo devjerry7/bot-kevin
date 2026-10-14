@@ -34,15 +34,18 @@ module.exports = async function handleTournamentInteractions(interaction) {
         "[TOURNAMENT LOG] Botão de inscrever equipe clicado por:",
         interaction.user.tag,
       );
+
+      // Evita o erro 10062 (Unknown interaction) respondendo imediatamente de forma efêmera
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       const activeCamp = await TournamentService.getActiveTournament();
 
       if (
         !activeCamp ||
         !["OPEN", "REGISTRATION_OPEN"].includes(activeCamp.status)
       ) {
-        return await interaction.reply({
+        return await interaction.editReply({
           content: `<:serv:1545444524241719376> As inscrições para o campeonato estão encerradas ou pausadas no momento.`,
-          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -54,10 +57,9 @@ module.exports = async function handleTournamentInteractions(interaction) {
 
       const row = new ActionRowBuilder().addComponents(userSelect);
 
-      return await interaction.reply({
+      return await interaction.editReply({
         content: `<a:2qn:1553155625738051604> **Selecione os 3 membros que jogarão com você no torneio:**`,
         components: [row],
-        flags: MessageFlags.Ephemeral,
       });
     }
 
