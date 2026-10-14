@@ -11,16 +11,6 @@ const {
 // --- IMPORTAÇÃO DA STAFF ---
 const staffVoiceTracker = require("../listeners/staffVoiceTracker");
 
-// Helper seguro para formatar/extrair o emoji para os botões do Discord.js
-const parseButtonEmoji = (emojiString, fallback) => {
-  if (!emojiString) return fallback;
-  const match = emojiString.match(/<a?:.+?:(\d+)>/);
-  if (match && match[1]) {
-    return match[1]; // Retorna apenas o ID numérico do emoji customizado
-  }
-  return emojiString.trim();
-};
-
 module.exports = async (oldState, newState, client) => {
   const creatorChannelId = process.env.JOIN_TO_CREATE_ID;
   const categoryId = process.env.TEMP_CATEGORY_ID;
@@ -70,42 +60,40 @@ module.exports = async (oldState, newState, client) => {
 
       await member.voice.setChannel(tempChannel);
 
-      const emojiLock = parseButtonEmoji(process.env.EMOJI_LOCK, "🔒");
-      const emojiUnlock = parseButtonEmoji(process.env.EMOJI_UNLOCK, "🔓");
-      const emojiRename = parseButtonEmoji(process.env.EMOJI_RENAME, "✏️");
-
       const COLOR_BASE = process.env.COLOR_BASE
         ? parseInt(process.env.COLOR_BASE.replace("#", ""), 16)
         : 0x00e5ff;
 
       const embed = new EmbedBuilder()
-        .setTitle("🎛️ PAINEL DE CONTROLE DA CALL")
+        .setTitle(
+          "<:br_registro2qn:1557798191100072119> PAINEL DE CONTROLE DA CALL",
+        )
         .setDescription(
           "Gerencie sua sala privada utilizando os botões abaixo.",
         )
         .setColor(COLOR_BASE);
 
-      // Botões transparentes (Secondary)
+      // Botões transparentes com os seus IDs personalizados em Hardcoded
       const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("vpanel_lock")
           .setLabel("Privar")
-          .setEmoji(emojiLock)
+          .setEmoji("1556914029841088573") // <:br_proibido2qn:1556914029841088573>
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("vpanel_unlock")
           .setLabel("Abrir")
-          .setEmoji(emojiUnlock)
+          .setEmoji("1556905093729882217") // <:br_correto2qn:1556905093729882217>
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("vpanel_rename")
           .setLabel("Renomear")
-          .setEmoji(emojiRename)
+          .setEmoji("1556905090835546173") // <:br_incricao2qn:1556905090835546173>
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("vpanel_limit")
           .setLabel("Limite")
-          .setEmoji("👥")
+          .setEmoji("1542026405481684994") // <:pr_pessoinha2qn:1542026405481684994>
           .setStyle(ButtonStyle.Secondary),
       );
 
@@ -113,12 +101,12 @@ module.exports = async (oldState, newState, client) => {
         new ButtonBuilder()
           .setCustomId("vpanel_add")
           .setLabel("Permitir Amigo")
-          .setEmoji("➕")
+          .setEmoji("1560020789015744522") // <:br_adicao:1560020789015744522>
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("vpanel_kick")
           .setLabel("Expulsar")
-          .setEmoji("👢")
+          .setEmoji("1556905095919050762") // <:br_errado2qn:1556905095919050762>
           .setStyle(ButtonStyle.Secondary),
       );
 
