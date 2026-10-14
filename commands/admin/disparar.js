@@ -64,7 +64,7 @@ module.exports = {
       )
       .setDescription(
         `A hora de provar o nível do seu time chegou! Estão abertas as inscrições para o **Torneio 4x4**.\n\n` +
-          `<:ver_dinheiro2qn:1556881769565790258> **Premiação:** R$ 200,00 em PIX\n\n` +
+          `<:ver_dinheiro2qn:1556881769565790258> **Premiação:** R$ 200,00 no PIX\n\n` +
           `<a:008_whiteexcl:1559272726739558562> **Canais Importantes:**\n` +
           `• Dúvidas e Regras: <#1554913667483705465>\n` +
           `• Faça sua Inscrição: <#1553186399967256629> pula contra but\n\n` +
@@ -77,7 +77,7 @@ module.exports = {
       .setImage(
         "https://media.discordapp.net/attachments/1553534170179833951/1554904332820811907/banner-4x4.png?ex=6acfb881&is=6ace6701&hm=0aaffcacde62ae009ffdd83379b4c4dbb289a9b2713c3ecfb890c4c00a39d82e&=&format=webp&quality=lossless&width=1536&height=615",
       )
-      .setFooter({ text: "Mc Kevin Bot • Torneios Oficiais" })
+      .setFooter({ text: "2qn • Torneios Oficiais" })
       .setTimestamp();
 
     // 4. Painel de Prévia e Confirmação
