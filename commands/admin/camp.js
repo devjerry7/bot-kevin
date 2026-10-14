@@ -93,6 +93,66 @@ module.exports = {
     }
 
     // ----------------------------------------------------
+    // LISTAR TIMES INSCRITOS
+    // ----------------------------------------------------
+    if (subCommand === "times" || subCommand === "lista") {
+      try {
+        const tournament = await prisma.tournament.findFirst({
+          where: {
+            status: {
+              in: ["REGISTRATION_OPEN", "REGISTRATION_CLOSED", "IN_PROGRESS"],
+            },
+          },
+          include: {
+            teams: {
+              include: {
+                players: true,
+              },
+            },
+          },
+        });
+
+        if (!tournament || !tournament.teams || tournament.teams.length === 0) {
+          return message.reply(
+            "<:ama_cuidado2qn:1545494059081142403> Nenhum torneio ativo encontrado ou nenhuma equipe cadastrada no momento.",
+          );
+        }
+
+        const embedTeams = new EmbedBuilder()
+          .setTitle(
+            `<:serv:1545459134089138256> EQUIPES INSCRITAS - ${tournament.name || "TORNEIO 4X4"}`,
+          )
+          .setColor(hexPurple)
+          .setTimestamp();
+
+        let description = `Total de equipes cadastradas: **${tournament.teams.length} / ${tournament.maxTeams}**\n\n`;
+
+        tournament.teams.forEach((team, index) => {
+          const playersList =
+            team.players && team.players.length > 0
+              ? team.players
+                  .map(
+                    (p) => `• <@${p.discordId}> (${p.gameNick || p.username})`,
+                  )
+                  .join("\n")
+              : "Nenhum jogador cadastrado.";
+
+          description += `**${index + 1}. ${team.name}** [Status: \`${team.status}\`]\n${playersList}\n\n`;
+        });
+
+        if (description.length > 4096) {
+          description = description.substring(0, 4093) + "...";
+        }
+
+        embedTeams.setDescription(description);
+        return message.reply({ embeds: [embedTeams] });
+      } catch (err) {
+        console.error("[LOG-CAMP] Erro ao listar equipes:", err);
+        return message.reply("❌ Erro ao buscar a lista de equipes inscritas.");
+      }
+    }
+
+    // ----------------------------------------------------
     // STATUS / RELATÓRIO DE INTEGRIDADE
     // ----------------------------------------------------
     if (subCommand === "status") {
@@ -148,9 +208,6 @@ module.exports = {
     // PAINEL DE CONTROLE DOS CONFRONTOS (DROPDOWN MENU)
     // ----------------------------------------------------
     if (subCommand === "confrontos") {
-      console.log(
-        "\n[LOG-CAMP] >>> Iniciando execução de mc!camp confrontos...",
-      );
       try {
         let tournament = await prisma.tournament.findFirst({
           where: {
@@ -163,25 +220,12 @@ module.exports = {
           },
         });
 
-        console.log(
-          "[LOG-CAMP] Torneio encontrado no banco:",
-          tournament
-            ? {
-                id: tournament.id,
-                status: tournament.status,
-                totalTeams: tournament.teams.length,
-              }
-            : "Nenhum torneio ativo encontrado!",
-        );
-
         if (!tournament) {
-          console.log("[LOG-CAMP] ABORTANDO: Torneio nulo.");
           return message.reply(
             "<:ama_cuidado2qn:1545494059081142403> Nenhum torneio ativo encontrado.",
           );
         }
 
-        // Busca todas as rodadas do torneio em ordem
         let rounds = await prisma.round.findMany({
           where: { tournamentId: tournament.id },
           orderBy: { roundNumber: "asc" },
@@ -192,7 +236,6 @@ module.exports = {
           },
         });
 
-        // Se não houver rounds criados, cria os padrão
         if (!rounds || rounds.length === 0) {
           const roundsData = [
             { roundNumber: 1, name: "32avos (R32)", matchType: "BO1" },
@@ -215,7 +258,6 @@ module.exports = {
           });
         }
 
-        // Determina a rodada ativa (a primeira com partidas PENDING ou a mais avançada com partidas)
         let activeRound = rounds.find((r) =>
           r.matches.some((m) => m.status === "PENDING"),
         );
@@ -229,11 +271,7 @@ module.exports = {
         }
 
         let matches = activeRound.matches;
-        console.log(
-          `[LOG-CAMP] Rodada ativa detectada: ${activeRound.name} (ID: ${activeRound.id}) | Partidas no banco: ${matches.length}`,
-        );
 
-        // Se estivermos no Round 1 e não houver partidas criadas, gera o sorteio inicial
         if (activeRound.roundNumber === 1 && matches.length === 0) {
           const activeTeams = tournament.teams.filter(
             (t) => !["CANCELLED"].includes(t.status),
@@ -272,7 +310,6 @@ module.exports = {
             data: { status: "IN_PROGRESS" },
           });
 
-          // Recarrega as partidas do Round 1 recém criadas
           rounds = await prisma.round.findMany({
             where: { tournamentId: tournament.id },
             orderBy: { roundNumber: "asc" },
@@ -284,10 +321,6 @@ module.exports = {
           matches = activeRound.matches;
         }
 
-        // =========================================================
-        // AGRUPAMENTO DE PARTIDAS POR CONFRONTO (matchNumber)
-        // Evita listar confrontos duplicados na exibição do painel
-        // =========================================================
         const groupedMatchesMap = new Map();
 
         matches.forEach((m) => {
@@ -298,7 +331,6 @@ module.exports = {
           groupedMatchesMap.get(matchNum).push(m);
         });
 
-        // Ordena os confrontos sequencialmente pelo matchNumber
         const sortedMatchNumbers = Array.from(groupedMatchesMap.keys()).sort(
           (a, b) => a - b,
         );
@@ -322,13 +354,11 @@ module.exports = {
         sortedMatchNumbers.forEach((matchNum) => {
           const matchGroup = groupedMatchesMap.get(matchNum);
 
-          // Pega a partida ativa/pendente prioritariamente, senão pega a mais recente
           const activeOrPendingMatch =
             matchGroup.find((m) => m.status === "IN_PROGRESS") ||
             matchGroup.find((m) => m.status === "PENDING") ||
             matchGroup[matchGroup.length - 1];
 
-          // Define o status consolidado do confronto
           const isGroupFinished = matchGroup.every(
             (m) => m.status === "FINISHED",
           );
@@ -531,7 +561,7 @@ module.exports = {
     }
 
     return message.reply(
-      "Use `mc!camp info`, `painel`, `status`, `confrontos`, `close` ou `reset`.",
+      "Use `mc!camp info`, `painel`, `times`, `status`, `confrontos`, `close` ou `reset`.",
     );
   },
 };
