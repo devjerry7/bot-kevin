@@ -137,11 +137,18 @@ class DiscordMatchService {
         `A infraestrutura deste confronto foi gerada com sucesso!\n\n` +
           `<:ama_coroa2qn:1535775618615087154> **Capitão Equipe 1:** <@${team1.captainId}> (${team1Name})\n` +
           `<:ama_coroa2qn:1535775618615087154> **Capitão Equipe 2:** <@${team2.captainId}> (${team2Name})\n\n` +
-          `<:verd_notas2qn:1545488990168158350> **Instruções:**\n` +
-          `1. Decidam entre si qual capitão criará a sala customizada no Free Fire.\n` +
-          `2. Enviem o **ID e a Senha** da sala neste chat.\n` +
-          `3. Entrem nas respectivas calls de voz acima. Boa sorte a ambos os squads!\n\n` +
-          `*<:ama_cuidado2qn:1545494059081142403> A administração deve clicar em um dos botões abaixo para declarar o vencedor da partida.*`,
+          `<:verd_notas2qn:1545488990168158350> **REGRAS E INSTRUÇÕES DA SALA:**\n` +
+          `1. **Habilidades Permitidas:** Alok, Kelly, Moco, Maxim e Leon.\n` +
+          `2. **Pets Permitidos:** Pato, Tirinho e Punk.\n` +
+          `3. **1º Round:** Apenas Desert Eagle.\n` +
+          `4. **Armas Liberadas:** Full UMP e XM8.\n` +
+          `5. Entrem na sala com as habilidades devidamente configuradas.\n` +
+          `6. **GO Automático:** Em até 3 minutos após o envio do ID e Senha.\n\n` +
+          `📌 **Passo a Passo:**\n` +
+          `• Decidam entre si qual capitão criará a sala customizada no Free Fire.\n` +
+          `• Enviem o **ID e a Senha** neste canal.\n` +
+          `• Entrem nas respetivas calls de voz acima. Boa sorte!\n\n` +
+          `*<:ama_cuidado2qn:1545494059081142403> Apenas a administração deve clicar nos botões abaixo para declarar o vencedor.*`,
       )
       .setTimestamp();
 
