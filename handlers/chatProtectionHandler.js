@@ -1,7 +1,7 @@
 // handlers/chatProtectionHandler.js
 const { EmbedBuilder } = require("discord.js");
 
-// Auxiliar para obter os IDs da Whitelist do .env
+// Auxiliar para obter os IDs da Whitelist do .env ou config
 const getWhitelistIds = () => {
   const whitelistEnv = process.env.WHITELIST_IDS || "";
   return whitelistEnv
@@ -50,7 +50,7 @@ module.exports = async (message) => {
 
   const WHITELIST_IDS = getWhitelistIds();
 
-  // Apenas membros da Whitelist Oficial ignoram as regras de segurança
+  // Membros da Whitelist Oficial ignoram as regras de segurança
   if (WHITELIST_IDS.includes(message.author.id)) return false;
 
   const { content, channel, attachments, guild, client, member } = message;
@@ -93,17 +93,19 @@ module.exports = async (message) => {
     }
   }
 
-  // --- 2. ANTI-INVITE DO DISCORD ---
-  const inviteRegex = /(discord\.(gg|io|me|li)|discord(app)?\.com\/invite)/i;
+  // --- 2. ANTI-INVITE E DIVULGAÇÃO (DISCORD, TELEGRAM, WHATSAPP) ---
+  const inviteRegex =
+    /(discord\.(gg|io|me|li)|discord(app)?\.com\/invite|t\.me\/|chat\.whatsapp\.com\/)/i;
+
   if (!violationType && inviteRegex.test(contentLower)) {
     violationType = "LINK_CONVITE";
     details = content;
-    warningMessage = `🚫 **${message.author}, divulgação de convites não é permitida.**`;
+    warningMessage = `🚫 **${message.author}, divulgação de convites/grupos externos não é permitida.**`;
   }
 
   // --- 3. ANTI-PHISHING, NITRO FALSO E LINKS ENCURTADOS ---
   const maliciousLinkRegex =
-    /(steamcommunity\..*?\..*|discordgift\..*|discor\.me|discord-nitro\..*|nitrofree\..*|steam-nitro\..*|free-nitro\..*|steamgifts\..*giveaway.*|tinyurl\.com|bit\.ly)/i;
+    /(steamcommunity\..*?\..*|discordgift\..*|discor\.me|discord-nitro\..*|nitrofree\..*|steam-nitro\..*|free-nitro\..*|steamgifts\..*giveaway.*|tinyurl\.com|bit\.ly|is\.gd|cutt\.ly)/i;
 
   if (!violationType && maliciousLinkRegex.test(contentLower)) {
     violationType = "LINK_MALICIOSO";
@@ -123,12 +125,20 @@ module.exports = async (message) => {
         await message.delete().catch(() => {});
       }
 
-      // Aplica Mute temporário no usuário por segurança se aplicável
+      // Tenta aplicar timeout. Se não puder (por hierarquia), tenta banir caso seja link malicioso
       if (member && member.moderatable) {
         await member.timeout(
-          10 * 60 * 1000,
+          15 * 60 * 1000,
           `Bloqueio automático: ${violationType}`,
         );
+      } else if (
+        member &&
+        member.bannable &&
+        violationType === "LINK_MALICIOSO"
+      ) {
+        await member.ban({
+          reason: `Bloqueio de segurança: Envio de Phishing (${details})`,
+        });
       }
 
       // Notifica os Donos no PV
