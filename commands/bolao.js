@@ -2,6 +2,7 @@
 const {
   EmbedBuilder,
   ActionRowBuilder,
+  StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
   PermissionsBitField,
@@ -26,13 +27,10 @@ module.exports = {
     }
 
     const subCommand = args[0] ? args[0].toLowerCase() : "";
-    const channelId = "1561188833180131378";
-    const targetChannel =
-      message.client.channels.cache.get(channelId) || message.channel;
+    const targetChannel = message.channel;
 
     // ====================================================
     // SUBCOMANDO: mc!bolao fechar / travar / lock
-    // Desativa todos os botões no canal de transmissão
     // ====================================================
     if (
       subCommand === "fechar" ||
@@ -47,15 +45,23 @@ module.exports = {
 
         if (!bolaoMessage) {
           return message.channel.send(
-            "<:ama_cuidado2qn:1545494059081142403> Não foi possível encontrar a mensagem ativa do bolão no canal.",
+            "<:ama_cuidado2qn:1545494059081142403> Não foi possível encontrar a mensagem ativa do bolão neste canal.",
           );
         }
 
         const disabledComponents = bolaoMessage.components.map((row) => {
           const newRow = new ActionRowBuilder();
-          row.components.forEach((btn) => {
-            const newBtn = ButtonBuilder.from(btn).setDisabled(true);
-            newRow.addComponents(newBtn);
+          row.components.forEach((comp) => {
+            if (comp.type === 3) {
+              // Select Menu
+              const newSelect =
+                StringSelectMenuBuilder.from(comp).setDisabled(true);
+              newRow.addComponents(newSelect);
+            } else {
+              // Button
+              const newBtn = ButtonBuilder.from(comp).setDisabled(true);
+              newRow.addComponents(newBtn);
+            }
           });
           return newRow;
         });
@@ -73,7 +79,7 @@ module.exports = {
 
         if (message.deletable) await message.delete().catch(() => {});
         return message.channel.send(
-          "<a:ver_verifcado2qn:1535775624864473169> **Bolão fechado com sucesso!** Os botões foram desativados.",
+          "<a:ver_verifcado2qn:1535775624864473169> **Bolão fechado com sucesso!** Os menus e botões foram desativados.",
         );
       } catch (err) {
         console.error("[BOLAO FECHAR ERROR]:", err);
@@ -88,9 +94,9 @@ module.exports = {
     // Exemplo: mc!bolao resultado LOUD 3x1 darker
     // ====================================================
     if (subCommand === "resultado" || subCommand === "apurar") {
-      const winnerInput = args[1]; // LOUD ou Vitality
-      const scoreInput = args[2]; // Ex: 3x1
-      const mvpInput = args[3]; // Ex: darker
+      const winnerInput = args[1];
+      const scoreInput = args[2];
+      const mvpInput = args[3];
 
       if (!winnerInput || !scoreInput || !mvpInput) {
         return message.channel.send(
@@ -113,7 +119,6 @@ module.exports = {
           );
         }
 
-        // Filtra os acertos
         const winnersAccurate = votes.filter(
           (v) =>
             v.votedWinner?.toLowerCase() === winnerName.toLowerCase() &&
@@ -162,109 +167,135 @@ module.exports = {
     }
 
     // ====================================================
-    // PAINEL PADRÃO: mc!bolao (Envia os botões no canal de transmissão)
+    // PAINEL PADRÃO: mc!bolao (Menu de Seleção + Botão de Presença)
     // ====================================================
-    const emojiLoud = "<:ver_loud:1561188231033397439>";
-    const emojiVit = "<:am_vit:1561190314671210618>";
     const emojiTrofeu = "<a:am_trofeu2qn:1556881758723776605>";
 
     const embed = new EmbedBuilder()
       .setTitle(`${emojiTrofeu} BOLÃO LOUD VALORANT - HOJE! ${emojiTrofeu}`)
       .setDescription(
-        "Transmissão exclusiva no nosso servidor! Deixe seu palpite nos botões abaixo e venha torcer.\n\n" +
+        "Transmissão exclusiva no nosso servidor! Selecione seus palpites nos menus abaixo e venha torcer.\n\n" +
           "**Partida:** LOUD vs TEAM VITALITY (MD5)",
       )
       .setImage(BANNER_URL)
       .setColor(0x962dc0)
       .setTimestamp();
 
-    // LINHA 1: Vencedor
-    const rowWinner = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("bolao_win_loud")
-        .setLabel("LOUD")
-        .setEmoji(emojiLoud)
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_win_vitality")
-        .setLabel("TEAM VITALITY")
-        .setEmoji(emojiVit)
-        .setStyle(ButtonStyle.Secondary),
-    );
+    // MENU 1: Vencedor e Placar
+    const menuWinnerScore = new StringSelectMenuBuilder()
+      .setCustomId("bolao_select_winnerscore")
+      .setPlaceholder(
+        "<a:am_trofeu2qn:1556881758723776605> Selecione o Vencedor e o Placar Exato...",
+      )
+      .addOptions([
+        {
+          label: "LOUD 3x0",
+          value: "loud_3x0",
+          description: "Vitória limpa da LOUD",
+        },
+        {
+          label: "LOUD 3x1",
+          value: "loud_3x1",
+          description: "LOUD vence por 3x1",
+        },
+        {
+          label: "LOUD 3x2",
+          value: "loud_3x2",
+          description: "LOUD vence no sufoco por 3x2",
+        },
+        {
+          label: "Vitality 3x0",
+          value: "vitality_3x0",
+          description: "Vitória limpa da Vitality",
+        },
+        {
+          label: "Vitality 3x1",
+          value: "vitality_3x1",
+          description: "Vitality vence por 3x1",
+        },
+        {
+          label: "Vitality 3x2",
+          value: "vitality_3x2",
+          description: "Vitality vence no sufoco por 3x2",
+        },
+      ]);
 
-    // LINHA 2: Placar MD5 + Presença
-    const rowScore = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("bolao_score_3x0")
-        .setLabel("3x0")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_score_3x1")
-        .setLabel("3x1")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_score_3x2")
-        .setLabel("3x2")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_attend")
-        .setLabel("<a:ver_verifcado2qn:1535775624864473169> Presença")
-        .setStyle(ButtonStyle.Secondary),
-    );
+    // MENU 2: Escolha do MVP
+    const menuMvp = new StringSelectMenuBuilder()
+      .setCustomId("bolao_select_mvp")
+      .setPlaceholder("🔥 Selecione o MVP da Partida...")
+      .addOptions([
+        {
+          label: "darker (LOUD)",
+          value: "darker",
+          description: "Jogador da LOUD",
+        },
+        { label: "erde (LOUD)", value: "erde", description: "Jogador da LOUD" },
+        {
+          label: "luck xo (LOUD)",
+          value: "luck_xo",
+          description: "Jogador da LOUD",
+        },
+        {
+          label: "tkzin (LOUD)",
+          value: "tkzin",
+          description: "Jogador da LOUD",
+        },
+        {
+          label: "davih (LOUD)",
+          value: "davih",
+          description: "Jogador da LOUD",
+        },
+        {
+          label: "Chronicle (Vitality)",
+          value: "Chronicle",
+          description: "Jogador da Vitality",
+        },
+        {
+          label: "Derke (Vitality)",
+          value: "Derke",
+          description: "Jogador da Vitality",
+        },
+        {
+          label: "PROFEK (Vitality)",
+          value: "PROFEK",
+          description: "Jogador da Vitality",
+        },
+        {
+          label: "Sayonara (Vitality)",
+          value: "Sayonara",
+          description: "Jogador da Vitality",
+        },
+        {
+          label: "Jamppi (Vitality)",
+          value: "Jamppi",
+          description: "Jogador da Vitality",
+        },
+      ]);
 
-    // LINHA 3: MVP LOUD
-    const rowMvpLoud = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_darker")
-        .setLabel("darker")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_erde")
-        .setLabel("erde")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_luck_xo")
-        .setLabel("luck xo")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_tkzin")
-        .setLabel("tkzin")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_davih")
-        .setLabel("davih")
-        .setStyle(ButtonStyle.Secondary),
-    );
+    // BOTÃO: Confirmar Presença
+    const btnAttendance = new ButtonBuilder()
+      .setCustomId("bolao_attend")
+      .setLabel("Confirmar Presença na Live")
+      .setEmoji("<a:ver_verifcado2qn:1535775624864473169>")
+      .setStyle(ButtonStyle.Success);
 
-    // LINHA 4: MVP Vitality
-    const rowMvpVit = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_Chronicle")
-        .setLabel("Chronicle")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_Derke")
-        .setLabel("Derke")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_PROFEK")
-        .setLabel("PROFEK")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_Sayonara")
-        .setLabel("Sayonara")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("bolao_mvp_Jamppi")
-        .setLabel("Jamppi")
-        .setStyle(ButtonStyle.Secondary),
-    );
+    const row1 = new ActionRowBuilder().addComponents(menuWinnerScore);
+    const row2 = new ActionRowBuilder().addComponents(menuMvp);
+    const row3 = new ActionRowBuilder().addComponents(btnAttendance);
 
-    if (message.deletable) await message.delete().catch(() => {});
+    try {
+      if (message.deletable) await message.delete().catch(() => {});
 
-    await targetChannel.send({
-      embeds: [embed],
-      components: [rowWinner, rowScore, rowMvpLoud, rowMvpVit],
-    });
+      await targetChannel.send({
+        embeds: [embed],
+        components: [row1, row2, row3],
+      });
+    } catch (err) {
+      console.error("[BOLAO SEND ERROR]:", err);
+      return message.channel.send(
+        `<:br_errado2qn:1556905095919050762> Erro ao enviar o painel do bolão: ${err.message}`,
+      );
+    }
   },
 };

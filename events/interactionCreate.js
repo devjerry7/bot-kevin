@@ -74,7 +74,10 @@ module.exports = async (interaction) => {
       return;
     }
 
-    if (interaction.isButton() && interaction.customId.startsWith("bolao_")) {
+    if (
+      (interaction.isButton() || interaction.isStringSelectMenu()) &&
+      interaction.customId.startsWith("bolao_")
+    ) {
       return require("../handlers/bolaoInteractionHandler")(interaction);
     }
 

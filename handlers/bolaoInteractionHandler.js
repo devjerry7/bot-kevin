@@ -6,14 +6,10 @@ const MATCH_NAME = "LOUD vs Vitality";
 
 module.exports = async (interaction) => {
   const userId = interaction.user.id;
-  const [_, action, subValue] = interaction.customId.split("_");
-  // Exemplo: bolao_win_loud -> action = win, subValue = loud
-  // Exemplo: bolao_score_3x0 -> action = score, subValue = 3x0
-  // Exemplo: bolao_mvp_darker -> action = mvp, subValue = darker
-  // Exemplo: bolao_attend -> action = attend, subValue = undefined
+  const customId = interaction.customId;
 
   try {
-    // Garante que o registro do usuário existe para esta partida
+    // Garante que o registro do voto existe no banco
     let voteRecord = await prisma.bolaoVote.findUnique({
       where: {
         discordUserId_matchName: {
@@ -34,34 +30,47 @@ module.exports = async (interaction) => {
 
     let responseText = "";
 
-    if (action === "win") {
-      const winnerName = subValue === "loud" ? "LOUD" : "Team Vitality";
+    // 1. MENU DE VENCEDOR + PLACAR (bolao_select_winnerscore)
+    if (customId === "bolao_select_winnerscore") {
+      const selectedValue = interaction.values[0]; // Ex: "loud_3x1" ou "vitality_3x0"
+      const [team, score] = selectedValue.split("_");
+      const winnerName = team === "loud" ? "LOUD" : "Team Vitality";
+
       await prisma.bolaoVote.update({
         where: { id: voteRecord.id },
-        data: { votedWinner: winnerName },
+        data: {
+          votedWinner: winnerName,
+          votedScore: score,
+        },
       });
-      responseText = `<:br_correto2qn:1556905093729882217> Seu voto para **Vencedor (${winnerName})** foi registrado com sucesso!`;
-    } else if (action === "score") {
+
+      responseText = `<a:ver_verifcado2qn:1535775624864473169> Palpite salvo: **${winnerName}** vencendo por **${score}**!`;
+    }
+
+    // 2. MENU DE MVP (bolao_select_mvp)
+    else if (customId === "bolao_select_mvp") {
+      const selectedMvp = interaction.values[0]; // Ex: "darker", "Derke"
+
       await prisma.bolaoVote.update({
         where: { id: voteRecord.id },
-        data: { votedScore: subValue },
+        data: { votedMvp: selectedMvp },
       });
-      responseText = `<:br_correto2qn:1556905093729882217> Seu palpite de **Placar (${subValue})** foi salvo!`;
-    } else if (action === "mvp") {
-      await prisma.bolaoVote.update({
-        where: { id: voteRecord.id },
-        data: { votedMvp: subValue },
-      });
-      responseText = `<:br_correto2qn:1556905093729882217> Você votou no **MVP: ${subValue}**!`;
-    } else if (action === "attend") {
+
+      responseText = `<a:ver_verifcado2qn:1535775624864473169> Voto registrado para MVP: **${selectedMvp}**!`;
+    }
+
+    // 3. BOTÃO DE PRESENÇA (bolao_attend)
+    else if (customId === "bolao_attend") {
       const newStatus = !voteRecord.attending;
+
       await prisma.bolaoVote.update({
         where: { id: voteRecord.id },
         data: { attending: newStatus },
       });
+
       responseText = newStatus
-        ? "<a:ver_verifcado2qn:1535775624864473169> Presença confirmada para a transmissão!"
-        : "<:br_errado2qn:1556905095919050762> Presença removida da transmissão.";
+        ? "🎟️ **Presença confirmada** para a transmissão ao vivo!"
+        : "❌ Presença removida da transmissão.";
     }
 
     return interaction.reply({ content: responseText, ephemeral: true });
@@ -69,7 +78,7 @@ module.exports = async (interaction) => {
     console.error("[BOLAO INTERACTION ERROR]:", error);
     return interaction.reply({
       content:
-        "<:br_errado2qn:1556905095919050762> Ocorreu um erro ao registrar seu palpite no banco de dados.",
+        "<:br_errado2qn:1556905095919050762> Ocorreu um erro ao registrar seu palpite.",
       ephemeral: true,
     });
   }
