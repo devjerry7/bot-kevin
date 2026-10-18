@@ -46,6 +46,7 @@ const {
 const { handleBotInfo } = require("../commands/botinfo");
 const { handleListMembers } = require("../commands/listMembers");
 const { handleVoice } = require("../commands/voice");
+const streamerCommand = require("../commands/streamer");
 
 // --- PAINÉIS VISUAIS E EMBEDS ---
 const { handleGameRolesPanel } = require("../commands/gameRoles");
@@ -326,6 +327,9 @@ module.exports = async (message) => {
 
   if (command === "ffcampeao") return ffCampeaoCommand.execute(message, args);
   if (command === "ffsair") return ffSairCommand.execute(message, args);
+
+  if (["streamer", "streamers"].includes(command))
+    return streamerCommand.execute(message, args);
 
   if (["help", "ajuda", "comandos"].includes(command))
     return helpCommand.execute(message, args);
