@@ -184,9 +184,7 @@ module.exports = {
     // MENU 1: Vencedor e Placar
     const menuWinnerScore = new StringSelectMenuBuilder()
       .setCustomId("bolao_select_winnerscore")
-      .setPlaceholder(
-        "<a:am_trofeu2qn:1556881758723776605> Selecione o Vencedor e o Placar Exato...",
-      )
+      .setPlaceholder("Selecione o Vencedor e o Placar Exato...")
       .addOptions([
         {
           label: "LOUD 3x0",
@@ -223,7 +221,7 @@ module.exports = {
     // MENU 2: Escolha do MVP
     const menuMvp = new StringSelectMenuBuilder()
       .setCustomId("bolao_select_mvp")
-      .setPlaceholder("🔥 Selecione o MVP da Partida...")
+      .setPlaceholder("Selecione o MVP da Partida...")
       .addOptions([
         {
           label: "darker (LOUD)",
@@ -278,7 +276,7 @@ module.exports = {
       .setCustomId("bolao_attend")
       .setLabel("Confirmar Presença na Live")
       .setEmoji("<a:ver_verifcado2qn:1535775624864473169>")
-      .setStyle(ButtonStyle.Success);
+      .setStyle(ButtonStyle.Secondary);
 
     const row1 = new ActionRowBuilder().addComponents(menuWinnerScore);
     const row2 = new ActionRowBuilder().addComponents(menuMvp);
