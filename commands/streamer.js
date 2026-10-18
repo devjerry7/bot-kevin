@@ -68,22 +68,21 @@ module.exports = {
       }
 
       try {
-        // 1. Garante que o streamer existe no banco vinculado ao Discord ID
-        let streamerRecord = await prisma.streamer.findUnique({
-          where: { discordId: targetMember.id },
+        // Busca usando discordUserId conforme schema do Prisma
+        let streamerRecord = await prisma.streamer.findFirst({
+          where: { discordUserId: targetMember.id },
         });
 
         if (!streamerRecord) {
           streamerRecord = await prisma.streamer.create({
             data: {
-              discordId: targetMember.id,
-              name: targetMember.user.tag,
+              discordUserId: targetMember.id,
+              displayName: targetMember.user.tag,
               enabled: true,
             },
           });
         }
 
-        // 2. Adiciona ou atualiza a plataforma vinculada (SEM mexer nos cargos do usuário)
         await prisma.streamerPlatform.upsert({
           where: {
             streamerId_platform: {
@@ -132,8 +131,8 @@ module.exports = {
     // Uso: mc!streamer link
     // ====================================================
     if (subCommand === "link" || subCommand === "convite") {
-      const streamerRecord = await prisma.streamer.findUnique({
-        where: { discordId: message.author.id },
+      const streamerRecord = await prisma.streamer.findFirst({
+        where: { discordUserId: message.author.id },
       });
 
       if (!streamerRecord || !streamerRecord.enabled) {
@@ -184,8 +183,8 @@ module.exports = {
     // ====================================================
     const targetId = message.mentions.users.first()?.id || message.author.id;
 
-    const streamerData = await prisma.streamer.findUnique({
-      where: { discordId: targetId },
+    const streamerData = await prisma.streamer.findFirst({
+      where: { discordUserId: targetId },
       include: { platforms: true },
     });
 
@@ -216,7 +215,7 @@ module.exports = {
         : "Nenhuma plataforma vinculada.";
 
     const embed = createEmbed(
-      `<:br_registro2qn:1557798191100072119> Perfil de Streamer — ${streamerData.name}`,
+      `<:br_registro2qn:1557798191100072119> Perfil de Streamer — ${streamerData.displayName || streamerData.name}`,
       `Estatísticas de monitoramento:\n\n` +
         `<:br_incricao2qn:1556905090835546173> **Plataformas Vinculadas:**\n${platformsList}\n\n` +
         `<:br_relogio2qn:1556898949011603487> **Tempo em Call na Semana:** \`${totalHoursInCall}h\` / \`${goalHours}h\` meta\n` +

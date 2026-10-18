@@ -41,8 +41,13 @@ function startStreamerWeeklyReport(client) {
             ? "<:br_correto2qn:1556905093729882217> **Meta Cumprida**"
             : "<:br_errado2qn:1556905095919050762> **Meta Incompleta**";
 
+        const streamerTag = s.discordUserId
+          ? `<@${s.discordUserId}>`
+          : s.displayName || "Streamer";
+        const displayName = s.displayName || "Sem Nome";
+
         reportDescription +=
-          `<:pr_pessoinha2qn:1542026405481684994> **<@${s.discordId}>** (${s.name})\n` +
+          `<:pr_pessoinha2qn:1542026405481684994> **${streamerTag}** (${displayName})\n` +
           `• Call: \`${hoursInCall}h\` / \`${goalHours}h\` ${metVoice ? "<:br_correto2qn:1556905093729882217>" : "<:br_errado2qn:1556905095919050762>"}\n` +
           `• Convites: \`${invites}\` / \`${goalInvites}\` ${metInvites ? "<:br_correto2qn:1556905093729882217>" : "<:br_errado2qn:1556905095919050762>"}\n` +
           `• Resultado: ${statusIcon}\n\n`;
