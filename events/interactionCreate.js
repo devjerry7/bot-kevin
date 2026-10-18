@@ -74,6 +74,10 @@ module.exports = async (interaction) => {
       return;
     }
 
+    if (interaction.isButton() && interaction.customId.startsWith("bolao_")) {
+      return require("../handlers/bolaoInteractionHandler")(interaction);
+    }
+
     // ==========================================
     // <a:am_trofelzinho:1556881756521766934> MENU DE SELEÇÃO DE CONFRONTOS (4X4)
     // ==========================================

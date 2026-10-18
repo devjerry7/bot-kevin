@@ -519,3 +519,17 @@ model AuditLog {
 
   timestamp    DateTime   @default(now())
 }
+
+model BolaoVote {
+  id            String   @id @default(uuid())
+  matchName     String   @default("LOUD vs Vitality")
+  discordUserId String
+  votedWinner   String?  // 'LOUD' ou 'Vitality'
+  votedScore    String?  // '3x0', '3x1', '3x2'
+  votedMvp      String?  // Nome do jogador (ex: 'saadakh', 'Derke', etc.)
+  attending     Boolean  @default(false) // Confirmação de presença
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([discordUserId, matchName])
+}
