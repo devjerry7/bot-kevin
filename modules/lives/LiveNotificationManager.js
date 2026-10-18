@@ -1,7 +1,8 @@
+// handlers/LiveNotificationManager.js
 const { EmbedBuilder } = require("discord.js");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const config = require("../../config"); // Puxa direto do seu config.js central
+const config = require("../../config");
 
 const TwitchProvider = require("./providers/TwitchProvider");
 const YouTubeProvider = require("./providers/YouTubeProvider");
@@ -70,7 +71,7 @@ class LiveNotificationManager {
         .catch(() => null);
       if (!channel) return;
 
-      // Busca os streamers cadastrados no Prisma junto com o perfil do streamer
+      // Busca os streamers cadastrados e ativos no banco
       const platformsData = await prisma.streamerPlatform.findMany({
         where: { enabled: true, streamer: { enabled: true } },
         include: { streamer: true },
@@ -85,11 +86,11 @@ class LiveNotificationManager {
         platformUsername: p.platformUsername,
       }));
 
-      // Executa a checagem em todos os provedores
+      // Executa a checagem em todos os provedores com isolamento de falha
       const allEventsPromises = this.providers.map((provider) =>
         provider.checkLives(streamersList).catch((err) => {
           console.error(
-            `[LiveManager] Erro no provider ${provider.name}:`,
+            `[LiveManager] Erro no provider ${provider.name || "Desconhecido"}:`,
             err.message,
           );
           return [];
@@ -100,6 +101,8 @@ class LiveNotificationManager {
       const allEvents = results.flat();
 
       for (const event of allEvents) {
+        if (!event || !event.streamerId || !event.platform) continue;
+
         const platformRecord = platformsData.find(
           (p) =>
             p.streamerId === event.streamerId &&
@@ -115,7 +118,8 @@ class LiveNotificationManager {
           },
         });
 
-        if (event.isLive) {
+        // Validação estrita para evitar falsos positivos
+        if (event.isLive === true) {
           if (!activeSession) {
             const newSession = await prisma.liveSession.create({
               data: {
@@ -125,47 +129,44 @@ class LiveNotificationManager {
               },
             });
 
-            // --- ESTRUTURA VISUAL APRIMORADA ---
             const embed = new EmbedBuilder()
               .setColor(config.colorBase || 0x962dc0)
               .setAuthor({
-                name: `${event.displayName} está ao vivo na ${event.platform.toUpperCase()}!`,
-                iconURL: event.avatarUrl || event.thumbnail || undefined, // Exibe o avatar do criador
+                name: `${event.displayName || platformRecord.platformUsername} está ao vivo na ${event.platform.toUpperCase()}!`,
+                iconURL: event.avatarUrl || event.thumbnail || undefined,
               })
-              .setTitle(event.title || `Transmissão de ${event.displayName}`)
-              .setURL(event.url)
+              .setTitle(
+                event.title ||
+                  `Transmissão de ${event.displayName || "Streamer"}`,
+              )
+              .setURL(event.url || "https://twitch.tv")
               .addFields(
                 {
-                  name: "🎮 Jogo / Categoria",
+                  name: "<:jg_game2qn:1546273610971218000> Jogo / Categoria",
                   value: event.category || "Não especificado",
                   inline: true,
                 },
                 {
-                  name: "👥 Visualizadores",
+                  name: "<:pr_pessoinha2qn:1542026405481684994> Visualizadores",
                   value: `\`${Number(event.viewerCount || 0).toLocaleString("pt-BR")}\``,
                   inline: true,
                 },
               )
               .setTimestamp(event.startedAt || new Date())
               .setFooter({
-                text: `Plataforma: ${event.platform.toUpperCase()} • Sistema de Lives`,
+                text: `Plataforma: ${event.platform.toUpperCase()} | 2QN Streamers`,
                 iconURL: this.client.user?.displayAvatarURL(),
               });
 
-            // Define a miniatura grande da live se houver
             if (event.thumbnail) {
               embed.setImage(event.thumbnail);
             }
 
-            // Montagem inteligente das menções de cargos
             const mentions = [];
-
-            // 1. Cargo geral de lives
             if (config.notifyRoles?.live) {
               mentions.push(`<@&${config.notifyRoles.live}>`);
             }
 
-            // 2. Cargo específico do jogo transmitido
             const gameRoleId = this.resolveGameRole(event.category);
             if (gameRoleId) {
               mentions.push(`<@&${gameRoleId}>`);
@@ -174,7 +175,7 @@ class LiveNotificationManager {
             const mentionString = mentions.length > 0 ? mentions.join(" ") : "";
 
             const sentMessage = await channel.send({
-              content: `${mentionString} **${event.displayName}** acabou de iniciar uma transmissão! 🔴`,
+              content: `${mentionString} **${event.displayName || "Streamer"}** acabou de iniciar uma transmissão! <:verm_botao2qn:1546265901161255085>`,
               embeds: [embed],
             });
 
@@ -184,23 +185,26 @@ class LiveNotificationManager {
             });
           }
         } else {
-          // Se a live encerrou e havia uma sessão ativa, fechamos e editamos a mensagem
+          // Se a live encerrou, fecha a sessão e atualiza a mensagem no Discord
           if (activeSession) {
             try {
               if (activeSession.discordMessageId) {
                 const msg = await channel.messages
                   .fetch(activeSession.discordMessageId)
                   .catch(() => null);
+
                 if (msg && msg.embeds[0]) {
                   const oldEmbed = msg.embeds[0];
                   const finishedEmbed = EmbedBuilder.from(oldEmbed)
                     .setColor(0x2f3136)
                     .setTitle(`[ENCERRADA] ${oldEmbed.title}`)
-                    .setFooter({ text: "🔴 Transmissão Encerrada" });
+                    .setFooter({
+                      text: "<:verm_botao2qn:1546265901161255085> Transmissão Encerrada | 2QN Streamers",
+                    });
 
                   await msg
                     .edit({
-                      content: `🔴 A transmissão de **${event.displayName}** foi encerrada.`,
+                      content: `<:verm_botao2qn:1546265901161255085> A transmissão foi encerrada.`,
                       embeds: [finishedEmbed],
                     })
                     .catch(() => {});

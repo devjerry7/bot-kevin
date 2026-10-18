@@ -8,8 +8,9 @@ const {
   EmbedBuilder,
 } = require("discord.js");
 
-// --- IMPORTAÇÃO DA STAFF ---
+// --- IMPORTAÇÕES DE TRACKERS ---
 const staffVoiceTracker = require("../listeners/staffVoiceTracker");
+const streamerVoiceTracker = require("../listeners/streamerVoiceTracker");
 
 module.exports = async (oldState, newState, client) => {
   const creatorChannelId = process.env.JOIN_TO_CREATE_ID;
@@ -19,11 +20,15 @@ module.exports = async (oldState, newState, client) => {
   const guild = newState.guild;
 
   // ====================================================
-  // TRACKER DE VOZ DA STAFF
+  // TRACKER DE VOZ DA STAFF E STREAMERS
   // ====================================================
   if (member) {
     staffVoiceTracker(oldState, newState).catch((err) =>
       console.error("[STAFF VOICE TRACKER ERROR]", err),
+    );
+
+    streamerVoiceTracker(oldState, newState).catch((err) =>
+      console.error("[STREAMER VOICE TRACKER ERROR]", err),
     );
   }
 
@@ -71,7 +76,6 @@ module.exports = async (oldState, newState, client) => {
         .setDescription("Gerencie sua sala privada utilizando o menu abaixo.")
         .setColor(COLOR_BASE);
 
-      // Menu Dropdown com todas as opções e emojis personalizados
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId("vpanel_menu")
         .setPlaceholder("Selecione uma opção para gerenciar sua call...")
@@ -80,32 +84,32 @@ module.exports = async (oldState, newState, client) => {
             .setLabel("Privar Sala")
             .setDescription("Fecha a call para novos membros")
             .setValue("vpanel_lock")
-            .setEmoji("1556914029841088573"), // <:br_proibido2qn:...>
+            .setEmoji("1556914029841088573"),
           new StringSelectMenuOptionBuilder()
             .setLabel("Abrir Sala")
             .setDescription("Permite a entrada de todos na call")
             .setValue("vpanel_unlock")
-            .setEmoji("1556905093729882217"), // <:br_correto2qn:...>
+            .setEmoji("1556905093729882217"),
           new StringSelectMenuOptionBuilder()
             .setLabel("Renomear Sala")
             .setDescription("Altera o nome do canal de voz")
             .setValue("vpanel_rename")
-            .setEmoji("1556905090835546173"), // <:br_incricao2qn:...>
+            .setEmoji("1556905090835546173"),
           new StringSelectMenuOptionBuilder()
             .setLabel("Alterar Limite")
             .setDescription("Muda o limite de pessoas na sala")
             .setValue("vpanel_limit")
-            .setEmoji("1542026405481684994"), // <:pr_pessoinha2qn:...>
+            .setEmoji("1542026405481684994"),
           new StringSelectMenuOptionBuilder()
             .setLabel("Permitir Amigo")
             .setDescription("Concede acesso de entrada a um usuário")
             .setValue("vpanel_add")
-            .setEmoji("1560020789015744522"), // <:br_adicao:...>
+            .setEmoji("1560020789015744522"),
           new StringSelectMenuOptionBuilder()
             .setLabel("Expulsar Membro")
             .setDescription("Retira um usuário específico da sala")
             .setValue("vpanel_kick")
-            .setEmoji("1556905095919050762"), // <:br_errado2qn:...>
+            .setEmoji("1556905095919050762"),
         ]);
 
       const row = new ActionRowBuilder().addComponents(selectMenu);
