@@ -3,7 +3,6 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const streamerConfig = require("../config/streamerConfig");
 
-// Mapa em memória para registrar o momento exato em que o streamer entrou na call
 const streamerVoiceSessions = new Map();
 
 module.exports = async (oldState, newState) => {
@@ -13,7 +12,6 @@ module.exports = async (oldState, newState) => {
   const streamerRoleId = streamerConfig.streamerRoleId;
   const monitoredCategories = streamerConfig.monitoredVoiceCategoryIds || [];
 
-  // Verifica se o usuário possui o cargo de Streamer (ou se está cadastrado como streamer no banco)
   const hasStreamerRole = member.roles.cache.has(streamerRoleId);
   if (!hasStreamerRole) return;
 
@@ -31,12 +29,12 @@ module.exports = async (oldState, newState) => {
 
   const now = Date.now();
 
-  // CENÁRIO A: Entrou em uma categoria monitorada ou trocou para uma válida
+  // CENÁRIO A: Entrou em uma categoria monitorada
   if (!wasInMonitoredCategory && isInMonitoredCategory) {
     streamerVoiceSessions.set(userId, now);
   }
 
-  // CENÁRIO B: Saiu de uma categoria monitorada (ou desconectou do Discord)
+  // CENÁRIO B: Saiu de uma categoria monitorada
   else if (wasInMonitoredCategory && (!isInMonitoredCategory || !newChannel)) {
     if (streamerVoiceSessions.has(userId)) {
       const joinTime = streamerVoiceSessions.get(userId);
@@ -44,22 +42,21 @@ module.exports = async (oldState, newState) => {
 
       if (durationMinutes > 0) {
         try {
-          // Busca ou garante registro do streamer no banco
-          let streamerRecord = await prisma.streamer.findUnique({
-            where: { discordId: userId },
+          // Utilizando o campo correto do schema: discordUserId
+          let streamerRecord = await prisma.streamer.findFirst({
+            where: { discordUserId: userId },
           });
 
           if (!streamerRecord) {
             streamerRecord = await prisma.streamer.create({
               data: {
-                discordId: userId,
-                name: member.user.tag,
+                discordUserId: userId,
+                displayName: member.user.tag,
                 enabled: true,
               },
             });
           }
 
-          // Atualiza os minutos acumulados de call na semana
           await prisma.streamer.update({
             where: { id: streamerRecord.id },
             data: {
