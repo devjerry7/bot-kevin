@@ -33,7 +33,7 @@ module.exports = {
       if (
         !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
       ) {
-        return message.reply({
+        return message.channel.send({
           embeds: [
             createEmbed(
               "<:br_errado2qn:1556905095919050762> Permissão Negada",
@@ -56,7 +56,7 @@ module.exports = {
         !platformUsername ||
         !validPlatforms.includes(platform)
       ) {
-        return message.reply({
+        return message.channel.send({
           embeds: [
             createEmbed(
               "<:ama_cuidado2qn:1545494059081142403> Uso Incorreto",
@@ -68,7 +68,6 @@ module.exports = {
       }
 
       try {
-        // Busca usando discordUserId conforme schema do Prisma
         let streamerRecord = await prisma.streamer.findFirst({
           where: { discordUserId: targetMember.id },
         });
@@ -104,7 +103,7 @@ module.exports = {
           },
         });
 
-        return message.reply({
+        return message.channel.send({
           embeds: [
             createEmbed(
               "<a:ver_verifcado2qn:1535775624864473169> Streamer Vinculado com Sucesso!",
@@ -114,7 +113,7 @@ module.exports = {
         });
       } catch (error) {
         console.error("[STREAMER ADD ERROR]:", error);
-        return message.reply({
+        return message.channel.send({
           embeds: [
             createEmbed(
               "<:br_errado2qn:1556905095919050762> Erro no Banco",
@@ -136,7 +135,7 @@ module.exports = {
       });
 
       if (!streamerRecord || !streamerRecord.enabled) {
-        return message.reply({
+        return message.channel.send({
           embeds: [
             createEmbed(
               "<:br_errado2qn:1556905095919050762> Não Autorizado",
@@ -155,7 +154,7 @@ module.exports = {
           reason: `Convite exclusivo do streamer ${message.author.tag}`,
         });
 
-        return message.reply({
+        return message.channel.send({
           embeds: [
             createEmbed(
               "<:br_link2qn:1555677611148054649> Seu Link de Convite Exclusivo",
@@ -165,7 +164,7 @@ module.exports = {
         });
       } catch (error) {
         console.error("[STREAMER INVITE ERROR]:", error);
-        return message.reply({
+        return message.channel.send({
           embeds: [
             createEmbed(
               "<:br_errado2qn:1556905095919050762> Erro",
@@ -189,7 +188,7 @@ module.exports = {
     });
 
     if (!streamerData) {
-      return message.reply({
+      return message.channel.send({
         embeds: [
           createEmbed(
             "<a:br_2qn:1559272726739558562> Informação",
@@ -223,6 +222,6 @@ module.exports = {
         `<:br_aviso2qn:1556905092374863883> **Status:** ${streamerData.enabled ? "🟢 Monitorando" : "<:verm_botao2qn:1546265901161255085> Inativo"}`,
     );
 
-    return message.reply({ embeds: [embed] });
+    return message.channel.send({ embeds: [embed] });
   },
 };
