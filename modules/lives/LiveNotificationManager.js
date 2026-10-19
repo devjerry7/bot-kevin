@@ -9,6 +9,9 @@ const YouTubeProvider = require("./providers/YouTubeProvider");
 const KickProvider = require("./providers/KickProvider");
 const TikTokProvider = require("./providers/TikTokProvider");
 
+const OFFICIAL_BANNER_URL =
+  "https://cdn.discordapp.com/attachments/1553534170179833951/1561884993159045241/2QN_Banner_oficial.png?ex=6ad7fa40&is=6ad6a8c0&hm=376a002fb58d6507603ede53f3e899c7b6f4639a1e20e3085eb3b0dad0199f99&";
+
 class LiveNotificationManager {
   constructor(client) {
     this.client = client;
@@ -152,6 +155,7 @@ class LiveNotificationManager {
                   inline: true,
                 },
               )
+              .setImage(OFFICIAL_BANNER_URL)
               .setTimestamp(event.startedAt || new Date())
               .setFooter({
                 text: `Plataforma: ${event.platform.toUpperCase()} | 2QN Streamers`,
@@ -159,7 +163,7 @@ class LiveNotificationManager {
               });
 
             if (event.thumbnail) {
-              embed.setImage(event.thumbnail);
+              embed.setThumbnail(event.thumbnail);
             }
 
             const mentions = [];

@@ -26,8 +26,9 @@ const {
 const { checkExpiredVips } = require("./services/vipManager");
 const { startLiveTracker } = require("./modules/lives/jobs/liveTrackerJob");
 
-// 🚀 IMPORTAÇÃO DO CRON DA STAFF (NOVO)
+// 🚀 IMPORTAÇÃO DOS JOBS E CRONS
 const initStaffCron = require("./jobs/staffCron");
+const { startStreamerWeeklyReport } = require("./jobs/streamerWeeklyReport");
 
 // Importações dos Eventos Principais
 const handleMessageCreate = require("./events/messageCreate");
@@ -108,9 +109,12 @@ client.once("ready", async () => {
   // Inicializa o sistema de rastreamento de lives a cada 3 minutos
   startLiveTracker(client);
 
-  // 🚀 INICIALIZAÇÃO DO CÉREBRO DA STAFF (NOVO)
+  // 🚀 INICIALIZAÇÃO DO CÉREBRO DA STAFF
   initStaffCron(client);
   console.log("[STAFF CRON] Rotinas semanais da Staff ativadas!");
+
+  // 🚀 INICIALIZAÇÃO DO RELATÓRIO SEMANAL DE STREAMERS
+  startStreamerWeeklyReport(client);
 
   // Status limpo e estático (apenas online, sem "Transmitindo")
   client.user.setPresence({
