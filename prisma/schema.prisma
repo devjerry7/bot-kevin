@@ -159,13 +159,15 @@ model ServerConfig {
 // ==========================================
 
 model Streamer {
-  id            String             @id @default(uuid())
-  displayName   String
-  discordUserId String?            // Opcional: linkar com a conta do membro no Discord
-  enabled       Boolean            @default(true)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  platforms     StreamerPlatform[]
+  id                 String             @id @default(uuid())
+  displayName        String
+  discordUserId      String?            
+  enabled            Boolean            @default(true)
+  weeklyVoiceMinutes Int                @default(0) // <--- ADICIONAR ESTA LINHA
+  weeklyInvites      Int                @default(0) // <--- ADICIONAR ESTA LINHA
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  platforms          StreamerPlatform[]
 }
 
 model StreamerPlatform {
