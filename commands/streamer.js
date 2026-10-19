@@ -26,6 +26,69 @@ module.exports = {
     };
 
     // ====================================================
+    // SUBCOMANDO: LISTAR TODOS OS STREAMERS
+    // Uso: mc!streamer list / listar
+    // ====================================================
+    if (subCommand === "list" || subCommand === "listar") {
+      try {
+        const streamers = await prisma.streamer.findMany({
+          include: { platforms: true },
+        });
+
+        if (streamers.length === 0) {
+          return message.channel.send({
+            embeds: [
+              createEmbed(
+                "<a:br_2qn:1559272726739558562> NENHUM STREAMER CADASTRADO",
+                "Ainda não há nenhum streamer vinculado ao sistema.",
+                COLOR_ERROR,
+              ),
+            ],
+          });
+        }
+
+        const streamerFormattedList = streamers
+          .map((s) => {
+            const userMention = s.discordUserId
+              ? `<@${s.discordUserId}>`
+              : `\`${s.displayName}\``;
+            const platforms =
+              s.platforms.length > 0
+                ? s.platforms
+                    .map(
+                      (p) =>
+                        `\`${p.platform.toUpperCase()}\`: ${p.platformUsername}`,
+                    )
+                    .join(" | ")
+                : "Sem plataformas vinculadas";
+
+            return `• **${userMention}**\n  └ ${platforms}`;
+          })
+          .join("\n\n");
+
+        return message.channel.send({
+          embeds: [
+            createEmbed(
+              "<:br_registro2qn:1557798191100072119> STREAMERS MONITORADOS",
+              `Lista de todos os criadores de conteúdo cadastrados no servidor:\n\n${streamerFormattedList}`,
+            ),
+          ],
+        });
+      } catch (error) {
+        console.error("[STREAMER LIST ERROR]:", error);
+        return message.channel.send({
+          embeds: [
+            createEmbed(
+              "<:br_errado2qn:1556905095919050762> Erro no Banco",
+              "Ocorreu um erro ao buscar a lista de streamers.",
+              COLOR_ERROR,
+            ),
+          ],
+        });
+      }
+    }
+
+    // ====================================================
     // SUBCOMANDO: ADICIONAR / VINCULAR CANAL DO STREAMER (Admin)
     // Uso: mc!streamer add @Membro twitch nome_do_canal
     // ====================================================
@@ -126,6 +189,94 @@ module.exports = {
     }
 
     // ====================================================
+    // SUBCOMANDO: REMOVER PLATAFORMA / STREAMER (Admin)
+    // Uso: mc!streamer remove @Membro <plataforma>
+    // ====================================================
+    if (subCommand === "remove" || subCommand === "remover") {
+      if (
+        !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
+      ) {
+        return message.channel.send({
+          embeds: [
+            createEmbed(
+              "<:br_errado2qn:1556905095919050762> Permissão Negada",
+              "Apenas administradores podem remover canais de streamers.",
+              COLOR_ERROR,
+            ),
+          ],
+        });
+      }
+
+      const targetMember = message.mentions.members.first();
+      const platform = args[2] ? args[2].toLowerCase() : "";
+
+      if (!targetMember) {
+        return message.channel.send({
+          embeds: [
+            createEmbed(
+              "<:ama_cuidado2qn:1545494059081142403> Uso Incorreto",
+              `Use o formato correto:\n\`${prefix}streamer remove @Membro [plataforma]\``,
+              COLOR_ERROR,
+            ),
+          ],
+        });
+      }
+
+      try {
+        const streamerRecord = await prisma.streamer.findFirst({
+          where: { discordUserId: targetMember.id },
+        });
+
+        if (!streamerRecord) {
+          return message.channel.send({
+            embeds: [
+              createEmbed(
+                "<:ama_cuidado2qn:1545494059081142403> Não Encontrado",
+                "Este usuário não possui cadastro no programa de streamers.",
+                COLOR_ERROR,
+              ),
+            ],
+          });
+        }
+
+        if (platform) {
+          await prisma.streamerPlatform.deleteMany({
+            where: {
+              streamerId: streamerRecord.id,
+              platform: platform,
+            },
+          });
+        } else {
+          await prisma.streamer.delete({
+            where: { id: streamerRecord.id },
+          });
+        }
+
+        return message.channel.send({
+          embeds: [
+            createEmbed(
+              "<a:ver_verifcado2qn:1535775624864473169> Removido com Sucesso!",
+              platform
+                ? `A plataforma \`${platform.toUpperCase()}\` foi desvinculada do membro ${targetMember}.`
+                : `O streamer ${targetMember} foi completamente removido do sistema.`,
+            ),
+          ],
+        });
+      } catch (error) {
+        console.error("[STREAMER REMOVE ERROR]:", error);
+        return message.channel.send({
+          embeds: [
+            createEmbed(
+              "<:br_errado2qn:1556905095919050762> Erro no Banco",
+              "Ocorreu um erro ao remover o vínculo no banco de dados.",
+              COLOR_ERROR,
+            ),
+          ],
+        });
+      }
+    }
+
+    // ====================================================
     // SUBCOMANDO: GERAR LINK DE CONVITE EXCLUSIVO
     // Uso: mc!streamer link
     // ====================================================
@@ -199,7 +350,9 @@ module.exports = {
       });
     }
 
-    const totalHoursInCall = (streamerData.weeklyVoiceMinutes / 60).toFixed(1);
+    const totalHoursInCall = (
+      (streamerData.weeklyVoiceMinutes || 0) / 60
+    ).toFixed(1);
     const goalHours = streamerConfig.goals.weeklyVoiceHours;
     const goalInvites = streamerConfig.goals.weeklyInvites;
 
