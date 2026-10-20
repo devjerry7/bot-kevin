@@ -161,10 +161,11 @@ model ServerConfig {
 model Streamer {
   id                 String             @id @default(uuid())
   displayName        String
-  discordUserId      String?            
+  discordUserId      String?            @unique
   enabled            Boolean            @default(true)
-  weeklyVoiceMinutes Int                @default(0) // <--- ADICIONAR ESTA LINHA
-  weeklyInvites      Int                @default(0) // <--- ADICIONAR ESTA LINHA
+  weeklyVoiceMinutes Int                @default(0)
+  weeklyInvites      Int                @default(0)
+  voiceJoinedAt      DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   platforms          StreamerPlatform[]

@@ -1,6 +1,7 @@
 // events/guildMemberAdd.js
 const { EmbedBuilder } = require("discord.js");
 const { triggerAutoLockdown } = require("../commands/lockdown");
+const { handleMemberAdd } = require("../listeners/inviteTracker");
 
 const OWNER_LOG_ID = "1551147533454282806";
 
@@ -18,6 +19,16 @@ module.exports = async (member) => {
     const { guild } = member;
     if (!guild) return;
 
+    // ====================================================
+    // 1. RASTREAMENTO DE CONVITE DO STREAMER (+1 convite)
+    // ====================================================
+    handleMemberAdd(member).catch((err) =>
+      console.error("[INVITE TRACKER ERROR]", err),
+    );
+
+    // ====================================================
+    // 2. SISTEMA ANTI-RAID (Proteção contra surto de entradas)
+    // ====================================================
     const now = Date.now();
 
     // Inicializa os rastreadores do servidor se não existirem
@@ -91,6 +102,6 @@ module.exports = async (member) => {
       }
     }
   } catch (error) {
-    console.error("[ANTI-RAID ERROR]", error);
+    console.error("[GUILD MEMBER ADD ERROR]", error);
   }
 };

@@ -3,8 +3,6 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const streamerConfig = require("../config/streamerConfig");
 
-const streamerVoiceSessions = new Map();
-
 module.exports = async (oldState, newState) => {
   const member = newState.member || oldState.member;
   if (!member || member.user.bot) return;
@@ -27,50 +25,58 @@ module.exports = async (oldState, newState) => {
   const isInMonitoredCategory =
     newCategoryId && monitoredCategories.includes(newCategoryId);
 
-  const now = Date.now();
+  const now = new Date();
 
-  // CENÁRIO A: Entrou em uma categoria monitorada
-  if (!wasInMonitoredCategory && isInMonitoredCategory) {
-    streamerVoiceSessions.set(userId, now);
-  }
+  try {
+    // Busca o streamer estritamente no banco (NÃO cria mais automaticamente)
+    const streamerRecord = await prisma.streamer.findFirst({
+      where: { discordUserId: userId, enabled: true },
+    });
 
-  // CENÁRIO B: Saiu de uma categoria monitorada
-  else if (wasInMonitoredCategory && (!isInMonitoredCategory || !newChannel)) {
-    if (streamerVoiceSessions.has(userId)) {
-      const joinTime = streamerVoiceSessions.get(userId);
-      const durationMinutes = Math.floor((now - joinTime) / (1000 * 60));
+    // Se o usuário não estiver cadastrado oficialmente como streamer, ignoramos o rastreamento
+    if (!streamerRecord) return;
 
-      if (durationMinutes > 0) {
-        try {
-          // Utilizando o campo correto do schema: discordUserId
-          let streamerRecord = await prisma.streamer.findFirst({
-            where: { discordUserId: userId },
-          });
+    // CENÁRIO A: Entrou em uma categoria monitorada e não tinha registro de entrada ativo
+    if (!wasInMonitoredCategory && isInMonitoredCategory) {
+      if (!streamerRecord.voiceJoinedAt) {
+        await prisma.streamer.update({
+          where: { id: streamerRecord.id },
+          data: { voiceJoinedAt: now },
+        });
+      }
+    }
 
-          if (!streamerRecord) {
-            streamerRecord = await prisma.streamer.create({
-              data: {
-                discordUserId: userId,
-                displayName: member.user.tag,
-                enabled: true,
-              },
-            });
-          }
+    // CENÁRIO B: Saiu de uma categoria monitorada (ou saiu totalmente da call)
+    else if (
+      wasInMonitoredCategory &&
+      (!isInMonitoredCategory || !newChannel)
+    ) {
+      if (streamerRecord.voiceJoinedAt) {
+        const joinTime = new Date(streamerRecord.voiceJoinedAt).getTime();
+        const durationMinutes = Math.floor(
+          (now.getTime() - joinTime) / (1000 * 60),
+        );
 
+        if (durationMinutes > 0) {
           await prisma.streamer.update({
             where: { id: streamerRecord.id },
             data: {
               weeklyVoiceMinutes: {
                 increment: durationMinutes,
               },
+              voiceJoinedAt: null, // Limpa o timestamp de entrada
             },
           });
-        } catch (err) {
-          console.error("[STREAMER VOICE TRACKER DB ERROR]:", err);
+        } else {
+          // Limpa mesmo se o tempo for menor que 1 minuto para evitar travar o estado
+          await prisma.streamer.update({
+            where: { id: streamerRecord.id },
+            data: { voiceJoinedAt: null },
+          });
         }
       }
-
-      streamerVoiceSessions.delete(userId);
     }
+  } catch (err) {
+    console.error("[STREAMER VOICE TRACKER DB ERROR]:", err);
   }
 };

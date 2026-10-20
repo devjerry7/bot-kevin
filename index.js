@@ -34,6 +34,14 @@ const { startStreamerWeeklyReport } = require("./jobs/streamerWeeklyReport");
 const handleMessageCreate = require("./events/messageCreate");
 const handleInteractionCreate = require("./events/interactionCreate");
 const handleVoiceState = require("./events/voiceStateUpdate");
+const handleGuildMemberAdd = require("./events/guildMemberAdd");
+
+// 🚀 IMPORTAÇÃO DO INVITE TRACKER
+const {
+  loadServerInvites,
+  handleInviteCreate,
+  handleInviteDelete,
+} = require("./listeners/inviteTracker");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
@@ -48,6 +56,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildInvites, // <--- NECESSÁRIO PARA O RASTREIO DE CONVITES
   ],
   partials: [
     Partials.Message,
@@ -87,6 +96,11 @@ client.on("interactionCreate", handleInteractionCreate);
 client.on("voiceStateUpdate", (oldState, newState) =>
   handleVoiceState(oldState, newState, client),
 );
+client.on("guildMemberAdd", (member) => handleGuildMemberAdd(member));
+
+// 🚀 EVENTOS DE CONVITES
+client.on("inviteCreate", (invite) => handleInviteCreate(invite));
+client.on("inviteDelete", (invite) => handleInviteDelete(invite));
 
 // Tratamento de Erros Críticos (Impede que o bot desligue do nada)
 process.on("uncaughtException", (err) =>
@@ -99,6 +113,9 @@ process.on("unhandledRejection", (reason) =>
 // --- 5. EVENTO READY ---
 client.once("ready", async () => {
   console.log(`🤖 Bot conectado como ${client.user.tag}!`);
+
+  // 🚀 INICIALIZA O CACHE DE CONVITES DOS SERVIDORES
+  await loadServerInvites(client);
 
   console.log("[SISTEMA VIP] Iniciando verificador...");
   checkExpiredVips(client);
