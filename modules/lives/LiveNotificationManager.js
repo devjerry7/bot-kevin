@@ -12,6 +12,9 @@ const TikTokProvider = require("./providers/TikTokProvider");
 const OFFICIAL_BANNER_URL =
   "https://cdn.discordapp.com/attachments/1553534170179833951/1561884993159045241/2QN_Banner_oficial.png?ex=6ad7fa40&is=6ad6a8c0&hm=376a002fb58d6507603ede53f3e899c7b6f4639a1e20e3085eb3b0dad0199f99&";
 
+// Tempo de tolerância em milissegundos para reabrir live sem gerar nova notificação (10 minutos)
+const REOPEN_COOLDOWN_MS = 10 * 60 * 1000;
+
 class LiveNotificationManager {
   constructor(client) {
     this.client = client;
@@ -121,9 +124,33 @@ class LiveNotificationManager {
           },
         });
 
-        // Validação estrita para evitar falsos positivos
         if (event.isLive === true) {
           if (!activeSession) {
+            // Verifica se houve uma sessão recente encerrada dentro da janela de tolerância (cooldown de oscilação)
+            const recentClosedSession = await prisma.liveSession.findFirst({
+              where: {
+                platformId: platformRecord.id,
+                isActive: false,
+                endedAt: {
+                  gte: new Date(Date.now() - REOPEN_COOLDOWN_MS),
+                },
+              },
+              orderBy: { endedAt: "desc" },
+            });
+
+            if (recentClosedSession) {
+              // Se a live reconectou rapidamente, reativa a sessão anterior sem mandar novo anúncio
+              await prisma.liveSession.update({
+                where: { id: recentClosedSession.id },
+                data: {
+                  isActive: true,
+                  endedAt: null,
+                },
+              });
+              continue;
+            }
+
+            // Criar nova sessão e disparar o anúncio
             const newSession = await prisma.liveSession.create({
               data: {
                 platformId: platformRecord.id,
@@ -189,7 +216,7 @@ class LiveNotificationManager {
             });
           }
         } else {
-          // Se a live encerrou, fecha a sessão e atualiza a mensagem no Discord
+          // Se a live encerrou, marca como inativa e atualiza a mensagem no Discord
           if (activeSession) {
             try {
               if (activeSession.discordMessageId) {

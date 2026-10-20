@@ -7,6 +7,37 @@ class TikTokProvider extends BaseProvider {
     super("tiktok");
   }
 
+  // Tenta inferir o jogo a partir do título caso a categoria venha vazia ou genérica
+  detectGameFromTitle(title) {
+    if (!title) return null;
+    const lowerTitle = title.toLowerCase();
+
+    if (lowerTitle.includes("valorant") || lowerTitle.includes("val"))
+      return "Valorant";
+    if (lowerTitle.includes("free fire") || lowerTitle.includes("ff"))
+      return "Free Fire";
+    if (lowerTitle.includes("gta") || lowerTitle.includes("fivem"))
+      return "GTA V / FiveM";
+    if (
+      lowerTitle.includes("cs2") ||
+      lowerTitle.includes("counter-strike") ||
+      lowerTitle.includes("cs:go")
+    )
+      return "Counter-Strike 2";
+    if (lowerTitle.includes("roblox")) return "Roblox";
+    if (lowerTitle.includes("minecraft") || lowerTitle.includes("mine"))
+      return "Minecraft";
+    if (lowerTitle.includes("league of legends") || lowerTitle.includes("lol"))
+      return "League of Legends";
+    if (lowerTitle.includes("fortnite")) return "Fortnite";
+    if (lowerTitle.includes("clash royale")) return "Clash Royale";
+    if (lowerTitle.includes("stumble guys")) return "Stumble Guys";
+    if (lowerTitle.includes("standoff")) return "Standoff 2";
+    if (lowerTitle.includes("blood strike")) return "Blood Strike";
+
+    return null;
+  }
+
   async checkLives(streamersLista) {
     const tiktokStreamers = streamersLista.filter(
       (s) => s.platform.toLowerCase() === "tiktok",
@@ -34,26 +65,67 @@ class TikTokProvider extends BaseProvider {
 
         const htmlContent = response.data;
 
-        // Validação rigorosa: O TikTok define roomStatus 2 ou status 2 estritamente quando há transmissão ativa real
+        // Validação estrita de status de live no TikTok
         const isLiveActive =
           htmlContent.includes('"roomStatus":2') ||
           htmlContent.includes('"status":2') ||
           htmlContent.includes('"isLive":true');
 
         if (isLiveActive) {
+          // Extração do Título da Live
+          let liveTitle = `Transmissão ao vivo de @${username}`;
+          const titleMatch = htmlContent.match(/"title":"([^"]+)"/);
+          if (titleMatch && titleMatch[1]) {
+            liveTitle = titleMatch[1];
+          }
+
+          // Extração de Visualizadores
+          let viewers = 0;
+          const userCountMatch = htmlContent.match(/"user_count":(\d+)/);
+          if (userCountMatch && userCountMatch[1]) {
+            viewers = parseInt(userCountMatch[1], 10);
+          }
+
+          // Extração da Categoria / Tag do Jogo
+          let detectedCategory = null;
+          const tagMatch = htmlContent.match(/"hashtag_name":"([^"]+)"/);
+          const gameTagMatch = htmlContent.match(/"sub_tag_name":"([^"]+)"/);
+
+          if (gameTagMatch && gameTagMatch[1]) {
+            detectedCategory = gameTagMatch[1];
+          } else if (tagMatch && tagMatch[1]) {
+            detectedCategory = tagMatch[1];
+          }
+
+          // Fallback: Se não achou na tag, tenta identificar o jogo direto pelo título
+          if (
+            !detectedCategory ||
+            detectedCategory.toLowerCase().includes("tiktok")
+          ) {
+            const gameFromTitle = this.detectGameFromTitle(liveTitle);
+            detectedCategory = gameFromTitle || "Games / Conversa";
+          }
+
+          // Identificador estático baseado na sala/username para evitar IDs randômicos com Date.now()
+          let roomId = username;
+          const roomIdMatch = htmlContent.match(/"roomId":"(\d+)"/);
+          if (roomIdMatch && roomIdMatch[1]) {
+            roomId = roomIdMatch[1];
+          }
+
           events.push(
             new StandardLiveEvent({
               streamerId: streamer.streamerId,
               platform: "tiktok",
-              platformLiveId: `tiktok_${username}_${Date.now()}`,
+              platformLiveId: `tiktok_${username}_${roomId}`,
               username: streamer.platformUsername,
               displayName: streamer.platformUsername,
               isLive: true,
-              title: `Transmissão ao vivo de @${username}`,
-              category: "TikTok Live",
+              title: liveTitle,
+              category: detectedCategory,
               url: `https://www.tiktok.com/@${username}/live`,
               thumbnail: null,
-              viewerCount: 0,
+              viewerCount: viewers,
               startedAt: new Date(),
             }),
           );
