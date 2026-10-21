@@ -38,6 +38,25 @@ class TikTokProvider extends BaseProvider {
     return null;
   }
 
+  // Filtra títulos genéricos de propaganda/SEO do TikTok
+  cleanTitle(extractedTitle, username) {
+    if (!extractedTitle) return `Live de @${username}`;
+
+    const lower = extractedTitle.toLowerCase();
+    const isGenericTag =
+      lower.includes("download tiktok") ||
+      lower.includes("tiktok lite") ||
+      lower.includes("make your day") ||
+      lower.includes("assista em tempo real") ||
+      lower.includes("tiktok.com");
+
+    if (isGenericTag) {
+      return `Live de @${username}`;
+    }
+
+    return extractedTitle;
+  }
+
   async checkLives(streamersLista) {
     const tiktokStreamers = streamersLista.filter(
       (s) => s.platform.toLowerCase() === "tiktok",
@@ -73,10 +92,16 @@ class TikTokProvider extends BaseProvider {
 
         if (isLiveActive) {
           // Extração do Título da Live
-          let liveTitle = `Transmissão ao vivo de @${username}`;
+          let liveTitle = `Live de @${username}`;
+
+          // Tenta pegar primeiro o título real da sala (room title)
+          const roomTitleMatch = htmlContent.match(/"room_title":"([^"]+)"/);
           const titleMatch = htmlContent.match(/"title":"([^"]+)"/);
-          if (titleMatch && titleMatch[1]) {
-            liveTitle = titleMatch[1];
+
+          if (roomTitleMatch && roomTitleMatch[1]) {
+            liveTitle = this.cleanTitle(roomTitleMatch[1], username);
+          } else if (titleMatch && titleMatch[1]) {
+            liveTitle = this.cleanTitle(titleMatch[1], username);
           }
 
           // Extração de Visualizadores
@@ -106,7 +131,7 @@ class TikTokProvider extends BaseProvider {
             detectedCategory = gameFromTitle || "Games / Conversa";
           }
 
-          // Identificador estático baseado na sala/username para evitar IDs randômicos com Date.now()
+          // Identificador estático baseado na sala/username
           let roomId = username;
           const roomIdMatch = htmlContent.match(/"roomId":"(\d+)"/);
           if (roomIdMatch && roomIdMatch[1]) {
