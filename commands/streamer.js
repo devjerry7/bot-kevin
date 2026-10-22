@@ -25,6 +25,17 @@ module.exports = {
         .setTimestamp();
     };
 
+    // ID do cargo autorizado a gerenciar streamers (além de Administradores)
+    const MANAGER_ROLE_ID = "1550589449082245161";
+
+    // Função para validar se o usuário é Administrador ou possui o cargo autorizado
+    const canManageStreamers = (member) => {
+      return (
+        member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+        member.roles.cache.has(MANAGER_ROLE_ID)
+      );
+    };
+
     // ====================================================
     // SUBCOMANDO: LISTAR TODOS OS STREAMERS
     // Uso: mc!streamer list / listar
@@ -89,18 +100,16 @@ module.exports = {
     }
 
     // ====================================================
-    // SUBCOMANDO: ADICIONAR / VINCULAR CANAL DO STREAMER (Admin)
+    // SUBCOMANDO: ADICIONAR / VINCULAR CANAL DO STREAMER (Admin/Cargo)
     // Uso: mc!streamer add @Membro twitch nome_do_canal
     // ====================================================
     if (subCommand === "add" || subCommand === "adicionar") {
-      if (
-        !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-      ) {
+      if (!canManageStreamers(message.member)) {
         return message.channel.send({
           embeds: [
             createEmbed(
               "<:br_errado2qn:1556905095919050762> Permissão Negada",
-              "Apenas administradores podem vincular canais de streamers.",
+              "Apenas administradores ou membros com o cargo autorizado podem vincular canais de streamers.",
               COLOR_ERROR,
             ),
           ],
@@ -189,18 +198,16 @@ module.exports = {
     }
 
     // ====================================================
-    // SUBCOMANDO: REMOVER PLATAFORMA / STREAMER (Admin)
+    // SUBCOMANDO: REMOVER PLATAFORMA / STREAMER (Admin/Cargo)
     // Uso: mc!streamer remove @Membro <plataforma>
     // ====================================================
     if (subCommand === "remove" || subCommand === "remover") {
-      if (
-        !message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-      ) {
+      if (!canManageStreamers(message.member)) {
         return message.channel.send({
           embeds: [
             createEmbed(
               "<:br_errado2qn:1556905095919050762> Permissão Negada",
-              "Apenas administradores podem remover canais de streamers.",
+              "Apenas administradores ou membros com o cargo autorizado podem remover canais de streamers.",
               COLOR_ERROR,
             ),
           ],
