@@ -7,8 +7,7 @@ const {
   ButtonStyle,
   PermissionsBitField,
 } = require("discord.js");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database"); // (ajuste o "../" conforme a profundidade da pasta)
 
 const MATCH_NAME = "LOUD vs Vitality";
 const BANNER_URL =

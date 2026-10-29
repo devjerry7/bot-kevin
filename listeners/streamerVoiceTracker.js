@@ -1,6 +1,5 @@
 // listeners/streamerVoiceTracker.js
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 const streamerConfig = require("../config/streamerConfig");
 
 module.exports = async (oldState, newState) => {

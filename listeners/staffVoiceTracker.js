@@ -1,6 +1,5 @@
 // listeners/staffVoiceTracker.js
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 
 module.exports = async (oldState, newState) => {
   const member = newState.member;

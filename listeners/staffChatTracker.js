@@ -1,6 +1,5 @@
 // listeners/staffChatTracker.js
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 const staffConfig = require("../config/staffConfig");
 
 module.exports = async (message) => {

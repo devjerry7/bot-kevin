@@ -1,8 +1,7 @@
 // pdManager.js
 const { EmbedBuilder } = require("discord.js");
 const logEmbed = require("./utils/logEmbed");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("./database"); // (ajuste o "../" conforme a profundidade da pasta)
 
 const MAX_PDS_PER_STAFF = 2;
 const PREFIX = "k!";

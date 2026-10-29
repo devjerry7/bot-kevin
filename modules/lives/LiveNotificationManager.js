@@ -1,7 +1,6 @@
 // handlers/LiveNotificationManager.js
 const { EmbedBuilder } = require("discord.js");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../../database");
 const config = require("../../config");
 
 const TwitchProvider = require("./providers/TwitchProvider");

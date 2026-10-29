@@ -1,8 +1,7 @@
 // jobs/streamerWeeklyReport.js
 const cron = require("node-cron");
 const { EmbedBuilder } = require("discord.js");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 const streamerConfig = require("../config/streamerConfig");
 
 // IDs dos donos/diretoria que receberão o relatório no PV

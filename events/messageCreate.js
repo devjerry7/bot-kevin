@@ -8,8 +8,7 @@ const {
 const config = require("../config");
 const path = require("path");
 const fs = require("fs");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 
 // --- IMPORTAÇÕES DOS SISTEMAS DE JOGO E ESTADO ---
 const { getGameState } = require("../game/gameState");

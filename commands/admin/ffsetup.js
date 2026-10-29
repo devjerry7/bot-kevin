@@ -5,8 +5,7 @@ const {
   ButtonStyle,
   PermissionsBitField,
 } = require("discord.js");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../../database");
 const config = require("../../config");
 
 module.exports = {

@@ -8,8 +8,7 @@ const {
   PermissionsBitField,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 
 /**
  * Manipulador de interações focado em Pagamentos, PIX, Comprovantes e Validação da Equipe

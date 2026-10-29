@@ -10,9 +10,7 @@ const {
 } = require("discord.js");
 const TournamentService = require("../../services/tournamentService");
 const DiscordMatchService = require("../../services/discordMatchService");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-
+const prisma = require("../../database");
 module.exports = {
   name: "camp",
   description: "Gerencia o campeonato 4x4 (Admin)",

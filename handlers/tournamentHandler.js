@@ -14,9 +14,7 @@ const {
   ChannelType,
 } = require("discord.js");
 const TournamentService = require("../services/tournamentService");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-
+const prisma = require("../database");
 // Armazenamento temporário em memória para o fluxo de seleção de emuladores antes de salvar no banco
 const pendingRegistrations = new Map();
 

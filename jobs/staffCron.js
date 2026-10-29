@@ -1,7 +1,6 @@
 // jobs/staffCron.js
 const cron = require("node-cron");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 const staffConfig = require("../config/staffConfig");
 const config = require("../config");
 

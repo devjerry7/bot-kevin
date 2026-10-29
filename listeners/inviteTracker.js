@@ -1,6 +1,5 @@
 // listeners/inviteTracker.js
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 
 // Cache em memória para armazenar os convites do servidor: Map<guildId, Map<inviteCode, inviteObject>>
 const invitesCache = new Map();

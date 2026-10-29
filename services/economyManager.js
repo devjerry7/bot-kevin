@@ -1,6 +1,5 @@
 // services/economyManager.js
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database");
 
 // --- CONFIGURAÇÕES PUXADAS DO .ENV (Com fallback de segurança) ---
 const DAILY_AMOUNT = Number(process.env.ECONOMY_DAILY_AMOUNT) || 500;

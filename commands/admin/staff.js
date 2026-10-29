@@ -1,7 +1,6 @@
 // commands/admin/staff.js
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../../database"); // (ajuste o "../" conforme a profundidade da pasta)
 const config = require("../../config");
 const staffConfigData = require("../../config/staffConfig");
 

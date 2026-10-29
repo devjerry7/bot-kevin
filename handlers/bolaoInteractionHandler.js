@@ -1,6 +1,4 @@
-// handlers/bolaoInteractionHandler.js
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../database"); // handlers/bolaoInteractionHandler.js
 
 const MATCH_NAME = "LOUD vs Vitality";
 
