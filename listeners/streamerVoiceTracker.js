@@ -6,13 +6,9 @@ module.exports = async (oldState, newState) => {
   const member = newState.member || oldState.member;
   if (!member || member.user.bot) return;
 
-  const streamerRoleId = streamerConfig.streamerRoleId;
   const monitoredCategories = streamerConfig.monitoredVoiceCategoryIds || [];
-
-  const hasStreamerRole = member.roles.cache.has(streamerRoleId);
-  if (!hasStreamerRole) return;
-
   const userId = member.id;
+
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
 
@@ -27,12 +23,12 @@ module.exports = async (oldState, newState) => {
   const now = new Date();
 
   try {
-    // Busca o streamer estritamente no banco (NÃO cria mais automaticamente)
+    // Busca o streamer estritamente no banco de dados
     const streamerRecord = await prisma.streamer.findFirst({
       where: { discordUserId: userId, enabled: true },
     });
 
-    // Se o usuário não estiver cadastrado oficialmente como streamer, ignoramos o rastreamento
+    // Se o usuário não estiver cadastrado oficialmente como streamer no banco, ignoramos
     if (!streamerRecord) return;
 
     // CENÁRIO A: Entrou em uma categoria monitorada e não tinha registro de entrada ativo
