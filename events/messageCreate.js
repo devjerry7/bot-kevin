@@ -47,6 +47,7 @@ const { handleListMembers } = require("../commands/listMembers");
 const { handleVoice } = require("../commands/voice");
 const streamerCommand = require("../commands/streamer");
 const bolaoCommand = require("../commands/bolao");
+const rodarRelatorioCommand = require("../commands/rodarRelatorio"); // 🚀 IMPORTADO AQUI
 
 // --- PAINÉIS VISUAIS E EMBEDS ---
 const { handleGameRolesPanel } = require("../commands/gameRoles");
@@ -330,6 +331,9 @@ module.exports = async (message) => {
 
   if (["streamer", "streamers"].includes(command))
     return streamerCommand.execute(message, args);
+
+  if (["rodarrelatorio", "relatoriomanual"].includes(command))
+    return rodarRelatorioCommand.execute(message, args); // 🚀 EXECUTADO AQUI
 
   if (["bolao", "bolão"].includes(command))
     return bolaoCommand.execute(message, args);
