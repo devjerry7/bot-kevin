@@ -1,6 +1,6 @@
 // commands/rodarRelatorio.js
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
-const prisma = require("../config/prisma"); // Importa o Prisma centralizado para evitar estouro de conexões
+const prisma = require("../database"); // Importa o Prisma centralizado para evitar estouro de conexões
 const streamerConfig = require("../config/streamerConfig");
 
 // IDs dos donos/diretoria que receberão o relatório no PV
