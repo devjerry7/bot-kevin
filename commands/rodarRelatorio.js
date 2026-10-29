@@ -1,6 +1,6 @@
 // commands/rodarRelatorio.js
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
-const prisma = require("../database"); // Importa o Prisma centralizado para evitar estouro de conexões
+const prisma = require("../database"); // Importa o Prisma centralizado
 const streamerConfig = require("../config/streamerConfig");
 
 // IDs dos donos/diretoria que receberão o relatório no PV
@@ -24,7 +24,7 @@ module.exports = {
         .setTimestamp();
     };
 
-    // Validação de segurança: Apenas Administradores ou o cargo de gerência podem forçar o relatório
+    // Validação de segurança: Apenas Administradores ou o cargo de gerência
     const MANAGER_ROLE_ID = "1550589449082245161";
     const canRun =
       message.member.permissions.has(PermissionsBitField.Flags.Administrator) ||
@@ -47,7 +47,7 @@ module.exports = {
         embeds: [
           createEmbed(
             "⏳ Gerando Relatório...",
-            "Buscando dados dos streamers no banco e disparando os relatórios no PV da diretoria...",
+            "Buscando dados dos streamers no banco e preparando os blocos de envio...",
           ),
         ],
       });
@@ -72,8 +72,9 @@ module.exports = {
       const goalHours = streamerConfig.goals.weeklyVoiceHours;
       const goalInvites = streamerConfig.goals.weeklyInvites;
 
-      let reportDescription =
-        "<:br_registro2qn:1557798191100072119> **Fechamento Manual de Streamers (Forçado)**\n\n";
+      // Monta os blocos de texto individuais para cada streamer
+      const streamerChunks = [];
+      let currentChunk = "";
 
       for (const s of streamers) {
         const hoursInCall = Number(
@@ -94,28 +95,49 @@ module.exports = {
           : s.displayName || "Streamer";
         const displayName = s.displayName || "Sem Nome";
 
-        reportDescription +=
+        const streamerText =
           `<:pr_pessoinha2qn:1542026405481684994> **${streamerTag}** (${displayName})\n` +
           `• Call: \`${hoursInCall}h\` / \`${goalHours}h\` ${metVoice ? "<:br_correto2qn:1556905093729882217>" : "<:br_errado2qn:1556905095919050762>"}\n` +
           `• Convites: \`${invites}\` / \`${goalInvites}\` ${metInvites ? "<:br_correto2qn:1556905093729882217>" : "<:br_errado2qn:1556905095919050762>"}\n` +
           `• Resultado: ${statusIcon}\n\n`;
+
+        // Se passar de 3500 caracteres num único bloco, guarda e inicia outro (margem de segurança para o limite de 4096)
+        if ((currentChunk + streamerText).length > 3500) {
+          streamerChunks.push(currentChunk);
+          currentChunk = streamerText;
+        } else {
+          currentChunk += streamerText;
+        }
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle(
-          "<a:am_trofelzinho:1556881756521766934> Relatório Semanal de Desempenho (Manual)",
-        )
-        .setDescription(reportDescription)
-        .setColor(COLOR_BASE)
-        .setTimestamp();
+      if (currentChunk.length > 0) {
+        streamerChunks.push(currentChunk);
+      }
 
-      // Envia a mensagem privada (PV) para cada um dos IDs configurados
+      // Cria as embeds baseadas nos blocos gerados
+      const embedsToSend = streamerChunks.map((chunk, index) => {
+        return new EmbedBuilder()
+          .setTitle(
+            `<a:am_trofelzinho:1556881756521766934> Relatório Semanal de Desempenho (Manual) [Parte ${index + 1}/${streamerChunks.length}]`,
+          )
+          .setDescription(
+            index === 0
+              ? `<:br_registro2qn:1557798191100072119> **Fechamento Manual de Streamers (Forçado)**\n\n${chunk}`
+              : chunk,
+          )
+          .setColor(COLOR_BASE)
+          .setTimestamp();
+      });
+
+      // Dispara todas as embeds no PV de cada administrador configurado
       let sentCount = 0;
       for (const ownerId of OWNER_IDS) {
         try {
           const user = await message.client.users.fetch(ownerId);
           if (user) {
-            await user.send({ embeds: [embed] });
+            for (const embed of embedsToSend) {
+              await user.send({ embeds: [embed] });
+            }
             sentCount++;
           }
         } catch (err) {
@@ -126,13 +148,11 @@ module.exports = {
         }
       }
 
-      // Pergunta se deseja resetar os contadores ou mantém (por padrão no manual podemos apenas enviar ou dar a opção)
-      // Aqui vamos apenas enviar o relatório e avisar no chat.
       return message.channel.send({
         embeds: [
           createEmbed(
             "✅ Relatório Enviado com Sucesso!",
-            `O relatório foi disparado no PV de \`${sentCount}\` administradores com êxito.`,
+            `O relatório completo (dividido em \`${embedsToSend.length}\` parte(s)) foi disparado no PV de \`${sentCount}\` administradores.`,
           ),
         ],
       });
