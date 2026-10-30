@@ -7,42 +7,172 @@ class TikTokProvider extends BaseProvider {
     super("tiktok");
   }
 
-  // Tenta inferir o jogo a partir do título caso a categoria venha vazia ou genérica
-  detectGameFromTitle(title) {
-    if (!title) return null;
-    const lowerTitle = title.toLowerCase();
+  /**
+   * Normaliza texto para facilitar comparação.
+   * Ex.: "FREE FIRE 🔥" -> "free fire"
+   */
+  normalizeText(text) {
+    if (!text) return "";
 
-    if (lowerTitle.includes("valorant") || lowerTitle.includes("val"))
-      return "Valorant";
-    if (lowerTitle.includes("free fire") || lowerTitle.includes("ff"))
-      return "Free Fire";
-    if (lowerTitle.includes("gta") || lowerTitle.includes("fivem"))
-      return "GTA V / FiveM";
+    return String(text)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  /**
+   * Tenta identificar um jogo através de qualquer texto:
+   * título, hashtag, subtag etc.
+   */
+  detectGame(text) {
+    if (!text) return null;
+
+    const lower = this.normalizeText(text);
+
+    // Free Fire
     if (
-      lowerTitle.includes("cs2") ||
-      lowerTitle.includes("counter-strike") ||
-      lowerTitle.includes("cs:go")
-    )
+      lower.includes("free fire") ||
+      lower.includes("freefire") ||
+      /\bff\b/.test(lower)
+    ) {
+      return "Free Fire";
+    }
+
+    // Valorant
+    if (lower.includes("valorant") || /\bval\b/.test(lower)) {
+      return "Valorant";
+    }
+
+    // GTA / FiveM
+    if (
+      lower.includes("gta v") ||
+      lower.includes("gta 5") ||
+      lower.includes("gta5") ||
+      /\bgta\b/.test(lower) ||
+      lower.includes("fivem") ||
+      lower.includes("five m")
+    ) {
+      return "GTA V / FiveM";
+    }
+
+    // Counter-Strike
+    if (
+      lower.includes("counter-strike") ||
+      lower.includes("counter strike") ||
+      lower.includes("cs2") ||
+      lower.includes("cs:go") ||
+      lower.includes("csgo")
+    ) {
       return "Counter-Strike 2";
-    if (lowerTitle.includes("roblox")) return "Roblox";
-    if (lowerTitle.includes("minecraft") || lowerTitle.includes("mine"))
+    }
+
+    if (lower.includes("roblox")) {
+      return "Roblox";
+    }
+
+    if (lower.includes("minecraft") || /\bmine\b/.test(lower)) {
       return "Minecraft";
-    if (lowerTitle.includes("league of legends") || lowerTitle.includes("lol"))
+    }
+
+    if (lower.includes("league of legends") || /\blol\b/.test(lower)) {
       return "League of Legends";
-    if (lowerTitle.includes("fortnite")) return "Fortnite";
-    if (lowerTitle.includes("clash royale")) return "Clash Royale";
-    if (lowerTitle.includes("stumble guys")) return "Stumble Guys";
-    if (lowerTitle.includes("standoff")) return "Standoff 2";
-    if (lowerTitle.includes("blood strike")) return "Blood Strike";
+    }
+
+    if (lower.includes("fortnite")) {
+      return "Fortnite";
+    }
+
+    if (lower.includes("among us")) {
+      return "Among Us";
+    }
+
+    if (lower.includes("clash royale")) {
+      return "Clash Royale";
+    }
+
+    if (lower.includes("stumble guys")) {
+      return "Stumble Guys";
+    }
+
+    if (lower.includes("standoff 2") || lower.includes("standoff")) {
+      return "Standoff 2";
+    }
+
+    if (lower.includes("gartic")) {
+      return "Gartic";
+    }
+
+    if (lower.includes("blood strike") || lower.includes("bloodstrike")) {
+      return "Blood Strike";
+    }
 
     return null;
   }
 
-  // Filtra títulos genéricos de propaganda/SEO do TikTok
-  cleanTitle(extractedTitle, username) {
-    if (!extractedTitle) return `Live de @${username}`;
+  /**
+   * Mantido para compatibilidade com o código anterior.
+   */
+  detectGameFromTitle(title) {
+    return this.detectGame(title);
+  }
 
-    const lower = extractedTitle.toLowerCase();
+  /**
+   * Verifica se a categoria retornada pelo TikTok é genérica
+   * e, portanto, não representa realmente um jogo.
+   */
+  isGenericCategory(category) {
+    if (!category) return true;
+
+    const lower = this.normalizeText(category);
+
+    const genericCategories = [
+      "games",
+      "game",
+      "gaming",
+      "jogos",
+      "jogo",
+      "conversa",
+      "games / conversa",
+      "games/conversa",
+      "jogos / conversa",
+      "jogos/conversa",
+      "chat",
+      "just chatting",
+      "live",
+      "tiktok live",
+      "tiktok",
+      "entertainment",
+      "entretenimento",
+    ];
+
+    return genericCategories.some(
+      (generic) =>
+        lower === generic ||
+        lower.includes("tiktok") ||
+        lower.includes("games/conversa") ||
+        lower.includes("games / conversa"),
+    );
+  }
+
+  /**
+   * Remove títulos genéricos/SEO retornados pelo TikTok.
+   */
+  cleanTitle(extractedTitle, username) {
+    if (!extractedTitle) {
+      return `Live de @${username}`;
+    }
+
+    let title = extractedTitle;
+
+    try {
+      title = JSON.parse(`"${extractedTitle.replace(/"/g, '\\"')}"`);
+    } catch {
+      title = extractedTitle;
+    }
+
+    const lower = this.normalizeText(title);
+
     const isGenericTag =
       lower.includes("download tiktok") ||
       lower.includes("tiktok lite") ||
@@ -54,14 +184,54 @@ class TikTokProvider extends BaseProvider {
       return `Live de @${username}`;
     }
 
-    return extractedTitle;
+    return title.trim();
+  }
+
+  /**
+   * Decide qual categoria será enviada ao Discord.
+   *
+   * Prioridade:
+   * 1. Jogo reconhecido na subtag
+   * 2. Jogo reconhecido na hashtag
+   * 3. Jogo reconhecido no título
+   * 4. Categoria específica retornada pelo TikTok
+   * 5. Games / Conversa
+   */
+  resolveCategory({ subTag, hashtag, title }) {
+    const gameFromSubTag = this.detectGame(subTag);
+    if (gameFromSubTag) {
+      return gameFromSubTag;
+    }
+
+    const gameFromHashtag = this.detectGame(hashtag);
+    if (gameFromHashtag) {
+      return gameFromHashtag;
+    }
+
+    const gameFromTitle = this.detectGame(title);
+    if (gameFromTitle) {
+      return gameFromTitle;
+    }
+
+    if (subTag && !this.isGenericCategory(subTag)) {
+      return subTag;
+    }
+
+    if (hashtag && !this.isGenericCategory(hashtag)) {
+      return hashtag;
+    }
+
+    return "Games / Conversa";
   }
 
   async checkLives(streamersLista) {
     const tiktokStreamers = streamersLista.filter(
       (s) => s.platform.toLowerCase() === "tiktok",
     );
-    if (tiktokStreamers.length === 0) return [];
+
+    if (tiktokStreamers.length === 0) {
+      return [];
+    }
 
     const events = [];
 
@@ -84,57 +254,50 @@ class TikTokProvider extends BaseProvider {
 
         const htmlContent = response.data;
 
-        // Validação estrita de status de live no TikTok
         const isLiveActive =
           htmlContent.includes('"roomStatus":2') ||
           htmlContent.includes('"status":2') ||
           htmlContent.includes('"isLive":true');
 
         if (isLiveActive) {
-          // Extração do Título da Live
           let liveTitle = `Live de @${username}`;
 
-          // Tenta pegar primeiro o título real da sala (room title)
           const roomTitleMatch = htmlContent.match(/"room_title":"([^"]+)"/);
+
           const titleMatch = htmlContent.match(/"title":"([^"]+)"/);
 
-          if (roomTitleMatch && roomTitleMatch[1]) {
+          if (roomTitleMatch?.[1]) {
             liveTitle = this.cleanTitle(roomTitleMatch[1], username);
-          } else if (titleMatch && titleMatch[1]) {
+          } else if (titleMatch?.[1]) {
             liveTitle = this.cleanTitle(titleMatch[1], username);
           }
 
-          // Extração de Visualizadores
           let viewers = 0;
+
           const userCountMatch = htmlContent.match(/"user_count":(\d+)/);
-          if (userCountMatch && userCountMatch[1]) {
+
+          if (userCountMatch?.[1]) {
             viewers = parseInt(userCountMatch[1], 10);
           }
 
-          // Extração da Categoria / Tag do Jogo
-          let detectedCategory = null;
           const tagMatch = htmlContent.match(/"hashtag_name":"([^"]+)"/);
+
           const gameTagMatch = htmlContent.match(/"sub_tag_name":"([^"]+)"/);
 
-          if (gameTagMatch && gameTagMatch[1]) {
-            detectedCategory = gameTagMatch[1];
-          } else if (tagMatch && tagMatch[1]) {
-            detectedCategory = tagMatch[1];
-          }
+          const hashtag = tagMatch?.[1] || null;
+          const subTag = gameTagMatch?.[1] || null;
 
-          // Fallback: Se não achou na tag, tenta identificar o jogo direto pelo título
-          if (
-            !detectedCategory ||
-            detectedCategory.toLowerCase().includes("tiktok")
-          ) {
-            const gameFromTitle = this.detectGameFromTitle(liveTitle);
-            detectedCategory = gameFromTitle || "Games / Conversa";
-          }
+          const detectedCategory = this.resolveCategory({
+            subTag,
+            hashtag,
+            title: liveTitle,
+          });
 
-          // Identificador estático baseado na sala/username
           let roomId = username;
+
           const roomIdMatch = htmlContent.match(/"roomId":"(\d+)"/);
-          if (roomIdMatch && roomIdMatch[1]) {
+
+          if (roomIdMatch?.[1]) {
             roomId = roomIdMatch[1];
           }
 
@@ -167,6 +330,11 @@ class TikTokProvider extends BaseProvider {
           );
         }
       } catch (error) {
+        console.error(
+          `[TikTokProvider] Erro ao verificar @${streamer.platformUsername}:`,
+          error.message,
+        );
+
         events.push(
           new StandardLiveEvent({
             streamerId: streamer.streamerId,
