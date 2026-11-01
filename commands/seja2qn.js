@@ -39,7 +39,9 @@ module.exports = {
           "Manter a call cheia, o chat vivo, dar recepção pra geral e não deixar a casa cair no tédio.\n" +
           "Liderança: <@1519030281947054245>",
       )
-      .setFooter({ text: "2QN • O topo é o único caminho." });
+      .setFooter({
+        text: "2QN • meu caráter não tem nada a ver com meu instinto",
+      });
 
     await message.channel.send({ embeds: [embed] });
   },
