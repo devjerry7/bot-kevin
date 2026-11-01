@@ -49,9 +49,15 @@ module.exports = async (message) => {
   if (message.author.bot) return false;
 
   const WHITELIST_IDS = getWhitelistIds();
+  const ALLOWED_ROLE_ID = "1535754248082559008";
 
-  // Membros da Whitelist Oficial ignoram as regras de segurança
-  if (WHITELIST_IDS.includes(message.author.id)) return false;
+  // Membros da Whitelist Oficial ou com o cargo permitido ignoram as regras restritivas
+  if (
+    WHITELIST_IDS.includes(message.author.id) ||
+    (message.member && message.member.roles.cache.has(ALLOWED_ROLE_ID))
+  ) {
+    return false;
+  }
 
   const { content, channel, attachments, guild, client, member } = message;
   const contentLower = content ? content.toLowerCase() : "";
