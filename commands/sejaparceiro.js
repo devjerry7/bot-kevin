@@ -23,7 +23,7 @@ module.exports = {
         "https://media.discordapp.net/attachments/1558933994467500174/1566562416333033662/1E857174-95A7-419A-9A2C-F6C7991A8E17.png?ex=6ae8fe71&is=6ae7acf1&hm=13ff83d507d5201e97378375229f16ffdcf54119592984e6e37fb6bb6429ab9f&=&format=webp&quality=lossless&width=1280&height=512",
       )
       .setDescription(
-        "**<a:am_aliana2qn:1556881754076348547> SEJA PARCEIRO • 2QN NETWORK**\n\n" +
+        "**<a:am_aliana2qn:1556881754076348547> SEJA PARCEIRO • 2QN**\n\n" +
           "Quer crescer junto com uma comunidade que ferve 24/7? A gente fortalece quem corre com a gente.\n\n" +
           "Nosso foco principal são **streamers e criadores de conteúdo**, mas estamos sempre abertos a conversar sobre qualquer outra proposta de parceria que seja boa para os dois lados.\n\n\n" +
           "**<:ama_coroa2qn:1535775618615087154> VIP STREAM • VANTAGENS EXCLUSIVAS:**\n" +
