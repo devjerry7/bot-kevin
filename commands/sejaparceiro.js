@@ -20,7 +20,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor("#2b2d31")
       .setImage(
-        "https://cdn.discordapp.com/attachments/1555226500066836490/1566530652227117056/IMG_0185.png?ex=6ae8e0dc&is=6ae78f5c&hm=f9774062b307a23c0f33e774f695b3279f4a2d8e7877622264be591505cdcdf1&",
+        "https://media.discordapp.net/attachments/1558933994467500174/1566562416333033662/1E857174-95A7-419A-9A2C-F6C7991A8E17.png?ex=6ae8fe71&is=6ae7acf1&hm=13ff83d507d5201e97378375229f16ffdcf54119592984e6e37fb6bb6429ab9f&=&format=webp&quality=lossless&width=1280&height=512",
       )
       .setDescription(
         "**🎥 SEJA PARCEIRO • 2QN NETWORK**\n\n" +
