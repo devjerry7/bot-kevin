@@ -67,6 +67,7 @@ const ffSairCommand = require("../commands/ffsair");
 // --- IMPORTAÇÕES DA EQUIPE ---
 const staffChatTracker = require("../listeners/staffChatTracker");
 const { handleMeta, handlePausa } = require("../commands/staffUtils");
+const sejaParceiroCommand = require("../commands/sejaparceiro");
 
 // ID Direto do Dono para Alertas Críticos de Segurança
 const OWNER_LOG_ID = "1551147533454282806";
@@ -228,6 +229,9 @@ module.exports = async (message) => {
   ) {
     if (await handleMention(message)) return;
   }
+
+  if (["sejaparceiro", "seja-parceiro", "parceria"].includes(command))
+    return sejaParceiroCommand.execute(message, args);
 
   if (!message.content.startsWith(PREFIX)) {
     if (state.isActive) {
