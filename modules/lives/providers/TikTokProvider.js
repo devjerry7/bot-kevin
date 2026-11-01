@@ -7,10 +7,6 @@ class TikTokProvider extends BaseProvider {
     super("tiktok");
   }
 
-  /**
-   * Normaliza texto para facilitar comparação.
-   * Ex.: "FREE FIRE 🔥" -> "free fire"
-   */
   normalizeText(text) {
     if (!text) return "";
 
@@ -21,16 +17,11 @@ class TikTokProvider extends BaseProvider {
       .trim();
   }
 
-  /**
-   * Tenta identificar um jogo através de qualquer texto:
-   * título, hashtag, subtag etc.
-   */
   detectGame(text) {
     if (!text) return null;
 
     const lower = this.normalizeText(text);
 
-    // Free Fire
     if (
       lower.includes("free fire") ||
       lower.includes("freefire") ||
@@ -39,12 +30,10 @@ class TikTokProvider extends BaseProvider {
       return "Free Fire";
     }
 
-    // Valorant
     if (lower.includes("valorant") || /\bval\b/.test(lower)) {
       return "Valorant";
     }
 
-    // GTA / FiveM
     if (
       lower.includes("gta v") ||
       lower.includes("gta 5") ||
@@ -56,7 +45,6 @@ class TikTokProvider extends BaseProvider {
       return "GTA V / FiveM";
     }
 
-    // Counter-Strike
     if (
       lower.includes("counter-strike") ||
       lower.includes("counter strike") ||
@@ -110,17 +98,10 @@ class TikTokProvider extends BaseProvider {
     return null;
   }
 
-  /**
-   * Mantido para compatibilidade com o código anterior.
-   */
   detectGameFromTitle(title) {
     return this.detectGame(title);
   }
 
-  /**
-   * Verifica se a categoria retornada pelo TikTok é genérica
-   * e, portanto, não representa realmente um jogo.
-   */
   isGenericCategory(category) {
     if (!category) return true;
 
@@ -155,9 +136,6 @@ class TikTokProvider extends BaseProvider {
     );
   }
 
-  /**
-   * Remove títulos genéricos/SEO retornados pelo TikTok.
-   */
   cleanTitle(extractedTitle, username) {
     if (!extractedTitle) {
       return `Live de @${username}`;
@@ -187,40 +165,48 @@ class TikTokProvider extends BaseProvider {
     return title.trim();
   }
 
-  /**
-   * Decide qual categoria será enviada ao Discord.
-   *
-   * Prioridade:
-   * 1. Jogo reconhecido na subtag
-   * 2. Jogo reconhecido na hashtag
-   * 3. Jogo reconhecido no título
-   * 4. Categoria específica retornada pelo TikTok
-   * 5. Games / Conversa
-   */
-  resolveCategory({ subTag, hashtag, title }) {
+  resolveCategory({ subTag, hashtag, title, username }) {
+    console.log(
+      `[TikTok Debug] Resolvendo categoria para @${username} | SubTag: "${subTag}" | Hashtag: "${hashtag}" | Título: "${title}"`,
+    );
+
     const gameFromSubTag = this.detectGame(subTag);
     if (gameFromSubTag) {
+      console.log(
+        `[TikTok Debug] Jogo detectado pela SubTag: ${gameFromSubTag}`,
+      );
       return gameFromSubTag;
     }
 
     const gameFromHashtag = this.detectGame(hashtag);
     if (gameFromHashtag) {
+      console.log(
+        `[TikTok Debug] Jogo detectado pela Hashtag: ${gameFromHashtag}`,
+      );
       return gameFromHashtag;
     }
 
     const gameFromTitle = this.detectGame(title);
     if (gameFromTitle) {
+      console.log(
+        `[TikTok Debug] Jogo detectado pelo Título: ${gameFromTitle}`,
+      );
       return gameFromTitle;
     }
 
     if (subTag && !this.isGenericCategory(subTag)) {
+      console.log(`[TikTok Debug] Usando SubTag não genérica: ${subTag}`);
       return subTag;
     }
 
     if (hashtag && !this.isGenericCategory(hashtag)) {
+      console.log(`[TikTok Debug] Usando Hashtag não genérica: ${hashtag}`);
       return hashtag;
     }
 
+    console.log(
+      `[TikTok Debug] Nenhuma tag ou jogo identificado. Caindo para fallback: Games / Conversa`,
+    );
     return "Games / Conversa";
   }
 
@@ -263,7 +249,6 @@ class TikTokProvider extends BaseProvider {
           let liveTitle = `Live de @${username}`;
 
           const roomTitleMatch = htmlContent.match(/"room_title":"([^"]+)"/);
-
           const titleMatch = htmlContent.match(/"title":"([^"]+)"/);
 
           if (roomTitleMatch?.[1]) {
@@ -273,7 +258,6 @@ class TikTokProvider extends BaseProvider {
           }
 
           let viewers = 0;
-
           const userCountMatch = htmlContent.match(/"user_count":(\d+)/);
 
           if (userCountMatch?.[1]) {
@@ -281,20 +265,24 @@ class TikTokProvider extends BaseProvider {
           }
 
           const tagMatch = htmlContent.match(/"hashtag_name":"([^"]+)"/);
-
           const gameTagMatch = htmlContent.match(/"sub_tag_name":"([^"]+)"/);
 
           const hashtag = tagMatch?.[1] || null;
           const subTag = gameTagMatch?.[1] || null;
 
+          // LOG DE INSPEÇÃO DO QUE O HTML RETORNOU
+          console.log(
+            `[TikTok Debug] Verificando @${username} -> Título extraído: "${liveTitle}" | Hashtag extraída: "${hashtag}" | SubTag extraída: "${subTag}"`,
+          );
+
           const detectedCategory = this.resolveCategory({
             subTag,
             hashtag,
             title: liveTitle,
+            username,
           });
 
           let roomId = username;
-
           const roomIdMatch = htmlContent.match(/"roomId":"(\d+)"/);
 
           if (roomIdMatch?.[1]) {
