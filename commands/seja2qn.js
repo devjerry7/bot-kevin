@@ -20,7 +20,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor("#2b2d31")
       .setImage(
-        "https://cdn.discordapp.com/attachments/1555226500066836490/1566530652227117056/IMG_0185.png?ex=6ae8e0dc&is=6ae78f5c&hm=f9774062b307a23c0f33e774f695b3279f4a2d8e7877622264be591505cdcdf1&",
+        "https://cdn.discordapp.com/attachments/1558933994467500174/1566553378916663306/79E16801-04C2-43B5-92E5-6B0AA9201759.png?ex=6ae8f606&is=6ae7a486&hm=9bf6204255b1d3faee020036d52cade146e5f667b126c5dfacaa51f5956af027&",
       )
       .setDescription(
         "**⚡ 2QN • FAÇA PARTE DO TIME**\n\n" +
