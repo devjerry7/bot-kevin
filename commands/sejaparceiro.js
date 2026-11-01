@@ -34,8 +34,11 @@ module.exports = {
           "• Permissão de enviar imagens no chat.\n" +
           "• Call privada + tag personalizada.\n" +
           "• Sorteios exclusivos para parceiros.\n\n\n" +
+          "**<a:am_aliana2qn:1556881754076348547> PATROCINADORES & PROJETOS:**\n" +
+          "• Parcerias comerciais e investidores recebem o cargo oficial de Patrocinador (<@&1540430923517141113>).\n" +
+          "• Espaço direto para divulgação de marca, produto ou investimento no ecossistema.\n\n\n" +
           "**<:roxo2qnavisos:1556916486398939186> COMO FECHAR PARCERIA:**\n" +
-          "Seja você streamer ou dono de algum projeto/ideia pra somar com a 2QN, chame no privado um dos responsáveis:\n\n" +
+          "Seja você streamer, patrocinador ou dono de algum projeto/ideia pra somar com a 2QN, chame no privado um dos responsáveis:\n\n" +
           "<:roxo1_st2QN:1560333690301583390> <@697947696702554223>\n" +
           "<:roxo1_st2QN:1560333690301583390> <@1551147533454282806>",
       )
