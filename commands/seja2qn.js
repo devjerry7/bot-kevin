@@ -28,13 +28,13 @@ module.exports = {
           "Escolha sua área e fale direto com o responsável:\n\n\n" +
           "**<:roxo_visual2QN:1566557759804276887> ESTÉTICA**\n" +
           "Deixar o servidor bem frufru, padronizado e com moral no visual.\n" +
-          "Liderança: <@946092563536941126> & <@496716578205990922>\n\n\n" +
+          "Liderança: <@946092563536941126> & <@496716578205990922>\n\n" +
           "**<:roxo_mov2QN:1566557594544513114> DIV**\n" +
           "Trazer gente nova, colocar o servidor pra frente e expandir nossa base.\n" +
-          "Liderança: <@343961792462061579> & <@789865303588601876>\n\n\n" +
+          "Liderança: <@343961792462061579> & <@789865303588601876>\n\n" +
           "**<:roxo_midia2QN:1566557686403833876> MÍDIA**\n" +
           "Estourar nas redes, cortar vídeo, fazer TikTok e botar a marca pra rodar na internet.\n" +
-          "Liderança: <@1524007175825915964> & <@849327062976430100>\n\n\n" +
+          "Liderança: <@1524007175825915964> & <@849327062976430100>\n\n" +
           "**<:roxo_rec2Qn:1566557832927514795> MOV**\n" +
           "Manter a call cheia, o chat vivo, dar recepção pra geral e não deixar a casa cair no tédio.\n" +
           "Liderança: <@1519030281947054245>",
