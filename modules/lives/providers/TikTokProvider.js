@@ -166,47 +166,18 @@ class TikTokProvider extends BaseProvider {
   }
 
   resolveCategory({ subTag, hashtag, title, username }) {
-    console.log(
-      `[TikTok Debug] Resolvendo categoria para @${username} | SubTag: "${subTag}" | Hashtag: "${hashtag}" | Título: "${title}"`,
-    );
-
     const gameFromSubTag = this.detectGame(subTag);
-    if (gameFromSubTag) {
-      console.log(
-        `[TikTok Debug] Jogo detectado pela SubTag: ${gameFromSubTag}`,
-      );
-      return gameFromSubTag;
-    }
+    if (gameFromSubTag) return gameFromSubTag;
 
     const gameFromHashtag = this.detectGame(hashtag);
-    if (gameFromHashtag) {
-      console.log(
-        `[TikTok Debug] Jogo detectado pela Hashtag: ${gameFromHashtag}`,
-      );
-      return gameFromHashtag;
-    }
+    if (gameFromHashtag) return gameFromHashtag;
 
     const gameFromTitle = this.detectGame(title);
-    if (gameFromTitle) {
-      console.log(
-        `[TikTok Debug] Jogo detectado pelo Título: ${gameFromTitle}`,
-      );
-      return gameFromTitle;
-    }
+    if (gameFromTitle) return gameFromTitle;
 
-    if (subTag && !this.isGenericCategory(subTag)) {
-      console.log(`[TikTok Debug] Usando SubTag não genérica: ${subTag}`);
-      return subTag;
-    }
+    if (subTag && !this.isGenericCategory(subTag)) return subTag;
+    if (hashtag && !this.isGenericCategory(hashtag)) return hashtag;
 
-    if (hashtag && !this.isGenericCategory(hashtag)) {
-      console.log(`[TikTok Debug] Usando Hashtag não genérica: ${hashtag}`);
-      return hashtag;
-    }
-
-    console.log(
-      `[TikTok Debug] Nenhuma tag ou jogo identificado. Caindo para fallback: Games / Conversa`,
-    );
     return "Games / Conversa";
   }
 
@@ -225,17 +196,13 @@ class TikTokProvider extends BaseProvider {
       try {
         const username = streamer.platformUsername.replace("@", "");
 
-        // Requisição simulando um navegador mobile para forçar o TikTok a entregar o SSR completo
         const response = await axios.get(
           `https://www.tiktok.com/@${username}/live`,
           {
             headers: {
               "User-Agent":
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-              Accept:
-                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
               "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-              "Cache-Control": "no-cache",
             },
             timeout: 10000,
             maxRedirects: 5,
@@ -247,85 +214,36 @@ class TikTokProvider extends BaseProvider {
         const isLiveActive =
           htmlContent.includes('"roomStatus":2') ||
           htmlContent.includes('"status":2') ||
-          htmlContent.includes('"isLive":true') ||
-          htmlContent.includes("live-room");
+          htmlContent.includes('"isLive":true');
 
         if (isLiveActive) {
           let liveTitle = `Live de @${username}`;
 
-          // Extração avançada varrendo blocos JSON embutidos (SIGI_STATE / Universal Data)
-          let extractedRoomTitle = null;
-          let extractedHashtag = null;
-          let extractedSubTag = null;
-          let viewers = 0;
-          let roomId = username;
-
-          // Tenta extrair o JSON do SIGI_STATE caso exista no HTML
-          const sigiMatch = htmlContent.match(
-            /<script id="SIGI_STATE" type="application\/json">([\s\S]*?)<\/script>/,
-          );
-          if (sigiMatch && sigiMatch[1]) {
-            try {
-              const sigiData = JSON.parse(sigiMatch[1]);
-              // Procura pelas estruturas de sala dentro do SIGI_STATE
-              const roomModule =
-                sigiData.LiveModule || sigiData.RoomModule || {};
-              const roomInfo =
-                roomModule.roomInfo || roomModule.activeRoom || {};
-
-              if (roomInfo.title) extractedRoomTitle = roomInfo.title;
-              if (roomInfo.user_count)
-                viewers = parseInt(roomInfo.user_count, 10);
-              if (roomInfo.id) roomId = String(roomInfo.id);
-              if (roomInfo.game_tag_name)
-                extractedSubTag = roomInfo.game_tag_name;
-              if (roomInfo.hashtag_name)
-                extractedHashtag = roomInfo.hashtag_name;
-            } catch (e) {
-              // Se falhar o parse do SIGI_STATE, segue para o regex clássico
-            }
-          }
-
-          // Fallback por Regex caso o SIGI_STATE venha em outro formato
+          const roomTitleMatch = htmlContent.match(/"room_title":"([^"]+)"/);
+          const titleMatch = htmlContent.match(/"title":"([^"]+)"/);
           const ogTitleMatch = htmlContent.match(
             /<meta\s+property="og:title"\s+content="([^"]+)"/i,
           );
-          const roomTitleMatch =
-            htmlContent.match(/"room_title":"([^"]+)"/) ||
-            htmlContent.match(/"title":"([^"]+)"/);
-          const userCountMatch = htmlContent.match(/"user_count":(\d+)/);
-          const tagMatch =
-            htmlContent.match(/"hashtag_name":"([^"]+)"/) ||
-            htmlContent.match(/"categoryName":"([^"]+)"/);
-          const gameTagMatch =
-            htmlContent.match(/"sub_tag_name":"([^"]+)"/) ||
-            htmlContent.match(/"game_tag":"([^"]+)"/);
-          const roomIdMatch =
-            htmlContent.match(/"roomId":"(\d+)"/) ||
-            htmlContent.match(/"room_id":"(\d+)"/);
 
-          if (extractedRoomTitle) {
-            liveTitle = this.cleanTitle(extractedRoomTitle, username);
+          if (roomTitleMatch?.[1]) {
+            liveTitle = this.cleanTitle(roomTitleMatch[1], username);
+          } else if (titleMatch?.[1]) {
+            liveTitle = this.cleanTitle(titleMatch[1], username);
           } else if (ogTitleMatch?.[1]) {
             liveTitle = this.cleanTitle(ogTitleMatch[1], username);
-          } else if (roomTitleMatch?.[1]) {
-            liveTitle = this.cleanTitle(roomTitleMatch[1], username);
           }
 
-          if (viewers === 0 && userCountMatch?.[1]) {
+          let viewers = 0;
+          const userCountMatch = htmlContent.match(/"user_count":(\d+)/);
+          if (userCountMatch?.[1]) {
             viewers = parseInt(userCountMatch[1], 10);
           }
 
-          const hashtag = extractedHashtag || tagMatch?.[1] || null;
-          const subTag = extractedSubTag || gameTagMatch?.[1] || null;
+          const tagMatch = htmlContent.match(/"hashtag_name":"([^"]+)"/);
+          const gameTagMatch = htmlContent.match(/"sub_tag_name":"([^"]+)"/);
 
-          if (roomIdMatch?.[1] && roomId === username) {
-            roomId = roomIdMatch[1];
-          }
-
-          console.log(
-            `[TikTok Debug] Verificando @${username} -> Título extraído: "${liveTitle}" | Hashtag extraída: "${hashtag}" | SubTag extraída: "${subTag}"`,
-          );
+          const hashtag = tagMatch?.[1] || null;
+          const subTag = gameTagMatch?.[1] || null;
 
           const detectedCategory = this.resolveCategory({
             subTag,
@@ -333,6 +251,12 @@ class TikTokProvider extends BaseProvider {
             title: liveTitle,
             username,
           });
+
+          let roomId = username;
+          const roomIdMatch = htmlContent.match(/"roomId":"(\d+)"/);
+          if (roomIdMatch?.[1]) {
+            roomId = roomIdMatch[1];
+          }
 
           events.push(
             new StandardLiveEvent({
