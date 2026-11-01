@@ -23,7 +23,7 @@ module.exports = {
       .setColor("#3c00ff") // Cor padrão limpa (Dark / Discord aesthetic)
       .setTitle("<:roxo_2qn:1566228040223162468> 2QN • ENTRE PRO TIME")
       .setDescription(
-        "Quer fazer parte do império e construir o ecossistema que mais cresce? Aqui a cobrança é justa, o reconhecimento é real e quem corre pelo certo só tem a ganhar.\n\n" +
+        "Quer fazer parte do nosso time e construir o ecossistema que mais cresce? Aqui o reconhecimento é real e quem corre com nós só tem a ganhar.\n\n" +
           "Escolha sua área de atuação abaixo e entre em contato com o responsável direto:",
       )
       .addFields(
@@ -63,7 +63,7 @@ module.exports = {
       .setImage(
         "https://cdn.discordapp.com/attachments/1555226500066836490/1566530652227117056/IMG_0185.png?ex=6ae8e0dc&is=6ae78f5c&hm=f9774062b307a23c0f33e774f695b3279f4a2d8e7877622264be591505cdcdf1&",
       )
-      .setFooter({ text: "2QN Network • O topo é o único caminho." });
+      .setFooter({ text: "2QN" });
 
     // Envia a embed no canal onde o comando foi executado
     await message.channel.send({ embeds: [embed] });
