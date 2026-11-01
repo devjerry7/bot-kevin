@@ -48,7 +48,8 @@ const { handleVoice } = require("../commands/voice");
 const streamerCommand = require("../commands/streamer");
 const bolaoCommand = require("../commands/bolao");
 const rodarRelatorioCommand = require("../commands/rodarRelatorio");
-const seja2qnCommand = require("../commands/seja2qn"); // 🚀 IMPORTADO AQUI
+const seja2qnCommand = require("../commands/seja2qn");
+const sejaParceiroCommand = require("../commands/sejaparceiro"); // 🚀 IMPORTADO AQUI
 
 // --- PAINÉIS VISUAIS E EMBEDS ---
 const { handleGameRolesPanel } = require("../commands/gameRoles");
@@ -67,7 +68,6 @@ const ffSairCommand = require("../commands/ffsair");
 // --- IMPORTAÇÕES DA EQUIPE ---
 const staffChatTracker = require("../listeners/staffChatTracker");
 const { handleMeta, handlePausa } = require("../commands/staffUtils");
-const sejaParceiroCommand = require("../commands/sejaparceiro");
 
 // ID Direto do Dono para Alertas Críticos de Segurança
 const OWNER_LOG_ID = "1551147533454282806";
@@ -230,9 +230,6 @@ module.exports = async (message) => {
     if (await handleMention(message)) return;
   }
 
-  if (["sejaparceiro", "seja-parceiro", "parceria"].includes(command))
-    return sejaParceiroCommand.execute(message, args);
-
   if (!message.content.startsWith(PREFIX)) {
     if (state.isActive) {
       const currentLetter = state.currentLetter;
@@ -341,7 +338,10 @@ module.exports = async (message) => {
     return rodarRelatorioCommand.execute(message, args);
 
   if (["seja2qn", "seja-2qn", "recrutamentostaff"].includes(command))
-    return seja2qnCommand.execute(message, args); // 🚀 EXECUTADO AQUI
+    return seja2qnCommand.execute(message, args);
+
+  if (["sejaparceiro", "seja-parceiro", "parceria"].includes(command))
+    return sejaParceiroCommand.execute(message, args); // 🚀 EXECUTADO AQUI
 
   if (["bolao", "bolão"].includes(command))
     return bolaoCommand.execute(message, args);
