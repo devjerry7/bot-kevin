@@ -39,7 +39,9 @@ module.exports = {
           "<:roxo1_st2QN:1560333690301583390> <@697947696702554223>\n" +
           "<:roxo1_st2QN:1560333690301583390> <@1551147533454282806>",
       )
-      .setFooter({ text: "2QN Network • O topo é o único caminho." });
+      .setFooter({
+        text: "2QN • meu caráter não tem nada a ver com meu instinto",
+      });
 
     await message.channel.send({ embeds: [embed] });
   },
