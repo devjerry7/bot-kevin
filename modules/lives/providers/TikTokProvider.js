@@ -7,6 +7,9 @@ class TikTokProvider extends BaseProvider {
     super("tiktok");
   }
 
+  /**
+   * Normaliza texto para facilitar comparação (remove acentos, emojis e espaços extras).
+   */
   normalizeText(text) {
     if (!text) return "";
 
@@ -17,11 +20,16 @@ class TikTokProvider extends BaseProvider {
       .trim();
   }
 
+  /**
+   * Tenta identificar um jogo através de qualquer texto:
+   * título, hashtag, subtag etc.
+   */
   detectGame(text) {
     if (!text) return null;
 
     const lower = this.normalizeText(text);
 
+    // Free Fire
     if (
       lower.includes("free fire") ||
       lower.includes("freefire") ||
@@ -30,10 +38,12 @@ class TikTokProvider extends BaseProvider {
       return "Free Fire";
     }
 
+    // Valorant
     if (lower.includes("valorant") || /\bval\b/.test(lower)) {
       return "Valorant";
     }
 
+    // GTA / FiveM
     if (
       lower.includes("gta v") ||
       lower.includes("gta 5") ||
@@ -45,6 +55,7 @@ class TikTokProvider extends BaseProvider {
       return "GTA V / FiveM";
     }
 
+    // Counter-Strike
     if (
       lower.includes("counter-strike") ||
       lower.includes("counter strike") ||
@@ -102,6 +113,9 @@ class TikTokProvider extends BaseProvider {
     return this.detectGame(title);
   }
 
+  /**
+   * Verifica se a categoria retornada pelo TikTok é genérica.
+   */
   isGenericCategory(category) {
     if (!category) return true;
 
@@ -136,6 +150,9 @@ class TikTokProvider extends BaseProvider {
     );
   }
 
+  /**
+   * Remove títulos genéricos de propaganda/SEO do TikTok.
+   */
   cleanTitle(extractedTitle, username) {
     if (!extractedTitle) {
       return `Live de @${username}`;
@@ -165,6 +182,9 @@ class TikTokProvider extends BaseProvider {
     return title.trim();
   }
 
+  /**
+   * Decide qual categoria será enviada ao Discord.
+   */
   resolveCategory({ subTag, hashtag, title, username }) {
     console.log(
       `[TikTok Debug] Resolvendo categoria para @${username} | SubTag: "${subTag}" | Hashtag: "${hashtag}" | Título: "${title}"`,
@@ -248,13 +268,24 @@ class TikTokProvider extends BaseProvider {
         if (isLiveActive) {
           let liveTitle = `Live de @${username}`;
 
+          // Extração via Meta Tags OpenGraph (og:title, og:description) + Fallbacks de JSON
+          const ogTitleMatch = htmlContent.match(
+            /<meta\s+property="og:title"\s+content="([^"]+)"/i,
+          );
+          const metaDescMatch = htmlContent.match(
+            /<meta\s+name="description"\s+content="([^"]+)"/i,
+          );
           const roomTitleMatch = htmlContent.match(/"room_title":"([^"]+)"/);
           const titleMatch = htmlContent.match(/"title":"([^"]+)"/);
 
-          if (roomTitleMatch?.[1]) {
+          if (ogTitleMatch?.[1]) {
+            liveTitle = this.cleanTitle(ogTitleMatch[1], username);
+          } else if (roomTitleMatch?.[1]) {
             liveTitle = this.cleanTitle(roomTitleMatch[1], username);
           } else if (titleMatch?.[1]) {
             liveTitle = this.cleanTitle(titleMatch[1], username);
+          } else if (metaDescMatch?.[1]) {
+            liveTitle = this.cleanTitle(metaDescMatch[1], username);
           }
 
           let viewers = 0;
@@ -264,13 +295,18 @@ class TikTokProvider extends BaseProvider {
             viewers = parseInt(userCountMatch[1], 10);
           }
 
-          const tagMatch = htmlContent.match(/"hashtag_name":"([^"]+)"/);
-          const gameTagMatch = htmlContent.match(/"sub_tag_name":"([^"]+)"/);
+          // Busca em chaves modernas do TikTok Web
+          const tagMatch =
+            htmlContent.match(/"hashtag_name":"([^"]+)"/) ||
+            htmlContent.match(/"categoryName":"([^"]+)"/);
+
+          const gameTagMatch =
+            htmlContent.match(/"sub_tag_name":"([^"]+)"/) ||
+            htmlContent.match(/"game_tag":"([^"]+)"/);
 
           const hashtag = tagMatch?.[1] || null;
           const subTag = gameTagMatch?.[1] || null;
 
-          // LOG DE INSPEÇÃO DO QUE O HTML RETORNOU
           console.log(
             `[TikTok Debug] Verificando @${username} -> Título extraído: "${liveTitle}" | Hashtag extraída: "${hashtag}" | SubTag extraída: "${subTag}"`,
           );
