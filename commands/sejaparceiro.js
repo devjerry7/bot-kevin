@@ -24,7 +24,7 @@ module.exports = {
       )
       .setDescription(
         "**<a:am_aliana2qn:1556881754076348547> SEJA PARCEIRO • 2QN**\n\n" +
-          "Quer crescer junto com uma comunidade que ferve 24/7? A gente fortalece quem corre com a gente.\n\n" +
+          "Quer crescer junto com uma comunidade que é ativa 24/7? A gente fortalece quem corre com a gente.\n\n" +
           "Nosso foco principal são **streamers e criadores de conteúdo**, mas estamos sempre abertos a conversar sobre qualquer outra proposta de parceria que seja boa para os dois lados.\n\n\n" +
           "**<:ama_coroa2qn:1535775618615087154> VIP STREAM • VANTAGENS EXCLUSIVAS:**\n" +
           "• Notificação automática da sua live assim que abrir transmissão.\n" +
