@@ -49,7 +49,8 @@ const streamerCommand = require("../commands/streamer");
 const bolaoCommand = require("../commands/bolao");
 const rodarRelatorioCommand = require("../commands/rodarRelatorio");
 const seja2qnCommand = require("../commands/seja2qn");
-const sejaParceiroCommand = require("../commands/sejaparceiro"); // 🚀 IMPORTADO AQUI
+const sejaParceiroCommand = require("../commands/sejaparceiro");
+const moverCommand = require("../commands/mover"); // 🚀 IMPORTADO AQUI
 
 // --- PAINÉIS VISUAIS E EMBEDS ---
 const { handleGameRolesPanel } = require("../commands/gameRoles");
@@ -341,7 +342,10 @@ module.exports = async (message) => {
     return seja2qnCommand.execute(message, args);
 
   if (["sejaparceiro", "seja-parceiro", "parceria"].includes(command))
-    return sejaParceiroCommand.execute(message, args); // 🚀 EXECUTADO AQUI
+    return sejaParceiroCommand.execute(message, args);
+
+  if (["mover", "puxarcall", "moveall"].includes(command))
+    return moverCommand.execute(message, args); // 🚀 EXECUTADO AQUI
 
   if (["bolao", "bolão"].includes(command))
     return bolaoCommand.execute(message, args);
