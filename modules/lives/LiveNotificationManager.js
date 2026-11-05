@@ -229,12 +229,12 @@ class LiveNotificationManager {
                     .setColor(0x2f3136)
                     .setTitle(`[ENCERRADA] ${oldEmbed.title}`)
                     .setFooter({
-                      text: "<:verm_botao2qn:1546265901161255085> Transmissão Encerrada | 2QN Streamers",
+                      text: "Transmissão Encerrada | 2QN Streamers",
                     });
 
                   await msg
                     .edit({
-                      content: `<:verm_botao2qn:1546265901161255085> A transmissão foi encerrada.`,
+                      content: `A transmissão foi encerrada.`,
                       embeds: [finishedEmbed],
                     })
                     .catch(() => {});
