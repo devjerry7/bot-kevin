@@ -28,7 +28,7 @@ module.exports = {
           "Escolha sua área e fale direto com o responsável:\n\n\n" +
           "**<:roxo_visual2QN:1566557759804276887> ESTÉTICA**\n" +
           "Deixar o servidor bem frufru, padronizado e com moral no visual.\n" +
-          "Liderança: <@946092563536941126> & <@496716578205990922>\n\n" +
+          "Liderança: <@946092563536941126>\n\n" +
           "**<:roxo_mov2QN:1566557594544513114> DIV**\n" +
           "Trazer gente nova, colocar o servidor pra frente e expandir nossa base.\n" +
           "Liderança: <@343961792462061579> & <@789865303588601876>\n\n" +
