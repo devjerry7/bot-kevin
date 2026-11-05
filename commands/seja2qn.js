@@ -23,7 +23,7 @@ module.exports = {
         "https://cdn.discordapp.com/attachments/1558933994467500174/1566553378916663306/79E16801-04C2-43B5-92E5-6B0AA9201759.png?ex=6ae8f606&is=6ae7a486&hm=9bf6204255b1d3faee020036d52cade146e5f667b126c5dfacaa51f5956af027&",
       )
       .setDescription(
-        "**<:roxo_div2QN:1566557524541444146> 2QN • FAÇA PARTE DO TIME**\n\n" +
+        "**<:00roxo_avisos2QN:1566677838617251850> 2QN • FAÇA PARTE DO TIME**\n\n" +
           "Quer fazer parte do time?\n\n" +
           "Escolha sua área e fale direto com o responsável:\n\n\n" +
           "**<:roxo_visual2QN:1566557759804276887> ESTÉTICA**\n" +
