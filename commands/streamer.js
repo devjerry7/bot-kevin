@@ -1,6 +1,6 @@
 // commands/streamer.js
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
-
+const prisma = require("../database"); // 🚀 IMPORTADO PARA RESOLVER O ERRO
 const streamerConfig = require("../config/streamerConfig");
 
 module.exports = {
