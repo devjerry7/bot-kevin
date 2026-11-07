@@ -31,7 +31,7 @@ module.exports = {
           "Liderança: <@946092563536941126>\n\n" +
           "**<:roxo_mov2QN:1566557594544513114> DIV**\n" +
           "Trazer gente nova, colocar o servidor pra frente e expandir nossa base.\n" +
-          "Liderança: <@343961792462061579> & <@789865303588601876>\n\n" +
+          "Liderança: <@343961792462061579>\n\n" +
           "**<:roxo_midia2QN:1566557686403833876> MÍDIA**\n" +
           "Estourar nas redes, cortar vídeo, fazer TikTok e botar a marca pra rodar na internet.\n" +
           "Liderança: <@1524007175825915964> & <@849327062976430100>\n\n" +
