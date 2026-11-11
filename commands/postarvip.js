@@ -39,17 +39,19 @@ const handlePostVip = async (message) => {
     const EMOJI_VIP_NIGHT = process.env.EMOJI_VIP_NIGHT || "🌙";
 
     const embed = new EmbedBuilder()
-      .setTitle(`${EMOJI_TITLE} Cargos & Planos Vip ${EMOJI_TITLE}`)
+      .setTitle(
+        `<:00roxo_2QN:1560811179964633208> Planos Vip <:00roxo_2QN:1560811179964633208>`,
+      )
       .setDescription(
         `**Quer ter vantagens exclusivas, se destacar no chat e ainda ajudar a nossa comunidade a crescer? Chegou a hora! Confira tudo o que preparamos para vocês.**\n\n` +
-          `${EMOJI_CART} | **COMO COMPRAR:**\n` +
-          `Para adquirir o seu VIP, entre em contato com <@${DONO_1}> e <@${DONO_2}>.\n\n` +
+          `${EMOJI_CART} | **COMO ADQUIRIR:**\n` +
+          `Entre em contato com <@${DONO_1}> e <@${DONO_2}>.\n\n` +
           `${EMOJI_BOOST} **LEVEL UP - BOOSTER**\n` +
           `${EMOJI_DOT} Cargo destacado no servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Sorteios exclusivos.\n` +
           `${EMOJI_DOT} Permissão de <#1545530073686347776>.\n\n` +
-          `${EMOJI_VIP_SELECT} **VIP SELECT - R$${PRICE_SELECT}**\n` +
+          `<a:azul_coroa2qn:1557802156713713805> **VIP SELECT**\n` +
           `${EMOJI_DOT} Cargo destacado no Servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Tag personalizada;\n` +
@@ -62,7 +64,7 @@ const handlePostVip = async (message) => {
           `${EMOJI_DOT} Vantagens no servidor. (<@&1537258569265717258>);\n` +
           `${EMOJI_DOT} Sorteios exclusivos;\n` +
           `${EMOJI_DOT} Acesso liberado ao chat <#1535759130298421258>.\n\n` +
-          `${EMOJI_VIP_NIGHT} **VIP NIGHT - R$${PRICE_NIGHT}**\n` +
+          `${EMOJI_VIP_NIGHT} **VIP NIGHT**\n` +
           `${EMOJI_DOT} Cargo destacado no servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Call privada + tag personalizada;\n` +
@@ -74,7 +76,7 @@ const handlePostVip = async (message) => {
       .setColor(COLOR_BASE)
       .setImage(BANNER_VIP)
       .setFooter({
-        text: "Todo valor arrecadado é revertido em melhorias para o servidor!",
+        text: "Meu caráter não tem nada a ver com meu instinto",
         iconURL: message.guild.iconURL(),
       })
       .setTimestamp();
