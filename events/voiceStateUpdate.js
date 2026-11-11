@@ -71,7 +71,7 @@ module.exports = async (oldState, newState, client) => {
 
       const embed = new EmbedBuilder()
         .setTitle(
-          "<:br_registro2qn:1557798191100072119> PAINEL DE CONTROLE DA CALL",
+          "<:04branco_registro2qn:1568402354037063820> PAINEL DE CONTROLE DA CALL",
         )
         .setDescription("Gerencie sua sala privada utilizando o menu abaixo.")
         .setColor(COLOR_BASE);
