@@ -61,7 +61,7 @@ const handlePostVip = async (message) => {
           `${EMOJI_DOT} Cargo destacado no servidor;\n` +
           `${EMOJI_DOT} Permissão de enviar imagem;\n` +
           `${EMOJI_DOT} Call privada + tag personalizada;\n` +
-          `${EMOJI_DOT} Vantagens no servidor. (<@&1537258569265717258>);\n` +
+          `${EMOJI_DOT} Vantagens no servidor. (<@&1566520876252401814>);\n` +
           `${EMOJI_DOT} Sorteios exclusivos;\n` +
           `${EMOJI_DOT} Acesso liberado ao chat <#1535759130298421258>.\n\n` +
           `${EMOJI_VIP_NIGHT} **VIP NIGHT**\n` +
