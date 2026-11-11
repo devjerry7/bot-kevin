@@ -70,7 +70,7 @@ const handlePostVip = async (message) => {
           `${EMOJI_DOT} Call privada + tag personalizada;\n` +
           `${EMOJI_DOT} Direito a <@&1535758383297073202>;\n` +
           `${EMOJI_DOT} Sorteios exclusivos;\n` +
-          `${EMOJI_DOT} Vantagens no servidor. (<@&1542372640319213590>)\n` +
+          `${EMOJI_DOT} Vantagens no servidor. (<@&1566521751704178749>)\n` +
           `${EMOJI_DOT} Acesso liberado ao chat <#1535759130298421258>`,
       )
       .setColor(COLOR_BASE)
