@@ -43,7 +43,7 @@ const handlePostVip = async (message) => {
         `<:00roxo_2QN:1560811179964633208> Planos Vip <:00roxo_2QN:1560811179964633208>`,
       )
       .setDescription(
-        `**Quer ter vantagens exclusivas, se destacar no chat e ainda ajudar a nossa comunidade a crescer? Chegou a hora! Confira tudo o que preparamos para vocês.**\n\n` +
+        `**Quer ter vantagens exclusivas, se destacar no chat e ainda ajudar o servidor? Confira tudo o que preparamos para vocês.**\n\n` +
           `${EMOJI_CART} | **COMO ADQUIRIR:**\n` +
           `Entre em contato com <@${DONO_1}> e <@${DONO_2}>.\n\n` +
           `${EMOJI_BOOST} **LEVEL UP - BOOSTER**\n` +
