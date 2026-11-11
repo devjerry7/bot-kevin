@@ -88,9 +88,11 @@ module.exports = {
       .map((r) => `\`@${r.name}\``)
       .join(", ");
 
-    // 3. Montagem do Embed da Nova Tag do Servidor
+    // 3. Montagem do Embed da Nova Tag do Servidor (Com o Banner Oficial)
     const embedAnuncio = new EmbedBuilder()
-      .setTitle("✨ NOVA TAG OFICIAL DA 2QN • VENHA FAZER PARTE!")
+      .setTitle(
+        "<:00roxo2qnavisos:1556916486398939186> NOVA TAG OFICIAL DA 2QN • VENHA FAZER PARTE!",
+      )
       .setDescription(
         `Oii, Tudo certo por aí?\n\n` +
           `Passando para avisar que estamos de cara nova e gostaríamos muito de contar com você para fortalecer ainda mais a nossa identidade no servidor. Lançamos a nossa **nova tag**, e seria incrível ver ela estampada no seu perfil!\n\n` +
@@ -101,8 +103,8 @@ module.exports = {
           `Sua presença e apoio fazem toda a diferença para o crescimento da nossa comunidade. Contamos com você! <a:01roxo1_heart2qn:1560755540710260776>`,
       )
       .setColor(0x962dc0)
-      .setThumbnail(
-        "https://cdn.discordapp.com/attachments/1553534170179833951/1569950800288022559/2QN_Icon_oficial.gif?ex=6af5521f&is=6af4009f&hm=fef566a9bfce6720975761c3316128809870819cf1b85bcd9753ddc5e6e23775&",
+      .setImage(
+        "https://cdn.discordapp.com/attachments/1553534170179833951/1569957900795777065/2QN_Banner_oficial.png?ex=6af558bb&is=6af4073b&hm=b14b7ec140df16ba68f4eea0da89934fd3fd3aef324b69e7454b3ad04bc5aecc&",
       )
       .setFooter({
         text: "2qn • meu caráter não tem nada a ver com meu instinto",
