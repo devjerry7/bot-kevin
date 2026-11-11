@@ -24,7 +24,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 module.exports = {
   name: "disparar",
   description:
-    "Envia disparo de anúncio do torneio no PV dos membros de um cargo específico.",
+    "Envia disparo de anúncio da nova tag do servidor no PV dos membros dos cargos informados (com deduplicação).",
   async execute(message, args) {
     // 1. Validação de Whitelist
     const whitelist = getWhitelistIds();
@@ -37,54 +37,85 @@ module.exports = {
       );
     }
 
-    // 2. Identificação do Cargo
-    const role =
-      message.mentions.roles.first() || message.guild.roles.cache.get(args[0]);
+    // 2. Identificação dos Cargos (Menções ou IDs passados nos argumentos)
+    const roleMentions = message.mentions.roles;
+    const roleIdsFromArgs = args.filter((arg) => /^\d{17,20}$/.test(arg));
 
-    if (!role) {
+    // Coleta todos os cargos válidos (por menção ou ID direto)
+    const rolesToTarget = [];
+
+    roleMentions.forEach((role) => {
+      if (!rolesToTarget.some((r) => r.id === role.id))
+        rolesToTarget.push(role);
+    });
+
+    for (const rId of roleIdsFromArgs) {
+      const foundRole = message.guild.roles.cache.get(rId);
+      if (foundRole && !rolesToTarget.some((r) => r.id === foundRole.id)) {
+        rolesToTarget.push(foundRole);
+      }
+    }
+
+    if (rolesToTarget.length === 0) {
       return message.reply(
-        "⚠️ Por favor, mencione um cargo ou informe o ID. Exemplo: `mc!disparar @Membros`",
+        "⚠️ Por favor, informe pelo menos um cargo válido ou menção. Exemplo: `mc!disparar 1550589449082245161 1566521751704178749`",
       );
     }
 
     // Garante a busca atualizada de todos os membros do servidor
     await message.guild.members.fetch().catch(() => {});
-    const targetMembers = role.members.filter((m) => !m.user.bot);
 
-    if (targetMembers.size === 0) {
+    // Coleta membros únicos de todos os cargos informados (evitando duplicatas)
+    const uniqueMembersMap = new Map();
+
+    for (const role of rolesToTarget) {
+      role.members.forEach((member) => {
+        if (!member.user.bot) {
+          uniqueMembersMap.set(member.id, member);
+        }
+      });
+    }
+
+    const targetMembersArray = Array.from(uniqueMembersMap.values());
+
+    if (targetMembersArray.length === 0) {
       return message.reply(
-        "⚠️ Nenhum membro humano encontrado com este cargo.",
+        "⚠️ Nenhum membro humano foi encontrado nos cargos informados.",
       );
     }
 
-    // 3. Montagem do Embed Fixo do Torneio
+    const rolesNamesFormatted = rolesToTarget
+      .map((r) => `\`@${r.name}\``)
+      .join(", ");
+
+    // 3. Montagem do Embed da Nova Tag do Servidor
     const embedAnuncio = new EmbedBuilder()
-      .setTitle(
-        "<:am_trofeu2qn:1556881751370899457> GRANDE CAMPEONATO FREE FIRE 4X4",
-      )
+      .setTitle("✨ NOVA TAG OFICIAL DA 2QN • VENHA FAZER PARTE!")
       .setDescription(
-        `A hora de provar o nível do seu time chegou! Estão abertas as inscrições para o **Torneio 4x4**.\n\n` +
-          `<:ver_dinheiro2qn:1556881769565790258> **Premiação:** R$ 200,00 no PIX\n\n` +
-          `<a:008_whiteexcl:1559272726739558562> **Canais Importantes:**\n` +
-          `• Dúvidas e Regras: <#1554913667483705465>\n` +
-          `• Faça sua Inscrição: <#1553186399967256629> pula contra but\n\n` +
-          `Garanta a vaga da sua equipe antes que esgoste!`,
+        `Oii, Tudo certo por aí?\n\n` +
+          `Passando para avisar que estamos de cara nova e gostaríamos muito de contar com você para fortalecer ainda mais a nossa identidade no servidor. Lançamos a nossa **nova tag**, e seria incrível ver ela estampada no seu perfil!\n\n` +
+          `<:04branco_registro2qn:1568402354037063820> **Como colocar a tag no seu perfil (Passo a Passo):**\n` +
+          `<:04branco_st2QN:1560333704298242118> Clique no nome do seu perfil ou vá nas configurações de sua conta no Discord.\n` +
+          `<:04branco_st2QN:1560333704298242118> Selecione a opção **"Editar Perfil do Servidor"** (ou Perfil de Usuário).\n` +
+          `<:04branco_st2QN:1560333704298242118> No campo **"Tag do servidor"**, adicione a nossa tag!!\n\n` +
+          `Sua presença e apoio fazem toda a diferença para o crescimento da nossa comunidade. Contamos com você! <a:01roxo1_heart2qn:1560755540710260776>`,
       )
       .setColor(0x962dc0)
       .setThumbnail(
-        "https://cdn.discordapp.com/avatars/1435303951036711064/0ae9b50d402d01d3cf3c6dbeff15350a.png?size=4096",
+        "https://cdn.discordapp.com/attachments/1553534170179833951/1569950800288022559/2QN_Icon_oficial.gif?ex=6af5521f&is=6af4009f&hm=fef566a9bfce6720975761c3316128809870819cf1b85bcd9753ddc5e6e23775&",
       )
-      .setImage(
-        "https://media.discordapp.net/attachments/1553534170179833951/1554904332820811907/banner-4x4.png?ex=6acfb881&is=6ace6701&hm=0aaffcacde62ae009ffdd83379b4c4dbb289a9b2713c3ecfb890c4c00a39d82e&=&format=webp&quality=lossless&width=1536&height=615",
-      )
-      .setFooter({ text: "2qn • Torneios Oficiais" })
+      .setFooter({
+        text: "2qn • meu caráter não tem nada a ver com meu instinto",
+      })
       .setTimestamp();
 
     // 4. Painel de Prévia e Confirmação
     const rowConfirm = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("confirm_disparo")
-        .setLabel(`Iniciar Disparo (${targetMembers.size} membros)`)
+        .setLabel(
+          `Iniciar Disparo (${targetMembersArray.length} membros únicos)`,
+        )
         .setStyle(ButtonStyle.Success)
         .setEmoji("🚀"),
       new ButtonBuilder()
@@ -94,7 +125,7 @@ module.exports = {
     );
 
     const previewMsg = await message.channel.send({
-      content: `📋 **PRÉVIA DO DISPARO PARA O CARGO <@&${role.id}>**\nConfirme abaixo se o anúncio está correto antes de iniciar o envio em massa:`,
+      content: `📋 **PRÉVIA DO DISPARO PARA OS CARGOS:**\n${rolesNamesFormatted}\n*(Total de membros únicos após remoção de duplicatas: **${targetMembersArray.length}**)*\n\nConfirme abaixo se a mensagem está correta antes de iniciar o envio:`,
       embeds: [embedAnuncio],
       components: [rowConfirm],
     });
@@ -132,8 +163,7 @@ module.exports = {
         let successCount = 0;
         let failCount = 0;
         let processed = 0;
-        const total = targetMembers.size;
-        const membersArray = Array.from(targetMembers.values());
+        const total = targetMembersArray.length;
 
         const ownerUser = await message.client.users
           .fetch(OWNER_LOG_ID)
@@ -142,13 +172,13 @@ module.exports = {
         if (ownerUser) {
           await ownerUser
             .send(
-              `🚀 **DISPARO INICIADO**\nTarget: Cargo \`${role.name}\` (${total} membros).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
+              `🚀 **DISPARO DE TAG INICIADO**\nAlvos: ${rolesNamesFormatted} (${total} membros únicos).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
             )
             .catch(() => {});
         }
 
-        for (let i = 0; i < membersArray.length; i++) {
-          const target = membersArray[i];
+        for (let i = 0; i < targetMembersArray.length; i++) {
+          const target = targetMembersArray[i];
 
           try {
             await target.send({ embeds: [embedAnuncio] });
@@ -163,7 +193,7 @@ module.exports = {
           if (processed % 50 === 0 && ownerUser) {
             await ownerUser
               .send(
-                `📊 **Progresso do Disparo:** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
+                `📊 **Progresso do Disparo (Tag):** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
               )
               .catch(() => {});
           }
@@ -188,11 +218,11 @@ module.exports = {
         // 6. Relatório Final no PV do Dono
         if (ownerUser) {
           const reportEmbed = new EmbedBuilder()
-            .setTitle("✅ DISPARO EM MASSA CONCLUÍDO")
+            .setTitle("✅ DISPARO DE TAG CONCLUÍDO")
             .setDescription(
-              `O envio de anúncios do campeonato foi finalizado com sucesso!\n\n` +
-                `🎯 **Cargo Alvo:** \`${role.name}\`\n` +
-                `👥 **Total de Membros:** \`${total}\`\n` +
+              `O envio de anúncios da nova tag foi finalizado com sucesso!\n\n` +
+                `🎯 **Cargos Alvo:** ${rolesNamesFormatted}\n` +
+                `👥 **Total de Membros Únicos:** \`${total}\`\n` +
                 `🟢 **Entregues no PV:** \`${successCount}\`\n` +
                 `🔴 **DMs Fechadas / Erros:** \`${failCount}\``,
             )
