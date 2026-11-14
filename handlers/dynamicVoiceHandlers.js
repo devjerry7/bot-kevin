@@ -23,12 +23,15 @@ module.exports = async (oldState, newState) => {
   isProcessing = true;
 
   try {
+    // Garante que o cache de canais da guilda está atualizado
+    await guild.channels.fetch().catch(() => {});
+
     // 1. Busca os canais da categoria, IGNORANDO o canal protegido
     const categoryChannels = guild.channels.cache.filter(
       (c) =>
         c.parentId === CATEGORY_ID &&
         c.type === ChannelType.GuildVoice &&
-        c.id !== IGNORED_CHANNEL_ID, // 👈 Aqui ele ignora o canal imune
+        c.id !== IGNORED_CHANNEL_ID,
     );
 
     if (categoryChannels.size === 0) {
@@ -37,14 +40,12 @@ module.exports = async (oldState, newState) => {
     }
 
     const emptyChannels = [];
-    const populatedChannels = [];
 
     categoryChannels.forEach((channel) => {
+      // Conta apenas membros humanos conectados
       const humansCount = channel.members.filter((m) => !m.user.bot).size;
       if (humansCount === 0) {
         emptyChannels.push(channel);
-      } else {
-        populatedChannels.push(channel);
       }
     });
 
@@ -64,12 +65,20 @@ module.exports = async (oldState, newState) => {
             ]
           : `call-${categoryChannels.size + 1}`;
 
-      await guild.channels.create({
+      console.log(
+        `[DYNAMIC VOICE] Tentando criar nova call: "${nameToUse}" na categoria ${CATEGORY_ID}...`,
+      );
+
+      const newChannel = await guild.channels.create({
         name: nameToUse,
         type: ChannelType.GuildVoice,
         parent: CATEGORY_ID,
         reason: "Auto-gerenciador: Todas as calls dinâmicas estavam ocupadas.",
       });
+
+      console.log(
+        `[DYNAMIC VOICE] Sucesso! Canal criado com ID: ${newChannel.id}`,
+      );
     }
     // 3. REGRA DE LIMPEZA: Se houver mais de 1 call vazia
     else if (emptyChannels.length > 1) {
@@ -82,7 +91,8 @@ module.exports = async (oldState, newState) => {
       }
     }
   } catch (error) {
-    console.error("[DYNAMIC VOICE ERROR]:", error);
+    // 🔍 AGORA QUALQUER ERRO DE PERMISSÃO VAI APARECER DETALHADO NO CONSOLE
+    console.error("[DYNAMIC VOICE CREATE ERROR]:", error);
   } finally {
     isProcessing = false;
   }
