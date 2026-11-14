@@ -2,16 +2,17 @@
 const { ChannelType } = require("discord.js");
 
 const CATEGORY_ID = "1535753779314430043";
-const IGNORED_CHANNEL_ID = [
+
+// 🔒 Lista com os IDs de todos os canais fixos/imunes que devem ser ignorados
+const IGNORED_CHANNEL_IDS = [
   "1571297862124306613",
   "1535754635351162901",
   "1535754703613329579",
   "1535758916133199883",
   "1549213649502216342",
-  "1549213649502216342",
   "1548427161751396372",
   "1548859310145146980",
-]; // 🔒 ID do canal fixo/imune
+];
 
 const AVAILABLE_NAMES = [
   "ballena",
@@ -35,12 +36,12 @@ module.exports = async (oldState, newState) => {
     // Garante que o cache de canais da guilda está atualizado
     await guild.channels.fetch().catch(() => {});
 
-    // 1. Busca os canais da categoria, IGNORANDO o canal protegido
+    // 1. Busca os canais da categoria, IGNORANDO todos os canais da lista
     const categoryChannels = guild.channels.cache.filter(
       (c) =>
         c.parentId === CATEGORY_ID &&
         c.type === ChannelType.GuildVoice &&
-        c.id !== IGNORED_CHANNEL_ID,
+        !IGNORED_CHANNEL_IDS.includes(c.id),
     );
 
     if (categoryChannels.size === 0) {
@@ -100,7 +101,6 @@ module.exports = async (oldState, newState) => {
       }
     }
   } catch (error) {
-    // 🔍 AGORA QUALQUER ERRO DE PERMISSÃO VAI APARECER DETALHADO NO CONSOLE
     console.error("[DYNAMIC VOICE CREATE ERROR]:", error);
   } finally {
     isProcessing = false;
