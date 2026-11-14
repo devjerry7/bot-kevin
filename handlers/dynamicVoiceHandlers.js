@@ -2,6 +2,8 @@
 const { ChannelType } = require("discord.js");
 
 const CATEGORY_ID = "1535753779314430043";
+const IGNORED_CHANNEL_ID = "1571297862124306613"; // 🔒 ID do canal fixo/imune
+
 const AVAILABLE_NAMES = [
   "ballena",
   "vivencias",
@@ -21,8 +23,12 @@ module.exports = async (oldState, newState) => {
   isProcessing = true;
 
   try {
+    // 1. Busca os canais da categoria, IGNORANDO o canal protegido
     const categoryChannels = guild.channels.cache.filter(
-      (c) => c.parentId === CATEGORY_ID && c.type === ChannelType.GuildVoice,
+      (c) =>
+        c.parentId === CATEGORY_ID &&
+        c.type === ChannelType.GuildVoice &&
+        c.id !== IGNORED_CHANNEL_ID, // 👈 Aqui ele ignora o canal imune
     );
 
     if (categoryChannels.size === 0) {
@@ -42,6 +48,7 @@ module.exports = async (oldState, newState) => {
       }
     });
 
+    // 2. REGRA DE CRIAÇÃO: Se não há nenhuma call dinâmica vazia
     if (emptyChannels.length === 0) {
       const activeNames = new Set(
         categoryChannels.map((c) => c.name.toLowerCase()),
@@ -50,7 +57,6 @@ module.exports = async (oldState, newState) => {
         (name) => !activeNames.has(name.toLowerCase()),
       );
 
-      // Correção do operador ternário feita aqui embaixo:
       const nameToUse =
         availableNamesFiltered.length > 0
           ? availableNamesFiltered[
@@ -62,9 +68,11 @@ module.exports = async (oldState, newState) => {
         name: nameToUse,
         type: ChannelType.GuildVoice,
         parent: CATEGORY_ID,
-        reason: "Auto-gerenciador: Todas as calls estavam ocupadas.",
+        reason: "Auto-gerenciador: Todas as calls dinâmicas estavam ocupadas.",
       });
-    } else if (emptyChannels.length > 1) {
+    }
+    // 3. REGRA DE LIMPEZA: Se houver mais de 1 call vazia
+    else if (emptyChannels.length > 1) {
       const channelsToDelete = emptyChannels.slice(1);
 
       for (const channel of channelsToDelete) {
