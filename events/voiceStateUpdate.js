@@ -11,7 +11,7 @@ const {
 // --- IMPORTAÇÕES DE TRACKERS E HANDLERS ---
 const staffVoiceTracker = require("../listeners/staffVoiceTracker");
 const streamerVoiceTracker = require("../listeners/streamerVoiceTracker");
-const dynamicVoiceHandler = require("../handlers/dynamicVoiceHandler");
+const dynamicVoiceHandler = require("../handlers/dynamicVoiceHandlers");
 
 module.exports = async (oldState, newState, client) => {
   const creatorChannelId = process.env.JOIN_TO_CREATE_ID;
