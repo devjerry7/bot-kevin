@@ -8,9 +8,10 @@ const {
   EmbedBuilder,
 } = require("discord.js");
 
-// --- IMPORTAÇÕES DE TRACKERS ---
+// --- IMPORTAÇÕES DE TRACKERS E HANDLERS ---
 const staffVoiceTracker = require("../listeners/staffVoiceTracker");
 const streamerVoiceTracker = require("../listeners/streamerVoiceTracker");
+const dynamicVoiceHandler = require("../handlers/dynamicVoiceHandler");
 
 module.exports = async (oldState, newState, client) => {
   const creatorChannelId = process.env.JOIN_TO_CREATE_ID;
@@ -20,7 +21,7 @@ module.exports = async (oldState, newState, client) => {
   const guild = newState.guild;
 
   // ====================================================
-  // TRACKER DE VOZ DA STAFF E STREAMERS
+  // TRACKER DE VOZ DA STAFF, STREAMERS E CALLS DINÂMICAS
   // ====================================================
   if (member) {
     staffVoiceTracker(oldState, newState).catch((err) =>
@@ -31,6 +32,11 @@ module.exports = async (oldState, newState, client) => {
       console.error("[STREAMER VOICE TRACKER ERROR]", err),
     );
   }
+
+  // Executa o gerenciador automático de calls públicas dinâmicas
+  dynamicVoiceHandler(oldState, newState).catch((err) =>
+    console.error("[DYNAMIC VOICE HANDLER ERROR]", err),
+  );
 
   // ====================================================
   // SISTEMA DE CANAIS TEMPORÁRIOS (Join to Create)
