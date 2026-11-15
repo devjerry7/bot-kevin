@@ -20,6 +20,7 @@ const { handlePDCommand } = require("../pdManager");
 const handleMention = require("../handlers/mentionHandler");
 const handleAntiSpam = require("../handlers/antiSpamHandler");
 const handleChatProtection = require("../handlers/chatProtectionHandler");
+const momentsChatFilter = require("../listeners/momentsChatFilter"); // 🚀 FILTRO DE MOMENTOS INTEGRADO
 const { isBlacklisted } = require("../protectionManager");
 
 // --- IMPORTAÇÕES DOS COMANDOS (Módulos externos) ---
@@ -209,10 +210,11 @@ module.exports = async (message) => {
   const EMOJI_STOP = config.emoji?.stop || "🛑";
 
   // ====================================================
-  // 2. CAMADA DE SEGURANÇA (CHAT E ANTI-SPAM)
+  // 2. CAMADA DE SEGURANÇA (CHAT, ANTI-SPAM E MOMENTOS)
   // ====================================================
   if (await handleChatProtection(message)) return;
   if (await handleAntiSpam(message)) return;
+  if (await momentsChatFilter(message)) return; // 🚀 FILTRA TEXTO PURO NO CANAL DE MOMENTOS
 
   staffChatTracker(message).catch((err) =>
     console.error("[STAFF TRACKER ERROR]", err),
