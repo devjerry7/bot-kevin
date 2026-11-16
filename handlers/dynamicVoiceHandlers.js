@@ -1,9 +1,9 @@
-// handlers/dynamicVoiceHandler.js
+// handlers/dynamicVoiceHandlers.js
 const { ChannelType } = require("discord.js");
 
 const CATEGORY_ID = "1535753779314430043";
 
-// 🔒 Lista com os IDs de todos os canais fixos/imunes que devem ser ignorados
+// 🔒 LISTA BLINDADA DE CANAIS FIXOS/IMUNES (Jamais serão deletados ou contados como dinâmicos)
 const IGNORED_CHANNEL_IDS = [
   "1571297862124306613",
   "1535754635351162901",
@@ -36,33 +36,39 @@ module.exports = async (oldState, newState) => {
     // Garante que o cache de canais da guilda está atualizado
     await guild.channels.fetch().catch(() => {});
 
-    // 1. Busca os canais da categoria, IGNORANDO todos os canais da lista
-    const categoryChannels = guild.channels.cache.filter(
-      (c) =>
-        c.parentId === CATEGORY_ID &&
-        c.type === ChannelType.GuildVoice &&
-        !IGNORED_CHANNEL_IDS.includes(c.id),
+    // 1. Pega apenas os canais de voz que pertencem estritamente à categoria dinâmica
+    const allCategoryChannels = guild.channels.cache.filter(
+      (c) => c.parentId === CATEGORY_ID && c.type === ChannelType.GuildVoice,
     );
 
-    if (categoryChannels.size === 0) {
+    if (allCategoryChannels.size === 0) {
       isProcessing = false;
       return;
     }
 
-    const emptyChannels = [];
+    // 2. Separa APENAS as calls dinâmicas (excluindo os canais fixos/imunes da lista)
+    const dynamicChannels = allCategoryChannels.filter(
+      (c) => !IGNORED_CHANNEL_IDS.includes(c.id),
+    );
 
-    categoryChannels.forEach((channel) => {
-      // Conta apenas membros humanos conectados
+    const emptyDynamicChannels = [];
+
+    dynamicChannels.forEach((channel) => {
+      // Conta apenas membros humanos conectados na call dinâmica
       const humansCount = channel.members.filter((m) => !m.user.bot).size;
       if (humansCount === 0) {
-        emptyChannels.push(channel);
+        emptyDynamicChannels.push(channel);
       }
     });
 
-    // 2. REGRA DE CRIAÇÃO: Se não há nenhuma call dinâmica vazia
-    if (emptyChannels.length === 0) {
+    console.log(
+      `[DYNAMIC VOICE] Total Dinâmicas: ${dynamicChannels.size} | Vazias: ${emptyDynamicChannels.length}`,
+    );
+
+    // 3. REGRA DE CRIAÇÃO: Se todas as calls dinâmicas estiverem ocupadas (0 vazias)
+    if (emptyDynamicChannels.length === 0) {
       const activeNames = new Set(
-        categoryChannels.map((c) => c.name.toLowerCase()),
+        allCategoryChannels.map((c) => c.name.toLowerCase()),
       );
       const availableNamesFiltered = AVAILABLE_NAMES.filter(
         (name) => !activeNames.has(name.toLowerCase()),
@@ -73,10 +79,10 @@ module.exports = async (oldState, newState) => {
           ? availableNamesFiltered[
               Math.floor(Math.random() * availableNamesFiltered.length)
             ]
-          : `call-${categoryChannels.size + 1}`;
+          : `call-${dynamicChannels.size + 1}`;
 
       console.log(
-        `[DYNAMIC VOICE] Tentando criar nova call: "${nameToUse}" na categoria ${CATEGORY_ID}...`,
+        `[DYNAMIC VOICE] Todas as dinâmicas cheias! Criando nova call: "${nameToUse}"...`,
       );
 
       const newChannel = await guild.channels.create({
@@ -90,14 +96,20 @@ module.exports = async (oldState, newState) => {
         `[DYNAMIC VOICE] Sucesso! Canal criado com ID: ${newChannel.id}`,
       );
     }
-    // 3. REGRA DE LIMPEZA: Se houver mais de 1 call vazia
-    else if (emptyChannels.length > 1) {
-      const channelsToDelete = emptyChannels.slice(1);
+    // 4. REGRA DE LIMPEZA: Se houver mais de 1 call dinâmica vazia (mantém apenas 1 de sobra)
+    else if (emptyDynamicChannels.length > 1) {
+      // Garante de forma tripla que nenhuma sala da lista de ignorados será tocada
+      const channelsToDelete = emptyDynamicChannels
+        .slice(1)
+        .filter((c) => !IGNORED_CHANNEL_IDS.includes(c.id));
 
       for (const channel of channelsToDelete) {
+        console.log(
+          `[DYNAMIC VOICE] Deletando call vazia excedente: ${channel.name} (${channel.id})`,
+        );
         await channel
           .delete("Auto-gerenciador: Excesso de calls vazias.")
-          .catch(() => {});
+          .catch((err) => console.error("[DELETE ERROR]:", err));
       }
     }
   } catch (error) {
