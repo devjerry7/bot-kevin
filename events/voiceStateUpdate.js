@@ -12,6 +12,7 @@ const {
 const staffVoiceTracker = require("../listeners/staffVoiceTracker");
 const streamerVoiceTracker = require("../listeners/streamerVoiceTracker");
 const dynamicVoiceHandler = require("../handlers/dynamicVoiceHandlers");
+const streamerSorterHandler = require("../handlers/streamerSorterHandler"); // 🚀 ORDENADOR DE CALLS DE STREAMERS
 
 module.exports = async (oldState, newState, client) => {
   const creatorChannelId = process.env.JOIN_TO_CREATE_ID;
@@ -36,6 +37,11 @@ module.exports = async (oldState, newState, client) => {
   // Executa o gerenciador automático de calls públicas dinâmicas
   dynamicVoiceHandler(oldState, newState).catch((err) =>
     console.error("[DYNAMIC VOICE HANDLER ERROR]", err),
+  );
+
+  // Executa o ordenador automático para deixar as calls de streamers com gente no topo
+  streamerSorterHandler(guild).catch((err) =>
+    console.error("[STREAMER SORTER HANDLER ERROR]", err),
   );
 
   // ====================================================
