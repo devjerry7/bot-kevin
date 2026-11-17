@@ -51,7 +51,8 @@ const bolaoCommand = require("../commands/bolao");
 const rodarRelatorioCommand = require("../commands/rodarRelatorio");
 const seja2qnCommand = require("../commands/seja2qn");
 const sejaParceiroCommand = require("../commands/sejaparceiro");
-const moverCommand = require("../commands/mover"); // 🚀 IMPORTADO AQUI
+const moverCommand = require("../commands/mover");
+const listaTagCommand = require("../commands/listatag"); // 🚀 COMANDO DE LISTAR TAG DO SERVIDOR
 
 // --- PAINÉIS VISUAIS E EMBEDS ---
 const { handleGameRolesPanel } = require("../commands/gameRoles");
@@ -347,7 +348,10 @@ module.exports = async (message) => {
     return sejaParceiroCommand.execute(message, args);
 
   if (["mover", "puxarcall", "moveall"].includes(command))
-    return moverCommand.execute(message, args); // 🚀 EXECUTADO AQUI
+    return moverCommand.execute(message, args);
+
+  if (["listatag", "listatags", "tagmembros"].includes(command))
+    return listaTagCommand.execute(message, args);
 
   if (["bolao", "bolão"].includes(command))
     return bolaoCommand.execute(message, args);
