@@ -8,6 +8,8 @@ const {
 } = require("discord.js");
 
 const OWNER_LOG_ID = "1551147533454282806";
+const LOJA_CHANNEL_ID = "1570902792938332220";
+const MYLOOT_LINK = "https://www.mybioz.com/loot/2qn?vincular=discord";
 
 // Auxiliar Whitelist
 const getWhitelistIds = () => {
@@ -24,7 +26,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 module.exports = {
   name: "disparar",
   description:
-    "Envia disparo de anúncio da nova tag do servidor no PV dos membros dos cargos informados (com deduplicação).",
+    "Envia disparo de anúncio do sistema de pontos em call no PV dos membros dos cargos informados (com deduplicação).",
   async execute(message, args) {
     // 1. Validação de Whitelist
     const whitelist = getWhitelistIds();
@@ -41,7 +43,6 @@ module.exports = {
     const roleMentions = message.mentions.roles;
     const roleIdsFromArgs = args.filter((arg) => /^\d{17,20}$/.test(arg));
 
-    // Coleta todos os cargos válidos (por menção ou ID direto)
     const rolesToTarget = [];
 
     roleMentions.forEach((role) => {
@@ -88,19 +89,19 @@ module.exports = {
       .map((r) => `\`@${r.name}\``)
       .join(", ");
 
-    // 3. Montagem do Embed da Nova Tag do Servidor (Com o Banner Oficial)
+    // 3. Montagem do Embed do Sistema de Pontos em Call
     const embedAnuncio = new EmbedBuilder()
       .setTitle(
-        "<:00roxo2qnavisos:1556916486398939186> NOVA TAG OFICIAL DA 2QN • VENHA FAZER PARTE!",
+        "<:00roxo2qnavisos:1556916486398939186> GANHE PRÊMIOS FICANDO EM CALL NA 2QN!",
       )
       .setDescription(
-        `Oii, Tudo certo por aí?\n\n` +
-          `Passando para avisar que estamos de cara nova e gostaríamos muito de contar com você para fortalecer ainda mais a nossa identidade no servidor. Lançamos a nossa **nova tag**, e seria incrível ver ela estampada no seu perfil!\n\n` +
-          `<:04branco_registro2qn:1568402354037063820> **Como colocar a tag no seu perfil (Passo a Passo):**\n` +
-          `<:04branco_st2QN:1560333704298242118> Clique no nome do seu perfil ou vá nas configurações de sua conta no Discord.\n` +
-          `<:04branco_st2QN:1560333704298242118> Selecione a opção **"Editar Perfil do Servidor"** (ou Perfil de Usuário).\n` +
-          `<:04branco_st2QN:1560333704298242118> No campo **"Tag do servidor"**, adicione a nossa tag!!\n\n` +
-          `Sua presença e apoio fazem toda a diferença para o crescimento da nossa comunidade. Contamos com você! <a:01roxo1_heart2qn:1560755540710260776>`,
+        `Preparem os fones, porque agora as nossas calls valem ainda mais a pena! Aproveite para reunir os amigos, entrar nas calls, interagir com a galera e começar a acumular seus pontos para trocar por recompensas reais. <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
+          `<:04branco_registro2qn:1568402354037063820> **Como funciona o sistema?**\n` +
+          `<:04branco_ponto2qn:1556901316230651954> **Acúmulo Automático:** A cada **1 minuto** em call pública (com no mínimo **2 pessoas** na sala), você acumula **1 ponto** automaticamente.\n` +
+          `<:04branco_ponto2qn:1556901316230651954> **Quanto mais tempo, mais pontos:** O bot contabiliza todo o seu tempo ativo nas calls da comunidade.\n` +
+          `<:04branco_ponto2qn:1556901316230651954> **Recompensas Exclusivas:** Troque seus pontos por **Gift Cards, VIPs e itens de jogos** (Valorant e muito mais) diretamente na nossa loja: <#${LOJA_CHANNEL_ID}>.\n` +
+          `<:04branco_ponto2qn:1556901316230651954> **Resgate Simples:** Após solicitar o resgate na loja, a equipe aprova e o código chega diretamente na sua conta!\n\n` +
+          `<:04branco_st2QN:1560333704298242118> **Comece agora:** Vincule sua conta do Discord com a **MyLoot** pelo botão abaixo ou acessando:\n${MYLOOT_LINK}`,
       )
       .setColor(0x962dc0)
       .setImage(
@@ -110,6 +111,15 @@ module.exports = {
         text: "2qn • meu caráter não tem nada a ver com meu instinto",
       })
       .setTimestamp();
+
+    // Botão de Link para acompanhar o Embed na DM dos membros
+    const rowLinkDm = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Vincular Discord na MyLoot")
+        .setStyle(ButtonStyle.Link)
+        .setURL(MYLOOT_LINK)
+        .setEmoji("🎁"),
+    );
 
     // 4. Painel de Prévia e Confirmação
     const rowConfirm = new ActionRowBuilder().addComponents(
@@ -174,7 +184,7 @@ module.exports = {
         if (ownerUser) {
           await ownerUser
             .send(
-              `🚀 **DISPARO DE TAG INICIADO**\nAlvos: ${rolesNamesFormatted} (${total} membros únicos).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
+              `🚀 **DISPARO DE PONTOS EM CALL INICIADO**\nAlvos: ${rolesNamesFormatted} (${total} membros únicos).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
             )
             .catch(() => {});
         }
@@ -183,7 +193,10 @@ module.exports = {
           const target = targetMembersArray[i];
 
           try {
-            await target.send({ embeds: [embedAnuncio] });
+            await target.send({
+              embeds: [embedAnuncio],
+              components: [rowLinkDm],
+            });
             successCount++;
           } catch (err) {
             failCount++;
@@ -195,7 +208,7 @@ module.exports = {
           if (processed % 50 === 0 && ownerUser) {
             await ownerUser
               .send(
-                `📊 **Progresso do Disparo (Tag):** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
+                `📊 **Progresso do Disparo (Pontos em Call):** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
               )
               .catch(() => {});
           }
@@ -220,9 +233,9 @@ module.exports = {
         // 6. Relatório Final no PV do Dono
         if (ownerUser) {
           const reportEmbed = new EmbedBuilder()
-            .setTitle("✅ DISPARO DE TAG CONCLUÍDO")
+            .setTitle("✅ DISPARO DE PONTOS EM CALL CONCLUÍDO")
             .setDescription(
-              `O envio de anúncios da nova tag foi finalizado com sucesso!\n\n` +
+              `O envio de anúncios do sistema de pontos em call foi finalizado com sucesso!\n\n` +
                 `🎯 **Cargos Alvo:** ${rolesNamesFormatted}\n` +
                 `👥 **Total de Membros Únicos:** \`${total}\`\n` +
                 `🟢 **Entregues no PV:** \`${successCount}\`\n` +
