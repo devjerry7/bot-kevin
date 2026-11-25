@@ -82,9 +82,11 @@ async function sendTagEquippedEmbed(guild, botMember, member, role) {
       : "da nossa tag";
 
     const thankYouEmbed = new EmbedBuilder()
-      .setTitle("💜 Tag Equipada • Obrigado pelo Apoio!")
+      .setTitle(
+        "<a:01roxo1_heart2qn:1560755540710260776> Tag Equipada • Obrigado pelo Apoio!",
+      )
       .setDescription(
-        `Obrigado ${member} por ajudar a contribuir com a estética do servidor usando **${tagLabel}**! ✨\n\n` +
+        `Obrigado ${member} por ajudar a contribuir com a estética do servidor usando **${tagLabel}**! <a:09amarelo_hootingstar2qn:1567102220632072263>\n\n` +
           `Você foi premiado com o cargo **${role.name}** e todas as permissões que ele possui.`,
       )
       .setColor(embedColor)
