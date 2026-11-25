@@ -103,14 +103,14 @@ module.exports = {
       )
       .setColor(0x962dc0)
       .setImage(
-        "https://cdn.discordapp.com/attachments/1553534170179833951/1569957900795777065/2QN_Banner_oficial.png?ex=6af558bb&is=6af4073b&hm=b14b7ec140df16ba68f4eea0da89934fd3fd3aef324b69e7454b3ad04bc5aecc&",
+        "https://media.discordapp.net/attachments/1567735929920028874/1574944986296877146/Logo_2QN_Roxo_com_Coroa.png?ex=6b077d51&is=6b062bd1&hm=12e094c853fcd15277dc2512d3fbfca6ddd03a674ef90a5f57e6a6f8977398ab&format=webp&quality=lossless&width=1536&height=512",
       )
       .setFooter({
         text: "2qn • meu caráter não tem nada a ver com meu instinto",
       })
       .setTimestamp();
 
-    // Botão de Link para acompanhar o Embed na DM dos membros
+    // Botão de Link para acompanhar o Embed (exibido na prévia e na DM dos membros)
     const rowLinkDm = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setLabel("Vincular Conta na MyLoot")
@@ -137,7 +137,7 @@ module.exports = {
     const previewMsg = await message.channel.send({
       content: `📋 **PRÉVIA DO DISPARO PARA OS CARGOS:**\n${rolesNamesFormatted}\n*(Total de membros únicos após remoção de duplicatas: **${targetMembersArray.length}**)*\n\nConfirme abaixo se a mensagem está correta antes de iniciar o envio:`,
       embeds: [embedAnuncio],
-      components: [rowConfirm],
+      components: [rowLinkDm, rowConfirm],
     });
 
     const collector = previewMsg.createMessageComponentCollector({
