@@ -98,7 +98,6 @@ module.exports = {
         `Preparem os fones, porque agora as nossas calls valem ainda mais a pena! Aproveite para reunir os amigos, entrar nas calls, interagir com a galera e começar a acumular seus pontos para trocar por recompensas reais. <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
           `<:04branco_registro2qn:1568402354037063820> **Como funciona o sistema?**\n` +
           `<:04branco_ponto2qn:1556901316230651954> **Acúmulo Automático:** A cada **1 minuto** em call pública (com no mínimo **2 pessoas** na sala), você acumula **1 ponto** automaticamente.\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **Quanto mais tempo, mais pontos:** O bot contabiliza todo o seu tempo ativo nas calls da comunidade.\n` +
           `<:04branco_ponto2qn:1556901316230651954> **Recompensas Exclusivas:** Troque seus pontos por **Gift Cards, VIPs e itens de jogos** (Valorant e muito mais) diretamente na nossa loja: <#${LOJA_CHANNEL_ID}>.\n` +
           `<:04branco_ponto2qn:1556901316230651954> **Resgate Simples:** Após solicitar o resgate na loja, a equipe aprova e o código chega diretamente na sua conta!\n\n` +
           `<:04branco_st2QN:1560333704298242118> **Comece agora:** Vincule sua conta do Discord com a **MyLoot** pelo botão abaixo ou acessando:\n${MYLOOT_LINK}`,
