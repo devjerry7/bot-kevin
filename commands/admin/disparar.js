@@ -105,7 +105,7 @@ module.exports = {
       )
       .setColor(0x962dc0)
       .setImage(
-        "https://cdn.discordapp.com/attachments/1553534170179833951/1569957900795777065/2QN_Banner_oficial.png?ex=6af558bb&is=6af4073b&hm=b14b7ec140df16ba68f4eea0da89934fd3fd3aef324b69e7454b3ad04bc5aecc&",
+        "https://cdn.discordapp.com/attachments/1574810959564902414/1574911840406999112/Logo_Graffiti_Roxo_2QN.png?ex=6b075e73&is=6b060cf3&hm=802a4e89352acfc844203832083d1389b9c937c339e2d8a7c90cd9fdd0170382&",
       )
       .setFooter({
         text: "2qn • meu caráter não tem nada a ver com meu instinto",
