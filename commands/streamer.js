@@ -79,7 +79,7 @@ module.exports = {
         return message.channel.send({
           embeds: [
             createEmbed(
-              "<:br_registro2qn:1557798191100072119> STREAMERS MONITORADOS",
+              "<:04branco_registro2qn:1568402354037063820> STREAMERS MONITORADOS",
               `Lista de todos os criadores de conteúdo cadastrados no servidor:\n\n${streamerFormattedList}`,
             ),
           ],
