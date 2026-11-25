@@ -26,7 +26,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 module.exports = {
   name: "disparar",
   description:
-    "Envia disparo de anúncio do sistema de pontos em call no PV dos membros dos cargos informados (com deduplicação).",
+    "Envia disparo curto de anúncio do sistema de pontos em call no PV dos membros dos cargos informados (com deduplicação).",
   async execute(message, args) {
     // 1. Validação de Whitelist
     const whitelist = getWhitelistIds();
@@ -89,22 +89,21 @@ module.exports = {
       .map((r) => `\`@${r.name}\``)
       .join(", ");
 
-    // 3. Montagem do Embed do Sistema de Pontos em Call
+    // 3. Montagem do Embed Curto e Objetivo
     const embedAnuncio = new EmbedBuilder()
       .setTitle(
         "<:00roxo2qnavisos:1556916486398939186> GANHE PRÊMIOS FICANDO EM CALL NA 2QN!",
       )
       .setDescription(
-        `Preparem os fones, porque agora as nossas calls valem ainda mais a pena! Aproveite para reunir os amigos, entrar nas calls, interagir com a galera e começar a acumular seus pontos para trocar por recompensas reais. <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
-          `<:04branco_registro2qn:1568402354037063820> **Como funciona o sistema?**\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **Acúmulo Automático:** A cada **1 minuto** em call pública (com no mínimo **2 pessoas** na sala), você acumula **1 ponto** automaticamente.\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **Recompensas Exclusivas:** Troque seus pontos por **Gift Cards, VIPs e itens de jogos** (Valorant e muito mais) diretamente na nossa loja: <#${LOJA_CHANNEL_ID}>.\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **Resgate Simples:** Após solicitar o resgate na loja, a equipe aprova e o código chega diretamente na sua conta!\n\n` +
-          `<:04branco_st2QN:1560333704298242118> **Comece agora:** Vincule sua conta do Discord com a **MyLoot** pelo botão abaixo ou acessando:\n${MYLOOT_LINK}`,
+        `Agora o seu tempo em call na **2qn** vale recompensas reais! <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
+          `<:04branco_ponto2qn:1556901316230651954> **1 minuto em call = 1 ponto** acumulado automaticamente.\n` +
+          `<:04branco_ponto2qn:1556901316230651954> Troque seus pontos por **Gift Cards, VIPs e itens de jogos**.\n` +
+          `<:04branco_ponto2qn:1556901316230651954> **Todas as informações** e regras completas estão no chat da loja: <#${LOJA_CHANNEL_ID}>\n\n` +
+          `<:04branco_st2QN:1560333704298242118> Vincule sua conta pelo botão abaixo e comece a acumular!`,
       )
       .setColor(0x962dc0)
       .setImage(
-        "https://cdn.discordapp.com/attachments/1574810959564902414/1574911840406999112/Logo_Graffiti_Roxo_2QN.png?ex=6b075e73&is=6b060cf3&hm=802a4e89352acfc844203832083d1389b9c937c339e2d8a7c90cd9fdd0170382&",
+        "https://cdn.discordapp.com/attachments/1553534170179833951/1569957900795777065/2QN_Banner_oficial.png?ex=6af558bb&is=6af4073b&hm=b14b7ec140df16ba68f4eea0da89934fd3fd3aef324b69e7454b3ad04bc5aecc&",
       )
       .setFooter({
         text: "2qn • meu caráter não tem nada a ver com meu instinto",
@@ -114,7 +113,7 @@ module.exports = {
     // Botão de Link para acompanhar o Embed na DM dos membros
     const rowLinkDm = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setLabel("Vincular Discord na MyLoot")
+        .setLabel("Vincular Conta na MyLoot")
         .setStyle(ButtonStyle.Link)
         .setURL(MYLOOT_LINK)
         .setEmoji("🎁"),
