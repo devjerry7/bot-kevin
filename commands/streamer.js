@@ -373,7 +373,7 @@ module.exports = {
         : "Nenhuma plataforma vinculada.";
 
     const embed = createEmbed(
-      `<:br_registro2qn:1557798191100072119> Perfil de Streamer — ${streamerData.displayName || streamerData.name}`,
+      `<:04branco_registro2qn:1568402354037063820> Perfil de Streamer — ${streamerData.displayName || streamerData.name}`,
       `Estatísticas de monitoramento:\n\n` +
         `<:br_incricao2qn:1556905090835546173> **Plataformas Vinculadas:**\n${platformsList}\n\n` +
         `<:br_relogio2qn:1556898949011603487> **Tempo em Call na Semana:** \`${totalHoursInCall}h\` / \`${goalHours}h\` meta\n` +
