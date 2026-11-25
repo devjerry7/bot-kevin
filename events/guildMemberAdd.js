@@ -2,6 +2,7 @@
 const { EmbedBuilder } = require("discord.js");
 const { triggerAutoLockdown } = require("../commands/lockdown");
 const { handleMemberAdd } = require("../listeners/inviteTracker");
+const { syncMemberTagRole } = require("../handlers/guildTagRoleHandler");
 
 const OWNER_LOG_ID = "1551147533454282806";
 
@@ -27,7 +28,14 @@ module.exports = async (member) => {
     );
 
     // ====================================================
-    // 2. SISTEMA ANTI-RAID (Proteção contra surto de entradas)
+    // 2. CARGO AUTOMÁTICO DE TAG DO SERVIDOR
+    // ====================================================
+    syncMemberTagRole(member).catch((err) =>
+      console.error("[GUILD TAG ROLE ADD ERROR]", err),
+    );
+
+    // ====================================================
+    // 3. SISTEMA ANTI-RAID (Proteção contra surto de entradas)
     // ====================================================
     const now = Date.now();
 

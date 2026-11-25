@@ -25,6 +25,10 @@ const {
 // Importações dos Gerenciadores
 const { checkExpiredVips } = require("./services/vipManager");
 const { startLiveTracker } = require("./modules/lives/jobs/liveTrackerJob");
+const {
+  syncMemberTagRole,
+  syncGuildTagRoles,
+} = require("./handlers/guildTagRoleHandler");
 
 // 🚀 IMPORTAÇÃO DOS JOBS E CRONS
 const initStaffCron = require("./jobs/staffCron");
@@ -98,6 +102,38 @@ client.on("voiceStateUpdate", (oldState, newState) =>
 );
 client.on("guildMemberAdd", (member) => handleGuildMemberAdd(member));
 
+// 🚀 SINCRONIZAÇÃO EM TEMPO REAL DA TAG DO SERVIDOR
+client.on("userUpdate", async (oldUser, newUser) => {
+  try {
+    const oldGuildId = oldUser?.primaryGuild?.identityGuildId ?? null;
+    const newGuildId = newUser?.primaryGuild?.identityGuildId ?? null;
+    const oldEnabled = oldUser?.primaryGuild?.identityEnabled ?? null;
+    const newEnabled = newUser?.primaryGuild?.identityEnabled ?? null;
+    const oldTag = oldUser?.primaryGuild?.tag ?? null;
+    const newTag = newUser?.primaryGuild?.tag ?? null;
+
+    // Só atua se houve mudança relevante de tag/identidade ou se o novo estado aponta para o servidor
+    const tagChanged =
+      oldGuildId !== newGuildId ||
+      oldEnabled !== newEnabled ||
+      oldTag !== newTag;
+
+    if (!tagChanged && !newGuildId) return;
+
+    for (const [, guild] of client.guilds.cache) {
+      const member =
+        guild.members.cache.get(newUser.id) ||
+        (await guild.members.fetch(newUser.id).catch(() => null));
+
+      if (member) {
+        await syncMemberTagRole(member, { sendEmbedOnEquip: true });
+      }
+    }
+  } catch (err) {
+    console.error("[USER UPDATE TAG SYNC ERROR]:", err);
+  }
+});
+
 // 🚀 EVENTOS DE CONVITES
 client.on("inviteCreate", (invite) => handleInviteCreate(invite));
 client.on("inviteDelete", (invite) => handleInviteDelete(invite));
@@ -132,6 +168,13 @@ client.once("ready", async () => {
 
   // 🚀 INICIALIZAÇÃO DO RELATÓRIO SEMANAL DE STREAMERS
   startStreamerWeeklyReport(client);
+
+  // 🚀 VARREDURA INICIAL DO CARGO DA TAG DO SERVIDOR
+  setTimeout(async () => {
+    for (const [, guild] of client.guilds.cache) {
+      await syncGuildTagRoles(guild);
+    }
+  }, 5000);
 
   // Status limpo e estático (apenas online, sem "Transmitindo")
   client.user.setPresence({
