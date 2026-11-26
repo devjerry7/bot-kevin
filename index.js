@@ -28,6 +28,7 @@ const { startLiveTracker } = require("./modules/lives/jobs/liveTrackerJob");
 const {
   syncMemberTagRole,
   syncGuildTagRoles,
+  handleTagRoleOptOutCheck,
 } = require("./handlers/guildTagRoleHandler");
 
 // 🚀 IMPORTAÇÃO DOS JOBS E CRONS
@@ -101,6 +102,11 @@ client.on("voiceStateUpdate", (oldState, newState) =>
   handleVoiceState(oldState, newState, client),
 );
 client.on("guildMemberAdd", (member) => handleGuildMemberAdd(member));
+
+// 🚀 DETECTA QUANDO O MEMBRO REMOVE O CARGO DA TAG MANTENDO A TAG
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+  await handleTagRoleOptOutCheck(oldMember, newMember);
+});
 
 // 🚀 SINCRONIZAÇÃO EM TEMPO REAL DA TAG DO SERVIDOR
 client.on("userUpdate", async (oldUser, newUser) => {
