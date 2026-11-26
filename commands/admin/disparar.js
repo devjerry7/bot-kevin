@@ -8,8 +8,6 @@ const {
 } = require("discord.js");
 
 const OWNER_LOG_ID = "1551147533454282806";
-const LOJA_CHANNEL_ID = "1570902792938332220";
-const MYLOOT_LINK = "https://www.mybioz.com/loot/2qn?vincular=discord";
 
 // Auxiliar Whitelist
 const getWhitelistIds = () => {
@@ -26,7 +24,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 module.exports = {
   name: "disparar",
   description:
-    "Envia disparo curto de anúncio do sistema de pontos em call e tag do servidor no PV dos membros dos cargos informados (com deduplicação).",
+    "Envia disparo curto de anúncio da tag do servidor no PV dos membros dos cargos informados (com deduplicação).",
   async execute(message, args) {
     // 1. Validação de Whitelist
     const whitelist = getWhitelistIds();
@@ -89,16 +87,15 @@ module.exports = {
       .map((r) => `\`@${r.name}\``)
       .join(", ");
 
-    // 3. Montagem do Embed Curto e Objetivo (Foco na Tag + Call + Loja)
+    // 3. Montagem do Embed Curto e Objetivo (Somente Tag)
     const embedAnuncio = new EmbedBuilder()
       .setTitle(
-        "<:00roxo2qnavisos:1556916486398939186> COLOQUE A TAG DA 2QN E GANHE EM CALL!",
+        "<:00roxo2qnavisos:1556916486398939186> COLOQUE A TAG DA 2QN NO SEU PERFIL!",
       )
       .setDescription(
-        `Coloque a **tag do servidor** no seu perfil e venha aproveitar as calls da **2qn**! <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **1 minuto em call = 1 ponto** acumulado.\n` +
-          `<:04branco_ponto2qn:1556901316230651954> Troque seus pontos por **Gift Cards, VIPs e itens de jogos**.\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **Todas as informações** estão no chat da loja: <#${LOJA_CHANNEL_ID}>`,
+        `Fortaleça a **2qn** colocando a nossa **tag do servidor** no perfil! <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
+          `<:04branco_ponto2qn:1556901316230651954> Vá no seu perfil ou configurações do Discord.\n` +
+          `<:04branco_ponto2qn:1556901316230651954> Em **Tag do servidor**, equipe a tag da **2qn** e ganhe o cargo exclusivo na hora.`,
       )
       .setColor(0x962dc0)
       .setImage(
@@ -108,15 +105,6 @@ module.exports = {
         text: "2qn • meu caráter não tem nada a ver com meu instinto",
       })
       .setTimestamp();
-
-    // Botão de Link para acompanhar o Embed (exibido na prévia e na DM dos membros)
-    const rowLinkDm = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel("Acessar Link")
-        .setStyle(ButtonStyle.Link)
-        .setURL(MYLOOT_LINK)
-        .setEmoji("🎁"),
-    );
 
     // 4. Painel de Prévia e Confirmação
     const rowConfirm = new ActionRowBuilder().addComponents(
@@ -136,7 +124,7 @@ module.exports = {
     const previewMsg = await message.channel.send({
       content: `📋 **PRÉVIA DO DISPARO PARA OS CARGOS:**\n${rolesNamesFormatted}\n*(Total de membros únicos após remoção de duplicatas: **${targetMembersArray.length}**)*\n\nConfirme abaixo se a mensagem está correta antes de iniciar o envio:`,
       embeds: [embedAnuncio],
-      components: [rowLinkDm, rowConfirm],
+      components: [rowConfirm],
     });
 
     const collector = previewMsg.createMessageComponentCollector({
@@ -181,7 +169,7 @@ module.exports = {
         if (ownerUser) {
           await ownerUser
             .send(
-              `🚀 **DISPARO INICIADO**\nAlvos: ${rolesNamesFormatted} (${total} membros únicos).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
+              `🚀 **DISPARO DE TAG INICIADO**\nAlvos: ${rolesNamesFormatted} (${total} membros únicos).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
             )
             .catch(() => {});
         }
@@ -190,10 +178,7 @@ module.exports = {
           const target = targetMembersArray[i];
 
           try {
-            await target.send({
-              embeds: [embedAnuncio],
-              components: [rowLinkDm],
-            });
+            await target.send({ embeds: [embedAnuncio] });
             successCount++;
           } catch (err) {
             failCount++;
@@ -205,7 +190,7 @@ module.exports = {
           if (processed % 50 === 0 && ownerUser) {
             await ownerUser
               .send(
-                `📊 **Progresso do Disparo:** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
+                `📊 **Progresso do Disparo (Tag):** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
               )
               .catch(() => {});
           }
@@ -230,9 +215,9 @@ module.exports = {
         // 6. Relatório Final no PV do Dono
         if (ownerUser) {
           const reportEmbed = new EmbedBuilder()
-            .setTitle("✅ DISPARO CONCLUÍDO")
+            .setTitle("✅ DISPARO DE TAG CONCLUÍDO")
             .setDescription(
-              `O envio de anúncios foi finalizado com sucesso!\n\n` +
+              `O envio de anúncios da tag foi finalizado com sucesso!\n\n` +
                 `🎯 **Cargos Alvo:** ${rolesNamesFormatted}\n` +
                 `👥 **Total de Membros Únicos:** \`${total}\`\n` +
                 `🟢 **Entregues no PV:** \`${successCount}\`\n` +
