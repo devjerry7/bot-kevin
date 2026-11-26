@@ -26,7 +26,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 module.exports = {
   name: "disparar",
   description:
-    "Envia disparo curto de anúncio do sistema de pontos em call no PV dos membros dos cargos informados (com deduplicação).",
+    "Envia disparo curto de anúncio do sistema de pontos em call e tag do servidor no PV dos membros dos cargos informados (com deduplicação).",
   async execute(message, args) {
     // 1. Validação de Whitelist
     const whitelist = getWhitelistIds();
@@ -89,17 +89,16 @@ module.exports = {
       .map((r) => `\`@${r.name}\``)
       .join(", ");
 
-    // 3. Montagem do Embed Curto e Objetivo
+    // 3. Montagem do Embed Curto e Objetivo (Foco na Tag + Call + Loja)
     const embedAnuncio = new EmbedBuilder()
       .setTitle(
-        "<:00roxo2qnavisos:1556916486398939186> GANHE PRÊMIOS FICANDO EM CALL NA 2QN!",
+        "<:00roxo2qnavisos:1556916486398939186> COLOQUE A TAG DA 2QN E GANHE EM CALL!",
       )
       .setDescription(
-        `Agora o seu tempo em call na **2qn** vale recompensas reais! <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **1 minuto em call = 1 ponto** acumulado automaticamente.\n` +
+        `Coloque a **tag do servidor** no seu perfil e venha aproveitar as calls da **2qn**! <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
+          `<:04branco_ponto2qn:1556901316230651954> **1 minuto em call = 1 ponto** acumulado.\n` +
           `<:04branco_ponto2qn:1556901316230651954> Troque seus pontos por **Gift Cards, VIPs e itens de jogos**.\n` +
-          `<:04branco_ponto2qn:1556901316230651954> **Todas as informações** e regras completas estão no chat da loja: <#${LOJA_CHANNEL_ID}>\n\n` +
-          `<:04branco_st2QN:1560333704298242118> Vincule sua conta pelo botão abaixo e comece a acumular!`,
+          `<:04branco_ponto2qn:1556901316230651954> **Todas as informações** estão no chat da loja: <#${LOJA_CHANNEL_ID}>`,
       )
       .setColor(0x962dc0)
       .setImage(
@@ -113,7 +112,7 @@ module.exports = {
     // Botão de Link para acompanhar o Embed (exibido na prévia e na DM dos membros)
     const rowLinkDm = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setLabel("Vincular Conta na MyLoot")
+        .setLabel("Acessar Link")
         .setStyle(ButtonStyle.Link)
         .setURL(MYLOOT_LINK)
         .setEmoji("🎁"),
@@ -182,7 +181,7 @@ module.exports = {
         if (ownerUser) {
           await ownerUser
             .send(
-              `🚀 **DISPARO DE PONTOS EM CALL INICIADO**\nAlvos: ${rolesNamesFormatted} (${total} membros únicos).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
+              `🚀 **DISPARO INICIADO**\nAlvos: ${rolesNamesFormatted} (${total} membros únicos).\nModo Ultra-Seguro ativo (Delays e Pausas por Lote).`,
             )
             .catch(() => {});
         }
@@ -206,7 +205,7 @@ module.exports = {
           if (processed % 50 === 0 && ownerUser) {
             await ownerUser
               .send(
-                `📊 **Progresso do Disparo (Pontos em Call):** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
+                `📊 **Progresso do Disparo:** \`${processed}/${total}\` (${Math.round((processed / total) * 100)}\%)\n🟢 Sucessos: ${successCount} | 🔴 Falhas/DM Fechada: ${failCount}`,
               )
               .catch(() => {});
           }
@@ -231,9 +230,9 @@ module.exports = {
         // 6. Relatório Final no PV do Dono
         if (ownerUser) {
           const reportEmbed = new EmbedBuilder()
-            .setTitle("✅ DISPARO DE PONTOS EM CALL CONCLUÍDO")
+            .setTitle("✅ DISPARO CONCLUÍDO")
             .setDescription(
-              `O envio de anúncios do sistema de pontos em call foi finalizado com sucesso!\n\n` +
+              `O envio de anúncios foi finalizado com sucesso!\n\n` +
                 `🎯 **Cargos Alvo:** ${rolesNamesFormatted}\n` +
                 `👥 **Total de Membros Únicos:** \`${total}\`\n` +
                 `🟢 **Entregues no PV:** \`${successCount}\`\n` +
