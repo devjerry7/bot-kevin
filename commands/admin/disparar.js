@@ -89,11 +89,9 @@ module.exports = {
 
     // 3. Montagem do Embed Curto e Objetivo (Somente Tag)
     const embedAnuncio = new EmbedBuilder()
-      .setTitle(
-        "<:00roxo2qnavisos:1556916486398939186> COLOQUE A TAG DA 2QN NO SEU PERFIL!",
-      )
+      .setTitle("<:00roxo2qnavisos:1556916486398939186> OII")
       .setDescription(
-        `Fortaleça a **2qn** colocando a nossa **tag do servidor** no perfil! <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
+        ` Você pode fortalecer a **2qn** colocando a nossa **tag do servidor** no perfil! <a:01roxo1_heart2qn:1560755540710260776>\n\n` +
           `<:04branco_ponto2qn:1556901316230651954> Vá no seu perfil ou configurações do Discord.\n` +
           `<:04branco_ponto2qn:1556901316230651954> Em **Tag do servidor**, equipe a tag da **2qn** e ganhe o cargo exclusivo na hora.`,
       )
